@@ -1,0 +1,23 @@
+fastapi==0.111.0
+uvicorn==0.29.0
+python-multipart==0.0.9
+groq==0.9.0
+rank-bm25==0.2.2
+python-dotenv==1.0.1
+pydantic==2.7.1
+# Fix #9: PDF and DOCX support
+pypdf==4.2.0
+python-docx==1.1.2
+# Fix #11: rate limiting
+slowapi==0.1.9
+
+# ── Upgrade: Hybrid retrieval + cross-encoder reranking ───────────────────────
+# Dense embeddings for hybrid search (Part 2 / Part 4)
+sentence-transformers>=2.7.0
+
+# Numeric operations for cosine similarity / MMR
+numpy>=1.26.0
+
+# Disk-based embedding cache (avoids recomputing at query time)
+diskcache>=5.6.3
+

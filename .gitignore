@@ -1,0 +1,15 @@
+.env
+store_state.pkl
+sessions.json
+sessions.json.tmp
+store_state.tmp
+logs/
+__pycache__/
+venv/
+*.pyc
+node_modules/
+frontend/node_modules/
+frontend/dist/
+rag_system.db
+rag_agentic_project.zip
+.DS_Store

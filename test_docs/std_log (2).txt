@@ -1,0 +1,809 @@
+/bin/bash: /azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/libtinfo.so.6: no version information available (required by /bin/bash)
+  [..]  Using single dataset file: /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_data_dir/core_visual_json_qwen.jsonl
+
+========================================================================
+  PowerNative — PBIP Visual QLoRA Fine-tuning v13
+========================================================================
+Data mode: visual
+  Run ID              : run_20260407_081105
+  Schema source       : /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_schema_source
+  Data dir            : /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_data_dir/core_visual_json_qwen.jsonl
+  Data mode           : visual
+  Main epochs         : 3
+  Batch eff.          : 2 x 4 = 8
+  LR                  : 8e-05
+  max_seq_len         : 2048
+  max_new_tokens      : 1024
+  Eval samples        : 6
+  Azure VM SKU        : Standard_NC24ads_A100_v4
+  CUDA available      : True
+  GPU name            : NVIDIA A100 80GB PCIe
+  GPU count           : 1
+  Eval dir            : /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105
+  Ckpt dir            : /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/checkpoints/run_20260407_081105
+  MLflow dump dir     : /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/mlflow_store/run_20260407_081105
+
+  ── Overfitting Prevention ──────────────────────────────────
+  LoRA r/alpha/dropout: 8 / 16 / 0.1
+  Weight decay        : 0.01
+  Label smoothing     : 0.05
+  Max grad norm       : 1.0
+  NEFTune noise alpha : 0.0
+  Early stop patience : 2 epoch(s)
+  Early stop delta    : 0.001
+
+  [OK]  [MLflow] Using Azure ML tracking URI: 'azureml://eastus2.api.azureml.ms/mlflow/v1.0/subscriptions/0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2/resourceGroups/pbi-ft-rg/providers/Microsoft.MachineLearningServices/workspaces/pbi-ft-workspace'
+  [OK]  MLflow run started: serene_dream_cqrb268d65  experiment=pbip-visual-qlora-v13
+  [..]  MLflow params logged: ['learning_rate', 'batch_size', 'grad_accum', 'main_epochs', 'max_seq_len', 'max_new_tokens', 'weight_decay', 'label_smoothing', 'max_grad_norm', 'lora_r', 'lora_alpha', 'lora_dropout', 'val_ratio', 'data_mode', 'model_name', 'seed', 'mlflow_experiment_name', 'azure_vm_sku', 'neftune_noise_alpha', 'early_stopping_patience', 'early_stopping_delta']
+  [!!]  MLflow manifest log failed (non-fatal): azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
+
+  ── System info ──────────────────────────────────────────────────────
+  python_version                      3.10.20
+  platform                            Linux-5.15.0-1098-azure-x86_64-with-glibc2.35
+  hostname                            1b585717ada040779a176382af88cc4a000000
+  cpu_count                           24
+  torch_version                       2.11.0+cu130
+  cuda_available                      True
+  cuda_version                        13.0
+  gpu_count                           1
+  gpu_0_name                          NVIDIA A100 80GB PCIe
+  gpu_0_memory_gb                     79.3
+  nvidia_driver                       580.95.05
+  pkg_transformers                    4.51.3
+  pkg_peft                            0.14.0
+  pkg_trl                             0.17.0
+  pkg_bitsandbytes                    0.49.2
+  pkg_accelerate                      1.13.0
+  env_AZUREML_ARM_WORKSPACE_NAME      pbi-ft-workspace
+  env_AZUREML_CR_TELEMETRY_CONFIG     {"collector":{"receiver":null,"exporter":{"appinsights":{"instrumentation_key":"d7481a2e-117d-49ac-8cc3-94ef59c96eab","endpoint_suffix":"services.visualstudio.com","ingestion_endpoint":null,"aad_audience":null},"jaeger":null,"prometheus":null,"timeout_millis":null,"level":null}},"logger":{"console":{"sink":"stdout","level":"info","enabled":true,"ansi":false},"appinsights":{"instrumentation_key":"d7481a2e-117d-49ac-8cc3-94ef59c96eab","level":"info","enabled":true,"endpoint_suffix":"services.visualstudio.com","ingestion_endpoint":null,"aad_audience":null},"file":{"extension":"log","level":"info","enabled":true}},"node_rank":null,"node_id":"tvmps_34339a1ba72e594b6c52672c6d65523637e3e024826bef3661fe975656c4b8f5_d","disable_sensitive_scrub":null,"attempt_id":null}
+  env_AZUREML_CR_CS_CAPABILITY_RUNNING TRUE
+  env_AZUREML_CR_EXECUTOR_ADDRESS     /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/.grpc/executor:0
+  env_AZUREML_CR_SNAPSHOT_CAPABILITY_HOST 1b585717ada040779a176382af88cc4a000000
+  env_AZUREML_ENVIRONMENT_IMAGE       True
+  env_AZUREML_PROCESS_NAME            main
+  env_AZUREML_ARM_SUBSCRIPTION        0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2
+  env_AZUREML_CR_SNAPSHOT_CAPABILITY_ADDRESS /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/.grpc/snapshot-capability:0
+  env_AZUREML_CR_CS_CAPABILITY_PATH   /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/cs-capability/wd
+  env_AZUREML_CR_HOSTTOOLS_CAPABILITY_HOST 1b585717ada040779a176382af88cc4a000000
+  env_AZUREML_DATAREFERENCE_DATA_DIR  /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_data_dir/core_visual_json_qwen.jsonl
+  env_AZUREML_CR_EXECUTION_WRAPPER_PATH /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/lifecycler/wd
+  env_AZUREML_EXPERIMENT_SCOPE        /subscriptions/0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2/resourceGroups/pbi-ft-rg/providers/Microsoft.MachineLearningServices/workspaces/pbi-ft-workspace/experiments/pbip-visual-qlora-v13
+  env_AZUREML_CR_NODE_RANK            0
+  env_AZUREML_CR_DATA_CAPABILITY_ADDRESS /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/.grpc/data-capability:0
+  env_AZUREML_SERVICE_CERT_ENDPOINT   https://eastus2.cert.api.azureml.ms
+  env_AZUREML_CR_DATA_CAPABILITY_HOST 1b585717ada040779a176382af88cc4a000000
+  env_AZUREML_CONDA_ENVIRONMENT_PATH  /azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc
+  env_AZUREML_EXPERIMENT_ID           95293240-c4a2-4288-9b53-2980555d20c9
+  env_AZUREML_CR_EXECUTOR_CONFIG      eyJleGVjdXRpb25fd29ya2luZ19kaXIiOiIvbW50L2F6dXJlbWwvY3Ivai9kYWUyODY1NDViMTA0MzAyODM4ZjgyY2RkZmM1OGM5OC9leGUvd2QiLCJleGVjdXRvcl9hZGRyZXNzIjoiL21udC9henVyZW1sL2NyL2ovZGFlMjg2NTQ1YjEwNDMwMjgzOGY4MmNkZGZjNThjOTgvLmdycGMvZXhlY3V0b3I6MCIsImxpZmVjeWNsZXJfYWRkcmVzcyI6Ii9tbnQvYXp1cmVtbC9jci9qL2RhZTI4NjU0NWIxMDQzMDI4MzhmODJjZGRmYzU4Yzk4Ly5ncnBjL2xpZmVjeWNsZXI6MCIsImRpc3RyaWJ1dGVkX2NvbmZpZyI6bnVsbCwidXNlX21waV9yc2hfYWdlbnQiOnRydWUsImV4ZWN1dG9yX2NvbmZpZyI6bnVsbH0=
+  env_AZUREML_DATASET_FILE_OUTPUTS    data_visual;eval_results;checkpoints;mlflow_store
+  env_AZUREML_COMPUTE_RESERVED_DISK_SPACE 2146320056
+  env_AZUREML_ARM_PROJECT_NAME        pbip-visual-qlora-v13
+  env_AZUREML_CR_GRPC_ADDRESS_BASE    /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/.grpc
+  env_AZUREML_CR_HT_CAP_user_logs_PATH /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/exe/wd/user_logs
+  env_AZUREML_CR_GRPC_ADDRESS_SPEC    {"Uds":{"base_address":"/mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/.grpc"}}
+  env_AZUREML_CR_HOSTTOOLS_CAPABILITY_RUNNING TRUE
+  env_AZUREML_CR_METRICS_CAPABILITY_RUNNING TRUE
+  env_AZUREML_CR_LIFECYCLER_PATH      /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/lifecycler/wd
+  env_AZUREML_CR_EXECUTION_WORKING_DIR_PATH /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/exe/wd
+  env_AZUREML_CR_HOSTTOOLS_CAPABILITY_PATH /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/hosttools-capability/wd
+  env_AZUREML_DATAREFERENCE_schema_source /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_schema_source
+  env_AZUREML_CR_HT_CAP_outputs_PATH  /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/exe/wd/outputs
+  env_AZUREML_RUN_TOKEN               eyJhbGciOiJSUzI1NiIsImtpZCI6IjY4NEI2RDRGNzVDQkExOEQzNzc0NTZCMkUyRDJBMkFFODExRDQ0NkYiLCJ0eXAiOiJKV1QifQ.eyJyb2xlIjoiQ29udHJpYnV0b3IiLCJzY29wZSI6Ii9zdWJzY3JpcHRpb25zLzA1MDRkMmZlLWE1ZTEtNGE3MS04NGM0LWViMzJlMWE5M2JmMi9yZXNvdXJjZUdyb3Vwcy9wYmktZnQtcmcvcHJvdmlkZXJzL01pY3Jvc29mdC5NYWNoaW5lTGVhcm5pbmdTZXJ2aWNlcy93b3Jrc3BhY2VzL3BiaS1mdC13b3Jrc3BhY2UiLCJhY2NvdW50aWQiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDAiLCJ3b3Jrc3BhY2VJZCI6IjhkMmJkNWYyLTVkYmUtNDAxYi1hZDg0LTU4ZjJkMjdmYjc5MyIsInByb2plY3RpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIsImRpc2NvdmVyeSI6InVyaTovL2Rpc2NvdmVyeXVyaS8iLCJ0aWQiOiJkNTBiNmE3OC1mNzJkLTRlMjQtOTllMS0wMDYzOWRkYzQwM2QiLCJvaWQiOiI3M2FhNTQ4ZC0xNTAxLTRjMmYtYTkwNi1iY2MzZGFmMGQ3ZmYiLCJwdWlkIjoiMTAwMzIwMDVBNUNCRTgwOSIsImlzcyI6ImF6dXJlbWwiLCJhcHBpZCI6InBiaW1vZGVsIiwiZXhwIjoxNzc3MzY2OTc2LCJhdWQiOiJhenVyZW1sIn0.IK-6bXPW7Rdr6HBET_2Fur7NVUyZyhQIn2yU9JciA99NEsNYzgUeW-G7S9wQiBDnVVll80rqAfAyC_lRnjyu2tiiVyOvpbz2g4W2u5dAzUUjjKP7KYMwjjK7ddgS6_rr2Bm5Knpv7oZO91MreGtr8-ZBZspoXIBXK-lYMVtgd3aKicTNV-2ADCpzSlGBEeJ2rsPMt9bqSNWUmM-GegD3U4SlaI6Hi7vSz9aQDhc2XTK8bcYk0s912KppV8b24a3VP0DBJq25iq5x1K1tcl-gPM-mPW5BmZkmK494BOOAzA3S5qRaoNYc6cK753T-YQa5oqLNFSe93y0yb0VwZ15u-g
+  env_AZUREML_CR_CS_CAPABILITY_HOST   1b585717ada040779a176382af88cc4a000000
+  env_AZUREML_SERVICE_ENDPOINT        https://eastus2.api.azureml.ms
+  env_AZUREML_CR_COMPUTE_CONTEXT      {"cluster_name":"pbi-ft-a100-cluster","node_id":{"Literal":"tvmps_34339a1ba72e594b6c52672c6d65523637e3e024826bef3661fe975656c4b8f5_d"},"vm_id":"3e705471-75ff-408a-8552-18b579fad50f","run_attempt_count":1,"gpu_count":1,"vm_size":"STANDARD_NC24ADS_A100_V4","readable_cluster_name":"pbi-ft-a100-cluster","vm_priority":"Dedicated","use_vnet_or_private_link":false}
+  env_AZUREML_DISCOVERY_SERVICE_ENDPOINT https://eastus2.api.azureml.ms/discovery
+  env_AZUREML_DATAREFERENCE_AZURE_ML_INPUT_data_dir /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_data_dir/core_visual_json_qwen.jsonl
+  env_AZUREML_DATAREFERENCE_data_dir  /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_data_dir/core_visual_json_qwen.jsonl
+  env_AZUREML_DATAREFERENCE_AZURE_ML_INPUT_DATA_DIR /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_data_dir/core_visual_json_qwen.jsonl
+  env_AZUREML_CR_DATA_CAPABILITY_RUNNING TRUE
+  env_AZUREML_CR_METRICS_CAPABILITY_HOST 1b585717ada040779a176382af88cc4a000000
+  env_AZUREML_CR_HT_CAP_azureml_logs_PATH /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/exe/wd/azureml-logs
+  env_AZUREML_RUN_ID                  serene_dream_cqrb268d65
+  env_AZUREML_ROOT_RUN_ID             serene_dream_cqrb268d65
+  env_AZUREML_CR_SNAPSHOT_CAPABILITY_PATH /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/snapshot-capability/wd
+  env_AZUREML_CR_CS_CAPABILITY_ADDRESS /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/.grpc/cs-capability:0
+  env_AZUREML_CR_HOSTTOOLS_CAPABILITY_ADDRESS /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/.grpc/hosttools-capability:0
+  env_AZUREML_WORKSPACE_SCOPE         /subscriptions/0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2/resourceGroups/pbi-ft-rg/providers/Microsoft.MachineLearningServices/workspaces/pbi-ft-workspace
+  env_AZUREML_DATAREFERENCE_AZURE_ML_INPUT_SCHEMA_SOURCE /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_schema_source
+  env_AZUREML_CR_METRICS_CAPABILITY_PATH /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/metrics-capability/wd
+  env_AZUREML_CR_AZUREML_CONTEXT      {"subscription_id":"0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2","resource_group":"pbi-ft-rg","workspace_name":"pbi-ft-workspace","workspace_id":"8d2bd5f2-5dbe-401b-ad84-58f2d27fb793","service_endpoint":"https://eastus2.api.azureml.ms","service_cert_endpoint":"https://eastus2.cert.api.azureml.ms","discovery_endpoint":"https://eastus2.api.azureml.ms/discovery","experiment_name":"pbip-visual-qlora-v13","experiment_id":"95293240-c4a2-4288-9b53-2980555d20c9","root_run_id":"serene_dream_cqrb268d65","run_id":"serene_dream_cqrb268d65","run_token":"eyJhbGciOiJSUzI1NiIsImtpZCI6IjY4NEI2RDRGNzVDQkExOEQzNzc0NTZCMkUyRDJBMkFFODExRDQ0NkYiLCJ0eXAiOiJKV1QifQ.eyJyb2xlIjoiQ29udHJpYnV0b3IiLCJzY29wZSI6Ii9zdWJzY3JpcHRpb25zLzA1MDRkMmZlLWE1ZTEtNGE3MS04NGM0LWViMzJlMWE5M2JmMi9yZXNvdXJjZUdyb3Vwcy9wYmktZnQtcmcvcHJvdmlkZXJzL01pY3Jvc29mdC5NYWNoaW5lTGVhcm5pbmdTZXJ2aWNlcy93b3Jrc3BhY2VzL3BiaS1mdC13b3Jrc3BhY2UiLCJhY2NvdW50aWQiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDAiLCJ3b3Jrc3BhY2VJZCI6IjhkMmJkNWYyLTVkYmUtNDAxYi1hZDg0LTU4ZjJkMjdmYjc5MyIsInByb2plY3RpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIsImRpc2NvdmVyeSI6InVyaTovL2Rpc2NvdmVyeXVyaS8iLCJ0aWQiOiJkNTBiNmE3OC1mNzJkLTRlMjQtOTllMS0wMDYzOWRkYzQwM2QiLCJvaWQiOiI3M2FhNTQ4ZC0xNTAxLTRjMmYtYTkwNi1iY2MzZGFmMGQ3ZmYiLCJwdWlkIjoiMTAwMzIwMDVBNUNCRTgwOSIsImlzcyI6ImF6dXJlbWwiLCJhcHBpZCI6InBiaW1vZGVsIiwiZXhwIjoxNzc3MzY2OTc2LCJhdWQiOiJhenVyZW1sIn0.IK-6bXPW7Rdr6HBET_2Fur7NVUyZyhQIn2yU9JciA99NEsNYzgUeW-G7S9wQiBDnVVll80rqAfAyC_lRnjyu2tiiVyOvpbz2g4W2u5dAzUUjjKP7KYMwjjK7ddgS6_rr2Bm5Knpv7oZO91MreGtr8-ZBZspoXIBXK-lYMVtgd3aKicTNV-2ADCpzSlGBEeJ2rsPMt9bqSNWUmM-GegD3U4SlaI6Hi7vSz9aQDhc2XTK8bcYk0s912KppV8b24a3VP0DBJq25iq5x1K1tcl-gPM-mPW5BmZkmK494BOOAzA3S5qRaoNYc6cK753T-YQa5oqLNFSe93y0yb0VwZ15u-g","run_history_service_endpoint":"https://eastus2.api.azureml.ms","data_container_id":"dcid.serene_dream_cqrb268d65","run_uuid":"dae28654-5b10-4302-838f-82cddfc58c98","compute_type":null}
+  env_AZUREML_WORKSPACE_ID            8d2bd5f2-5dbe-401b-ad84-58f2d27fb793
+  env_AZUREML_DATAREFERENCE_AZURE_ML_INPUT_schema_source /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_schema_source
+  env_AZUREML_CR_METRICS_CAPABILITY_ADDRESS /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/.grpc/metrics-capability:0
+  env_AZUREML_CR_HT_CAP_logs_PATH     /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/exe/wd/logs
+  env_AZUREML_CR_DATA_CAPABILITY_PATH /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd
+  env_AZUREML_CR_CORRELATION_ID       serene_dream_cqrb268d65
+  env_AZUREML_ARM_RESOURCEGROUP       pbi-ft-rg
+  env_AZUREML_DATAREFERENCE_SCHEMA_SOURCE /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_schema_source
+  env_AZUREML_DATASET_ENVIRONMENT_VARS data_dir:download,schema_source:download
+  env_AZUREML_CR_COMPUTE_TYPE         amlcompute
+  env_AZUREML_RUN_HISTORY_SERVICE_ENDPOINT https://eastus2.api.azureml.ms
+  env_AZUREML_CR_SNAPSHOT_CAPABILITY_RUNNING TRUE
+  run_id                              run_20260407_081105
+  data_dir                            /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_data_dir/core_visual_json_qwen.jsonl
+  schema_source                       /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_schema_source
+  data_mode                           visual
+  azure_vm_sku                        Standard_NC24ads_A100_v4
+  finetuned_baseline                  
+  [!!]  MLflow system info log failed (non-fatal): INVALID_PARAMETER_VALUE: Response: {'Error': {'Code': 'ValidationError', 'Severity': None, 'Message': 'No more than 500 characters per params Value. Request contains 3 of greater length.', 'MessageFormat': None, 'MessageParameters': None, 'ReferenceCode': None, 'DetailsUri': None, 'Target': None, 'Details': [], 'InnerError': None, 'DebugInfo': None, 'AdditionalInfo': None}, 'Correlation': {'operation': '5c83fcff603793286a348398cae16a33', 'request': '295078f9f1eb8770'}, 'Environment': 'eastus2', 'Location': 'eastus2', 'Time': '2026-04-07T08:11:08.9034163+00:00', 'ComponentName': 'mlflow', 'statusCode': 400, 'error_code': 'INVALID_PARAMETER_VALUE'}
+
+  +-- PHASE 1/11 --------------------------------------------------
+  |  Load schema bundle
+  +----------------------------------------------------------
+  [..]  Schema files discovered  : 73
+  [..]  Visual container schema  : /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_schema_source/fabric/item/report/definition/visualContainer/2.5.0/schema.json
+  [..]  Visual config schema     : /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_schema_source/fabric/item/report/definition/visualConfiguration/2.2.0/schema-embedded.json
+  [OK]  Schema bundle loaded from: /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_schema_source
+
+  +-- PHASE 2/11 --------------------------------------------------
+  |  Model loading
+  +----------------------------------------------------------
+
+  +-- PHASE 3/10 --------------------------------------------------
+  |  Load model  Qwen/Qwen2.5-Coder-7B-Instruct  (4-bit NF4 QLoRA)
+  +----------------------------------------------------------
+  [OK]  Tokenizer loaded.
+  [..]  Loading 4-bit NF4 quantised model…
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  25%|██▌       | 1/4 [01:29<04:27, 89.31s/it]Fetching 4 files:  50%|█████     | 2/4 [01:30<01:14, 37.28s/it]Fetching 4 files: 100%|██████████| 4/4 [01:30<00:00, 22.54s/it]
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:213: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
+  torch._check_is_size(blocksize)
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:11,  3.78s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:06<00:05,  2.86s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.45s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.55s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.03s/it]
+  [OK]  Base model loaded in 100.9s.
+
+  +-- PHASE 3/11 --------------------------------------------------
+  |  Data preparation
+  +----------------------------------------------------------
+
+  +-- PHASE 2/10 --------------------------------------------------
+  |  PBIP visual data prep  <-  /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_data_dir/core_visual_json_qwen.jsonl
+  +----------------------------------------------------------
+  [..]  Single dataset file detected (visual mode): /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/INPUT_data_dir/core_visual_json_qwen.jsonl
+  [OK]  Loaded 541 records from single file (visual mode)
+
+  ── DATASET QUALITY ──────────────────────────────────
+  Total raw rows                         541
+  Valid (after strict filter)            541
+  Skipped (no extractable target)        0
+  Rejected (JSON extraction error)       0
+  Rejected (soft validation failed)      0
+  Rejected (schema invalid)              0
+  Compacted (oversized, kept)            0
+  Rich samples (queryState present)      525
+  Skeleton samples                       4
+  Skeleton ratio                         0.7%
+  Legacy-converted samples               0 (0.0%)
+  [!!]  visual-data: dropped 4 samples exceeding 2×2048 tokens (avg over-length: 4160 tokens)
+  [OK]  visual-data: truncated 21 samples (rescued from drop)
+  [OK]  visual-data: 537 samples kept  [kept=516  truncated=21  dropped=4  max_tokens_seen=4160  limit=2048]
+  [OK]  Written    501 samples -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/data_visual/train_visual.jsonl
+  [OK]  Written     36 samples -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/data_visual/val_visual.jsonl
+
+  Metric                           Value
+  --------------------------------------------------
+  Total samples                    537
+  Train                            501
+  Val                              36
+  Unique visual types              37
+    [single_file]                  537
+
+  Visual type                                    Count  Bar
+  -------------------------------------------------------
+  gauge                                             15  XXXXXXXXXXXXXXX
+  stackedAreaChart                                  15  XXXXXXXXXXXXXXX
+  pivotTable                                        15  XXXXXXXXXXXXXXX
+  clusteredBarChart                                 15  XXXXXXXXXXXXXXX
+  hundredPercentStackedColumnChart                  15  XXXXXXXXXXXXXXX
+  card                                              15  XXXXXXXXXXXXXXX
+  ribbonChart                                       15  XXXXXXXXXXXXXXX
+  hundredPercentStackedBarChart                     15  XXXXXXXXXXXXXXX
+  slicer                                            15  XXXXXXXXXXXXXXX
+  scatterChart                                      15  XXXXXXXXXXXXXXX
+  clusteredColumnChart                              15  XXXXXXXXXXXXXXX
+  hundredPercentStackedAreaChart                    15  XXXXXXXXXXXXXXX
+  waterfallChart                                    15  XXXXXXXXXXXXXXX
+  pieChart                                          15  XXXXXXXXXXXXXXX
+  columnChart                                       15  XXXXXXXXXXXXXXX
+  lineStackedColumnComboChart                       15  XXXXXXXXXXXXXXX
+  cardVisual                                        15  XXXXXXXXXXXXXXX
+  shapeMap                                          15  XXXXXXXXXXXXXXX
+  azureMap                                          15  XXXXXXXXXXXXXXX
+  lineChart                                         15  XXXXXXXXXXXXXXX
+  multiRowCard                                      15  XXXXXXXXXXXXXXX
+  barChart                                          15  XXXXXXXXXXXXXXX
+  keyDriversVisual                                  15  XXXXXXXXXXXXXXX
+  decompositionTreeVisual                           15  XXXXXXXXXXXXXXX
+  treemap                                           15  XXXXXXXXXXXXXXX
+  tableEx                                           15  XXXXXXXXXXXXXXX
+  listSlicer                                        15  XXXXXXXXXXXXXXX
+  filledMap                                         15  XXXXXXXXXXXXXXX
+  lineClusteredColumnComboChart                     15  XXXXXXXXXXXXXXX
+  funnel                                            15  XXXXXXXXXXXXXXX
+  [..]    ... and 7 more visual types
+
+  +-- PHASE 4/11 --------------------------------------------------
+  |  Token statistics
+  +----------------------------------------------------------
+
+  ── Token stats  [train_visual]  ────────────────────────────────────
+  Samples                                 501
+  Min tokens                              253
+  p25                                     557
+  Median (p50)                            739
+  Mean                                    845
+  p75                                   1,001
+  p95                                   1,731
+  Max tokens                            4,038
+  Total tokens                        423,403
+  max_seq_len                           2,048
+  Truncated (> max_seq_len)                20  (4.0%)
+
+  ── Token stats  [val_visual]  ────────────────────────────────────
+  Samples                                  36
+  Min tokens                              258
+  p25                                     600
+  Median (p50)                            755
+  Mean                                    826
+  p75                                   1,102
+  p95                                   1,655
+  Max tokens                            2,057
+  Total tokens                         29,746
+  max_seq_len                           2,048
+  Truncated (> max_seq_len)                 1  (2.8%)
+
+  +-- PHASE 5/11 --------------------------------------------------
+  |  Build evaluation samples
+  +----------------------------------------------------------
+  [OK]  Eval samples ready: 6
+  [..]  Eval task distribution: {'visual': 6}
+
+  +-- PHASE 6/11 --------------------------------------------------
+  |  Baseline eval — PRE-FINETUNING (epoch 0)
+  +----------------------------------------------------------
+
+  +-- PHASE 3/10 --------------------------------------------------
+  |  Load model  Qwen/Qwen2.5-Coder-7B-Instruct  (4-bit NF4 QLoRA)
+  +----------------------------------------------------------
+  [OK]  Tokenizer loaded.
+  [..]  Loading 4-bit NF4 quantised model…
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.13s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.34s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:06<00:02,  2.27s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.46s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.75s/it]
+/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:468: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
+  torch._check_is_size(blocksize)
+  [OK]  Base model loaded in 7.5s.
+
+========================================================================
+  EVAL  |  stage=baseline_pre_ft  |  epoch=0  |  2026-04-07 08:13:03
+  Samples=6
+  Tasks: {'visual': 6}
+========================================================================
+
+  [ 1/6]  eval_001  task=visual  -> target_type=json
+         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2243  keys=0.2432  fail=wrong_visual_type  (62344.4ms)
+
+  [ 2/6]  eval_002  task=visual  -> target_type=json
+         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2281  keys=0.2812  fail=wrong_visual_type  (60880.9ms)
+
+  [ 3/6]  eval_003  task=visual  -> target_type=json
+         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.4757  keys=0.2571  fail=invalid_schema  (59962.4ms)
+
+  [ 4/6]  eval_004  task=visual  -> target_type=json
+         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.4725  keys=0.225  fail=invalid_schema  (60127.1ms)
+
+  [ 5/6]  eval_005  task=visual  -> target_type=json
+         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v2/visual-container.schema.json",   "…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.236  keys=0.36  fail=wrong_visual_type  (60175.2ms)
+
+  [ 6/6]  eval_006  task=visual  -> target_type=json
+         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.4833  keys=0.3333  fail=invalid_schema  (60247.7ms)
+
+  Metric                       Value
+  ------------------------------------------
+  Exact Match Rate             0.0
+  Valid JSON Rate              1.0
+  Schema Valid Rate            0.0
+  Syntax Score Mean            0.0
+  Key Path Overlap             0.2833
+  Partial Score Mean           0.3533
+  Invalid Output Rate          1.0
+  [!!]  ⚠️  Invalid output rate 100.0% exceeds threshold 40.0% — model outputs are mostly malformed. Consider more training epochs, a higher LoRA rank, or more data.
+
+  Failure breakdown:
+    invalid_schema               3  (50.0%)
+    wrong_visual_type            3  (50.0%)
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/baseline_pre_ft/baseline_pre_ft_predictions.json
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/baseline_pre_ft/baseline_pre_ft_summary.json
+  [OK]  TXT    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/baseline_pre_ft/baseline_pre_ft_report.txt
+  [OK]  CSV    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/all_epochs_metrics.csv  (row appended)
+
+  stage=baseline_pre_ft  exact=0.0  syntax=0.0  partial=0.3533
+========================================================================
+
+  [OK]  Pre-FT baseline  syntax=0.0  partial=0.3533
+
+  +-- PHASE 7/11 --------------------------------------------------
+  |  Apply LoRA adapter
+  +----------------------------------------------------------
+
+  +-- PHASE 3/10 --------------------------------------------------
+  |  Load model  Qwen/Qwen2.5-Coder-7B-Instruct  (4-bit NF4 QLoRA)
+  +----------------------------------------------------------
+  [OK]  Tokenizer loaded.
+  [..]  Loading 4-bit NF4 quantised model…
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:05,  1.84s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:04,  2.03s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:05<00:01,  1.97s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.26s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.52s/it]
+  [OK]  Base model loaded in 6.6s.
+  [..]  LoRA auto-config  dataset_size=501  r=8  alpha=16  dropout=0.1
+trainable params: 20,185,088 || all params: 7,632,948,736 || trainable%: 0.2644
+  [OK]  LoRA applied  r=8  alpha=16  dropout=0.1.
+  [OK]  Loading training data from /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/data_visual/train_visual.jsonl ...
+  [OK]  Loading validation data from /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/data_visual/val_visual.jsonl ...
+  [OK]    train=501 rows  val=36 rows
+Tokenising train (label masking):   0%|          | 0/501 [00:00<?, ? examples/s]Tokenising train (label masking):  13%|█▎        | 63/501 [00:00<00:00, 603.68 examples/s]Tokenising train (label masking):  26%|██▌       | 128/501 [00:00<00:00, 618.55 examples/s]Tokenising train (label masking):  44%|████▍     | 221/501 [00:00<00:00, 611.11 examples/s]Tokenising train (label masking):  58%|█████▊    | 289/501 [00:00<00:00, 627.28 examples/s]Tokenising train (label masking):  70%|███████   | 353/501 [00:00<00:00, 625.74 examples/s]Tokenising train (label masking):  85%|████████▍ | 424/501 [00:00<00:00, 648.31 examples/s]Tokenising train (label masking):  98%|█████████▊| 491/501 [00:00<00:00, 653.44 examples/s]Tokenising train (label masking): 100%|██████████| 501/501 [00:00<00:00, 507.30 examples/s]
+Tokenising val (label masking):   0%|          | 0/36 [00:00<?, ? examples/s]Tokenising val (label masking): 100%|██████████| 36/36 [00:00<00:00, 483.84 examples/s]
+Truncating train dataset:   0%|          | 0/501 [00:00<?, ? examples/s]Truncating train dataset: 100%|██████████| 501/501 [00:00<00:00, 112143.57 examples/s]
+Truncating eval dataset:   0%|          | 0/36 [00:00<?, ? examples/s]Truncating eval dataset: 100%|██████████| 36/36 [00:00<00:00, 15516.90 examples/s]
+  [OK]  Starting SFTTrainer.train()  (3 epoch(s)) ...
+  0%|          | 0/186 [00:00<?, ?it/s]/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py:1263: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+  1%|          | 1/186 [00:07<23:05,  7.49s/it]  1%|          | 2/186 [00:13<20:17,  6.62s/it]  2%|▏         | 3/186 [00:18<17:46,  5.83s/it]  2%|▏         | 4/186 [00:22<16:12,  5.35s/it]  3%|▎         | 5/186 [00:27<15:04,  5.00s/it]  3%|▎         | 6/186 [00:31<13:58,  4.66s/it]  4%|▍         | 7/186 [00:35<12:53,  4.32s/it]  4%|▍         | 8/186 [00:38<12:05,  4.08s/it]  5%|▍         | 9/186 [00:41<11:17,  3.83s/it]  5%|▌         | 10/186 [00:44<10:29,  3.58s/it]                                                  5%|▌         | 10/186 [00:45<10:29,  3.58s/it]  6%|▌         | 11/186 [00:48<10:05,  3.46s/it]  6%|▋         | 12/186 [00:50<09:25,  3.25s/it]  7%|▋         | 13/186 [00:53<08:50,  3.07s/it]  8%|▊         | 14/186 [00:55<08:11,  2.86s/it]  8%|▊         | 15/186 [00:57<07:25,  2.61s/it]  9%|▊         | 16/186 [01:05<11:22,  4.02s/it]  9%|▉         | 17/186 [01:10<12:16,  4.36s/it] 10%|▉         | 18/186 [01:15<12:34,  4.49s/it] 10%|█         | 19/186 [01:19<12:30,  4.49s/it] 11%|█         | 20/186 [01:23<12:11,  4.41s/it]                                                 11%|█         | 20/186 [01:24<12:11,  4.41s/it] 11%|█▏        | 21/186 [01:27<11:53,  4.32s/it] 12%|█▏        | 22/186 [01:31<11:15,  4.12s/it] 12%|█▏        | 23/186 [01:35<10:43,  3.95s/it] 13%|█▎        | 24/186 [01:38<10:07,  3.75s/it] 13%|█▎        | 25/186 [01:41<09:30,  3.54s/it] 14%|█▍        | 26/186 [01:44<08:54,  3.34s/it] 15%|█▍        | 27/186 [01:47<08:22,  3.16s/it] 15%|█▌        | 28/186 [01:49<07:53,  2.99s/it] 16%|█▌        | 29/186 [01:51<07:17,  2.79s/it] 16%|█▌        | 30/186 [01:53<06:36,  2.54s/it]                                                 16%|█▌        | 30/186 [01:54<06:36,  2.54s/it] 17%|█▋        | 31/186 [02:02<10:50,  4.20s/it] 17%|█▋        | 32/186 [02:07<11:47,  4.60s/it] 18%|█▊        | 33/186 [02:12<11:55,  4.68s/it] 18%|█▊        | 34/186 [02:16<11:37,  4.59s/it] 19%|█▉        | 35/186 [02:21<11:17,  4.49s/it] 19%|█▉        | 36/186 [02:25<10:49,  4.33s/it] 20%|█▉        | 37/186 [02:28<10:16,  4.14s/it] 20%|██        | 38/186 [02:32<09:45,  3.96s/it] 21%|██        | 39/186 [02:35<09:12,  3.76s/it] 22%|██▏       | 40/186 [02:38<08:39,  3.56s/it]                                                 22%|██▏       | 40/186 [02:38<08:39,  3.56s/it] 22%|██▏       | 41/186 [02:41<08:18,  3.44s/it] 23%|██▎       | 42/186 [02:44<07:43,  3.22s/it] 23%|██▎       | 43/186 [02:47<07:12,  3.02s/it] 24%|██▎       | 44/186 [02:49<06:37,  2.80s/it] 24%|██▍       | 45/186 [02:51<06:03,  2.58s/it] 25%|██▍       | 46/186 [02:58<09:31,  4.08s/it] 25%|██▌       | 47/186 [03:04<10:37,  4.59s/it] 26%|██▌       | 48/186 [03:09<10:38,  4.62s/it] 26%|██▋       | 49/186 [03:13<10:13,  4.48s/it] 27%|██▋       | 50/186 [03:17<09:41,  4.27s/it]                                                 27%|██▋       | 50/186 [03:17<09:41,  4.27s/it] 27%|██▋       | 51/186 [03:21<09:21,  4.16s/it] 28%|██▊       | 52/186 [03:24<08:46,  3.93s/it] 28%|██▊       | 53/186 [03:27<08:13,  3.71s/it] 29%|██▉       | 54/186 [03:30<07:44,  3.52s/it] 30%|██▉       | 55/186 [03:33<07:17,  3.34s/it] 30%|███       | 56/186 [03:36<06:54,  3.19s/it] 31%|███       | 57/186 [03:39<06:32,  3.05s/it] 31%|███       | 58/186 [03:41<06:10,  2.89s/it] 32%|███▏      | 59/186 [03:44<05:42,  2.70s/it] 32%|███▏      | 60/186 [03:46<05:10,  2.47s/it]                                                 32%|███▏      | 60/186 [03:46<05:10,  2.47s/it] 33%|███▎      | 61/186 [03:51<07:04,  3.40s/it] 33%|███▎      | 62/186 [03:54<06:53,  3.34s/it]/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:468: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
+  torch._check_is_size(blocksize)
+{'loss': 11.1111, 'grad_norm': 1.7195171117782593, 'learning_rate': 1.1612903225806453e-05, 'num_tokens': 85345.0, 'epoch': 0.16}
+{'loss': 11.9962, 'grad_norm': 1.6892094612121582, 'learning_rate': 2.4516129032258067e-05, 'num_tokens': 155337.0, 'epoch': 0.32}
+{'loss': 11.782, 'grad_norm': 3.278761625289917, 'learning_rate': 3.741935483870968e-05, 'num_tokens': 205405.0, 'epoch': 0.48}
+{'loss': 9.2723, 'grad_norm': 2.2850050926208496, 'learning_rate': 5.0322580645161296e-05, 'num_tokens': 286994.0, 'epoch': 0.64}
+{'loss': 8.4785, 'grad_norm': 2.248927593231201, 'learning_rate': 6.32258064516129e-05, 'num_tokens': 355584.0, 'epoch': 0.8}
+{'loss': 6.9195, 'grad_norm': 2.6420583724975586, 'learning_rate': 7.612903225806452e-05, 'num_tokens': 401919.0, 'epoch': 0.96}
+
+------------------------------------------------------------------------
+  EPOCH 1 DONE  train_loss=6.9195  eval_loss=-1.0
+------------------------------------------------------------------------
+
+========================================================================
+  EVAL  |  stage=main_epoch_1  |  epoch=1  |  2026-04-07 08:24:16
+  Samples=6
+  Tasks: {'visual': 6}
+========================================================================
+
+  [ 1/6]  eval_001  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (93113.5ms)
+
+  [ 2/6]  eval_002  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92847.3ms)
+
+  [ 3/6]  eval_003  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91959.0ms)
+
+  [ 4/6]  eval_004  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91781.1ms)
+
+  [ 5/6]  eval_005  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92107.1ms)
+
+  [ 6/6]  eval_006  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91873.6ms)
+
+  Metric                       Value
+  ------------------------------------------
+  Exact Match Rate             0.0
+  Valid JSON Rate              0.0
+  Schema Valid Rate            0.0
+  Syntax Score Mean            0.0
+  Key Path Overlap             0.0
+  Partial Score Mean           0.0
+  Invalid Output Rate          1.0
+  [!!]  ⚠️  Invalid output rate 100.0% exceeds threshold 40.0% — model outputs are mostly malformed. Consider more training epochs, a higher LoRA rank, or more data.
+
+  Failure breakdown:
+    invalid_json                 6  (100.0%)
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/main_epoch_1/main_epoch_1_predictions.json
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/main_epoch_1/main_epoch_1_summary.json
+  [OK]  TXT    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/main_epoch_1/main_epoch_1_report.txt
+  [OK]  CSV    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/all_epochs_metrics.csv  (row appended)
+
+  stage=main_epoch_1  exact=0.0  syntax=0.0  partial=0.0
+========================================================================
+
+  [OK]  [EarlyStopping/partial] New best partial_score=0.0000. Counter reset.
+
+  0%|          | 0/5 [00:00<?, ?it/s][A
+ 40%|████      | 2/5 [00:01<00:02,  1.06it/s][A
+ 60%|██████    | 3/5 [00:03<00:02,  1.13s/it][A
+ 80%|████████  | 4/5 [00:04<00:01,  1.15s/it][A
+100%|██████████| 5/5 [00:05<00:00,  1.06s/it][A                                                
+                                             [A 33%|███▎      | 62/186 [14:22<06:53,  3.34s/it]
+100%|██████████| 5/5 [00:05<00:00,  1.06s/it][A
+                                             [A/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/peft/utils/save_and_load.py:260: UserWarning: Setting `save_embedding_layers` to `True` as the embedding layer has been resized during finetuning.
+  warnings.warn(
+/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py:1263: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+ 34%|███▍      | 63/186 [15:00<6:53:53, 201.90s/it] 34%|███▍      | 64/186 [15:05<4:50:55, 143.08s/it] 35%|███▍      | 65/186 [15:10<3:24:56, 101.62s/it] 35%|███▌      | 66/186 [15:15<2:24:51, 72.43s/it]  36%|███▌      | 67/186 [15:19<1:42:52, 51.87s/it] 37%|███▋      | 68/186 [15:22<1:13:32, 37.39s/it] 37%|███▋      | 69/186 [15:26<53:05, 27.23s/it]   38%|███▊      | 70/186 [15:29<38:46, 20.06s/it]                                                 38%|███▊      | 70/186 [15:29<38:46, 20.06s/it] 38%|███▊      | 71/186 [15:32<28:53, 15.07s/it] 39%|███▊      | 72/186 [15:35<21:42, 11.43s/it] 39%|███▉      | 73/186 [15:38<16:38,  8.84s/it] 40%|███▉      | 74/186 [15:41<13:02,  6.99s/it] 40%|████      | 75/186 [15:43<10:23,  5.62s/it] 41%|████      | 76/186 [15:45<08:21,  4.56s/it] 41%|████▏     | 77/186 [15:47<06:51,  3.78s/it] 42%|████▏     | 78/186 [15:54<08:38,  4.80s/it] 42%|████▏     | 79/186 [15:59<08:40,  4.87s/it] 43%|████▎     | 80/186 [16:04<08:25,  4.77s/it]                                                 43%|████▎     | 80/186 [16:04<08:25,  4.77s/it] 44%|████▎     | 81/186 [16:09<08:20,  4.76s/it] 44%|████▍     | 82/186 [16:13<07:53,  4.55s/it] 45%|████▍     | 83/186 [16:17<07:23,  4.31s/it] 45%|████▌     | 84/186 [16:20<06:56,  4.09s/it] 46%|████▌     | 85/186 [16:24<06:30,  3.87s/it] 46%|████▌     | 86/186 [16:27<06:04,  3.65s/it] 47%|████▋     | 87/186 [16:30<05:41,  3.45s/it] 47%|████▋     | 88/186 [16:32<05:20,  3.27s/it] 48%|████▊     | 89/186 [16:35<05:01,  3.11s/it] 48%|████▊     | 90/186 [16:38<04:43,  2.95s/it]                                                 48%|████▊     | 90/186 [16:38<04:43,  2.95s/it] 49%|████▉     | 91/186 [16:40<04:31,  2.85s/it] 49%|████▉     | 92/186 [16:42<04:03,  2.59s/it] 50%|█████     | 93/186 [16:49<06:03,  3.91s/it] 51%|█████     | 94/186 [16:55<06:33,  4.28s/it] 51%|█████     | 95/186 [16:59<06:41,  4.41s/it] 52%|█████▏    | 96/186 [17:04<06:36,  4.40s/it] 52%|█████▏    | 97/186 [17:08<06:23,  4.31s/it] 53%|█████▎    | 98/186 [17:12<06:09,  4.20s/it] 53%|█████▎    | 99/186 [17:15<05:53,  4.06s/it] 54%|█████▍    | 100/186 [17:19<05:37,  3.92s/it]                                                  54%|█████▍    | 100/186 [17:19<05:37,  3.92s/it] 54%|█████▍    | 101/186 [17:23<05:32,  3.91s/it] 55%|█████▍    | 102/186 [17:26<05:11,  3.71s/it] 55%|█████▌    | 103/186 [17:29<04:48,  3.48s/it] 56%|█████▌    | 104/186 [17:32<04:29,  3.28s/it] 56%|█████▋    | 105/186 [17:35<04:11,  3.11s/it] 57%|█████▋    | 106/186 [17:37<03:52,  2.91s/it] 58%|█████▊    | 107/186 [17:39<03:28,  2.64s/it] 58%|█████▊    | 108/186 [17:47<05:24,  4.16s/it] 59%|█████▊    | 109/186 [17:53<06:11,  4.82s/it] 59%|█████▉    | 110/186 [17:58<06:17,  4.96s/it]                                                  59%|█████▉    | 110/186 [17:59<06:17,  4.96s/it] 60%|█████▉    | 111/186 [18:04<06:16,  5.02s/it] 60%|██████    | 112/186 [18:08<05:59,  4.86s/it] 61%|██████    | 113/186 [18:12<05:34,  4.59s/it] 61%|██████▏   | 114/186 [18:16<05:09,  4.30s/it] 62%|██████▏   | 115/186 [18:19<04:44,  4.01s/it] 62%|██████▏   | 116/186 [18:22<04:23,  3.76s/it] 63%|██████▎   | 117/186 [18:25<04:03,  3.53s/it] 63%|██████▎   | 118/186 [18:28<03:46,  3.34s/it] 64%|██████▍   | 119/186 [18:31<03:32,  3.18s/it] 65%|██████▍   | 120/186 [18:33<03:18,  3.01s/it]                                                  65%|██████▍   | 120/186 [18:34<03:18,  3.01s/it] 65%|██████▌   | 121/186 [18:36<03:09,  2.92s/it] 66%|██████▌   | 122/186 [18:38<02:49,  2.65s/it] 66%|██████▌   | 123/186 [18:43<03:36,  3.44s/it] 67%|██████▋   | 124/186 [18:46<03:24,  3.30s/it]/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:468: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
+  torch._check_is_size(blocksize)
+{'eval_loss': 1.5474083423614502, 'eval_runtime': 7.099, 'eval_samples_per_second': 5.071, 'eval_steps_per_second': 0.704, 'eval_num_tokens': 418174.0, 'epoch': 0.99}
+  [OK]  [EarlyStopping/loss] New best eval_loss=1.547408 (delta>0.001). Counter reset.
+{'loss': 6.0801, 'grad_norm': 1.3192342519760132, 'learning_rate': 7.937260095190137e-05, 'num_tokens': 489358.0, 'epoch': 1.13}
+{'loss': 5.9248, 'grad_norm': 1.8093531131744385, 'learning_rate': 7.6346911645665e-05, 'num_tokens': 550818.0, 'epoch': 1.29}
+{'loss': 5.525, 'grad_norm': 1.883345127105713, 'learning_rate': 7.100062605933835e-05, 'num_tokens': 609096.0, 'epoch': 1.45}
+{'loss': 5.3793, 'grad_norm': 1.3284220695495605, 'learning_rate': 6.36750818714807e-05, 'num_tokens': 683890.0, 'epoch': 1.61}
+{'loss': 5.4698, 'grad_norm': 1.8009990453720093, 'learning_rate': 5.483798403479072e-05, 'num_tokens': 753865.0, 'epoch': 1.76}
+{'loss': 5.1457, 'grad_norm': 1.3320852518081665, 'learning_rate': 4.505354379688518e-05, 'num_tokens': 814622.0, 'epoch': 1.92}
+
+------------------------------------------------------------------------
+  EPOCH 2 DONE  train_loss=5.1457  eval_loss=1.547408
+------------------------------------------------------------------------
+
+========================================================================
+  EVAL  |  stage=main_epoch_2  |  epoch=2  |  2026-04-07 08:38:11
+  Samples=6
+  Tasks: {'visual': 6}
+========================================================================
+
+  [ 1/6]  eval_001  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92081.0ms)
+
+  [ 2/6]  eval_002  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92959.8ms)
+
+  [ 3/6]  eval_003  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91701.1ms)
+
+  [ 4/6]  eval_004  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91991.4ms)
+
+  [ 5/6]  eval_005  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91709.0ms)
+
+  [ 6/6]  eval_006  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92005.6ms)
+
+  Metric                       Value
+  ------------------------------------------
+  Exact Match Rate             0.0
+  Valid JSON Rate              0.0
+  Schema Valid Rate            0.0
+  Syntax Score Mean            0.0
+  Key Path Overlap             0.0
+  Partial Score Mean           0.0
+  Invalid Output Rate          1.0
+  [!!]  ⚠️  Invalid output rate 100.0% exceeds threshold 40.0% — model outputs are mostly malformed. Consider more training epochs, a higher LoRA rank, or more data.
+
+  Failure breakdown:
+    invalid_json                 6  (100.0%)
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/main_epoch_2/main_epoch_2_predictions.json
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/main_epoch_2/main_epoch_2_summary.json
+  [OK]  TXT    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/main_epoch_2/main_epoch_2_report.txt
+  [OK]  CSV    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/all_epochs_metrics.csv  (row appended)
+
+  stage=main_epoch_2  exact=0.0  syntax=0.0  partial=0.0
+========================================================================
+
+  [!!]  [EarlyStopping/partial] No improvement for 1/2 epochs  (best=0.0000  current=0.0000).
+
+  0%|          | 0/5 [00:00<?, ?it/s][A
+ 40%|████      | 2/5 [00:01<00:02,  1.31it/s][A
+ 60%|██████    | 3/5 [00:03<00:02,  1.11s/it][A
+ 80%|████████  | 4/5 [00:04<00:01,  1.28s/it][A
+100%|██████████| 5/5 [00:05<00:00,  1.14s/it][A
+                                             [A                                                 
+100%|██████████| 5/5 [00:06<00:00,  1.14s/it][A 67%|██████▋   | 124/186 [28:13<03:24,  3.30s/it]
+                                             [A/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/peft/utils/save_and_load.py:260: UserWarning: Setting `save_embedding_layers` to `True` as the embedding layer has been resized during finetuning.
+  warnings.warn(
+/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py:1263: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+ 67%|██████▋   | 125/186 [28:50<3:06:26, 183.39s/it] 68%|██████▊   | 126/186 [28:56<2:10:08, 130.14s/it] 68%|██████▊   | 127/186 [29:01<1:31:03, 92.60s/it]  69%|██████▉   | 128/186 [29:05<1:03:57, 66.17s/it] 69%|██████▉   | 129/186 [29:10<45:11, 47.56s/it]   70%|██████▉   | 130/186 [29:13<32:08, 34.44s/it]                                                  70%|██████▉   | 130/186 [29:14<32:08, 34.44s/it] 70%|███████   | 131/186 [29:17<23:10, 25.28s/it] 71%|███████   | 132/186 [29:21<16:52, 18.75s/it] 72%|███████▏  | 133/186 [29:24<12:26, 14.09s/it] 72%|███████▏  | 134/186 [29:27<09:18, 10.73s/it] 73%|███████▎  | 135/186 [29:30<07:05,  8.35s/it] 73%|███████▎  | 136/186 [29:32<05:32,  6.66s/it] 74%|███████▎  | 137/186 [29:35<04:26,  5.44s/it] 74%|███████▍  | 138/186 [29:37<03:33,  4.45s/it] 75%|███████▍  | 139/186 [29:39<02:53,  3.70s/it] 75%|███████▌  | 140/186 [29:46<03:38,  4.75s/it]                                                  75%|███████▌  | 140/186 [29:47<03:38,  4.75s/it] 76%|███████▌  | 141/186 [29:52<03:43,  4.96s/it] 76%|███████▋  | 142/186 [29:56<03:34,  4.87s/it] 77%|███████▋  | 143/186 [30:01<03:23,  4.72s/it] 77%|███████▋  | 144/186 [30:05<03:10,  4.54s/it] 78%|███████▊  | 145/186 [30:09<02:57,  4.33s/it] 78%|███████▊  | 146/186 [30:12<02:45,  4.13s/it] 79%|███████▉  | 147/186 [30:16<02:33,  3.94s/it] 80%|███████▉  | 148/186 [30:19<02:22,  3.76s/it] 80%|████████  | 149/186 [30:22<02:12,  3.57s/it] 81%|████████  | 150/186 [30:25<02:01,  3.39s/it]                                                  81%|████████  | 150/186 [30:26<02:01,  3.39s/it] 81%|████████  | 151/186 [30:28<01:55,  3.31s/it] 82%|████████▏ | 152/186 [30:31<01:45,  3.11s/it] 82%|████████▏ | 153/186 [30:33<01:34,  2.88s/it] 83%|████████▎ | 154/186 [30:36<01:24,  2.63s/it] 83%|████████▎ | 155/186 [30:43<02:08,  4.16s/it] 84%|████████▍ | 156/186 [30:49<02:18,  4.61s/it] 84%|████████▍ | 157/186 [30:54<02:14,  4.64s/it] 85%|████████▍ | 158/186 [30:58<02:07,  4.55s/it] 85%|████████▌ | 159/186 [31:02<01:56,  4.33s/it] 86%|████████▌ | 160/186 [31:05<01:46,  4.11s/it]                                                  86%|████████▌ | 160/186 [31:06<01:46,  4.11s/it] 87%|████████▋ | 161/186 [31:09<01:40,  4.01s/it] 87%|████████▋ | 162/186 [31:12<01:30,  3.75s/it] 88%|████████▊ | 163/186 [31:15<01:21,  3.54s/it] 88%|████████▊ | 164/186 [31:18<01:13,  3.35s/it] 89%|████████▊ | 165/186 [31:21<01:07,  3.19s/it] 89%|████████▉ | 166/186 [31:24<01:00,  3.02s/it] 90%|████████▉ | 167/186 [31:26<00:54,  2.86s/it] 90%|█████████ | 168/186 [31:28<00:47,  2.65s/it] 91%|█████████ | 169/186 [31:30<00:41,  2.45s/it] 91%|█████████▏| 170/186 [31:38<01:04,  4.01s/it]                                                  91%|█████████▏| 170/186 [31:39<01:04,  4.01s/it] 92%|█████████▏| 171/186 [31:44<01:11,  4.74s/it] 92%|█████████▏| 172/186 [31:49<01:07,  4.80s/it] 93%|█████████▎| 173/186 [31:54<01:01,  4.72s/it] 94%|█████████▎| 174/186 [31:58<00:54,  4.57s/it] 94%|█████████▍| 175/186 [32:02<00:48,  4.37s/it] 95%|█████████▍| 176/186 [32:06<00:41,  4.15s/it] 95%|█████████▌| 177/186 [32:09<00:35,  3.92s/it] 96%|█████████▌| 178/186 [32:12<00:29,  3.72s/it] 96%|█████████▌| 179/186 [32:15<00:24,  3.53s/it] 97%|█████████▋| 180/186 [32:18<00:19,  3.33s/it]                                                  97%|█████████▋| 180/186 [32:19<00:19,  3.33s/it] 97%|█████████▋| 181/186 [32:21<00:16,  3.30s/it] 98%|█████████▊| 182/186 [32:24<00:12,  3.11s/it] 98%|█████████▊| 183/186 [32:27<00:08,  2.91s/it] 99%|█████████▉| 184/186 [32:29<00:05,  2.64s/it] 99%|█████████▉| 185/186 [32:34<00:03,  3.31s/it]100%|██████████| 186/186 [32:37<00:00,  3.34s/it]/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:468: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
+  torch._check_is_size(blocksize)
+{'eval_loss': 1.3062821626663208, 'eval_runtime': 7.257, 'eval_samples_per_second': 4.961, 'eval_steps_per_second': 0.689, 'eval_num_tokens': 836431.0, 'epoch': 1.99}
+  [OK]  [EarlyStopping/loss] New best eval_loss=1.306282 (delta>0.001). Counter reset.
+{'loss': 5.3765, 'grad_norm': 1.0944827795028687, 'learning_rate': 3.494645620311484e-05, 'num_tokens': 896740.0, 'epoch': 2.1}
+{'loss': 5.1745, 'grad_norm': 0.8749430775642395, 'learning_rate': 2.5162015965209295e-05, 'num_tokens': 953716.0, 'epoch': 2.25}
+{'loss': 5.0431, 'grad_norm': 1.123106598854065, 'learning_rate': 1.6324918128519306e-05, 'num_tokens': 1024244.0, 'epoch': 2.41}
+{'loss': 5.2519, 'grad_norm': 0.9647864103317261, 'learning_rate': 8.99937394066165e-06, 'num_tokens': 1096335.0, 'epoch': 2.57}
+{'loss': 5.2699, 'grad_norm': 0.9297981262207031, 'learning_rate': 3.6530883543350038e-06, 'num_tokens': 1151836.0, 'epoch': 2.73}
+{'loss': 4.9686, 'grad_norm': 1.2621279954910278, 'learning_rate': 6.273990480986314e-07, 'num_tokens': 1223418.0, 'epoch': 2.89}
+
+------------------------------------------------------------------------
+  EPOCH 3 DONE  train_loss=4.9686  eval_loss=1.306282
+------------------------------------------------------------------------
+
+========================================================================
+  EVAL  |  stage=main_epoch_3  |  epoch=3  |  2026-04-07 08:52:00
+  Samples=6
+  Tasks: {'visual': 6}
+========================================================================
+
+  [ 1/6]  eval_001  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (88442.7ms)
+
+  [ 2/6]  eval_002  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (87671.3ms)
+
+  [ 3/6]  eval_003  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (87503.5ms)
+
+  [ 4/6]  eval_004  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (87281.3ms)
+
+  [ 5/6]  eval_005  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (87306.4ms)
+
+  [ 6/6]  eval_006  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (87181.4ms)
+
+  Metric                       Value
+  ------------------------------------------
+  Exact Match Rate             0.0
+  Valid JSON Rate              0.0
+  Schema Valid Rate            0.0
+  Syntax Score Mean            0.0
+  Key Path Overlap             0.0
+  Partial Score Mean           0.0
+  Invalid Output Rate          1.0
+  [!!]  ⚠️  Invalid output rate 100.0% exceeds threshold 40.0% — model outputs are mostly malformed. Consider more training epochs, a higher LoRA rank, or more data.
+
+  Failure breakdown:
+    invalid_json                 6  (100.0%)
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/main_epoch_3/main_epoch_3_predictions.json
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/main_epoch_3/main_epoch_3_summary.json
+  [OK]  TXT    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/main_epoch_3/main_epoch_3_report.txt
+  [OK]  CSV    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/all_epochs_metrics.csv  (row appended)
+
+  stage=main_epoch_3  exact=0.0  syntax=0.0  partial=0.0
+========================================================================
+
+  [!!]  [EarlyStopping/partial] No improvement for 2/2 epochs  (best=0.0000  current=0.0000).
+  [!!]  [EarlyStopping/partial] Patience exhausted — partial_score stuck at 0.0000 for 2 epochs.  Stopping training.
+
+  0%|          | 0/5 [00:00<?, ?it/s][A
+ 40%|████      | 2/5 [00:01<00:02,  1.34it/s][A
+ 60%|██████    | 3/5 [00:02<00:01,  1.10it/s][A
+ 80%|████████  | 4/5 [00:03<00:00,  1.05it/s][A
+100%|██████████| 5/5 [00:04<00:00,  1.05it/s][A
+                                             [A                                                 
+100%|██████████| 5/5 [00:05<00:00,  1.05it/s][A100%|██████████| 186/186 [41:34<00:00,  3.34s/it]
+                                             [A/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/peft/utils/save_and_load.py:260: UserWarning: Setting `save_embedding_layers` to `True` as the embedding layer has been resized during finetuning.
+  warnings.warn(
+                                                 100%|██████████| 186/186 [42:05<00:00,  3.34s/it]100%|██████████| 186/186 [42:05<00:00, 13.58s/it]
+/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:468: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
+  torch._check_is_size(blocksize)
+/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/peft/utils/save_and_load.py:260: UserWarning: Setting `save_embedding_layers` to `True` as the embedding layer has been resized during finetuning.
+  warnings.warn(
+/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/peft/tuners/lora/bnb.py:355: UserWarning: Merge lora module to 4-bit linear may get different generations due to rounding errors.
+  warnings.warn(
+/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:213: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
+  torch._check_is_size(blocksize)
+{'eval_loss': 1.272861361503601, 'eval_runtime': 6.3965, 'eval_samples_per_second': 5.628, 'eval_steps_per_second': 0.782, 'eval_num_tokens': 1253635.0, 'epoch': 2.99}
+  [OK]  [EarlyStopping/loss] New best eval_loss=1.272861 (delta>0.001). Counter reset.
+{'train_runtime': 2525.6599, 'train_samples_per_second': 0.595, 'train_steps_per_second': 0.074, 'train_loss': 6.841259966614426, 'num_tokens': 1253635.0, 'epoch': 2.99}
+  [OK]  Training complete.
+  [OK]  Best partial-score checkpoint : None
+  [OK]  Best loss-based checkpoint    : /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/checkpoints/run_20260407_081105/checkpoint-186
+
+  +-- PHASE 9/11 --------------------------------------------------
+  |  Final eval — POST-FINETUNING
+  +----------------------------------------------------------
+
+========================================================================
+  EVAL  |  stage=final_post_ft  |  epoch=3  |  2026-04-07 09:01:34
+  Samples=6
+  Tasks: {'visual': 6}
+========================================================================
+
+  [ 1/6]  eval_001  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86348.4ms)
+
+  [ 2/6]  eval_002  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86095.0ms)
+
+  [ 3/6]  eval_003  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86342.6ms)
+
+  [ 4/6]  eval_004  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86656.8ms)
+
+  [ 5/6]  eval_005  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86918.9ms)
+
+  [ 6/6]  eval_006  task=visual  -> target_type=json
+         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
+         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86636.5ms)
+
+  Metric                       Value
+  ------------------------------------------
+  Exact Match Rate             0.0
+  Valid JSON Rate              0.0
+  Schema Valid Rate            0.0
+  Syntax Score Mean            0.0
+  Key Path Overlap             0.0
+  Partial Score Mean           0.0
+  Invalid Output Rate          1.0
+  [!!]  ⚠️  Invalid output rate 100.0% exceeds threshold 40.0% — model outputs are mostly malformed. Consider more training epochs, a higher LoRA rank, or more data.
+
+  Failure breakdown:
+    invalid_json                 6  (100.0%)
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/final_post_ft/final_post_ft_predictions.json
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/final_post_ft/final_post_ft_summary.json
+  [OK]  TXT    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/final_post_ft/final_post_ft_report.txt
+  [OK]  CSV    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/all_epochs_metrics.csv  (row appended)
+
+  stage=final_post_ft  exact=0.0  syntax=0.0  partial=0.0
+========================================================================
+
+
+  +-- PHASE 10/11 --------------------------------------------------
+  |  Pre/Post finetuning comparison
+  +----------------------------------------------------------
+  [OK]  Pre/post comparison -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/pre_post_comparison.json
+
+========================================================================
+  PRE / POST FINETUNING COMPARISON
+========================================================================
+  Metric                                Pre      Post     Delta    %Change
+  ------------------------------------------------------------------------
+  exact_match_rate                   0.0000    0.0000   +0.0000      +0.0%  →
+  valid_json_rate                    1.0000    0.0000   -1.0000    -100.0%  ↓
+  schema_valid_rate                  0.0000    0.0000   +0.0000      +0.0%  →
+  syntax_score_mean                  0.0000    0.0000   +0.0000      +0.0%  →
+  key_path_overlap_mean              0.2833    0.0000   -0.2833    -100.0%  ↓
+  partial_score_mean                 0.3533    0.0000   -0.3533    -100.0%  ↓
+  invalid_output_rate                1.0000    1.0000   +0.0000      +0.0%  →
+========================================================================
+
+
+  ⚠️  REGRESSION DETECTED: finetuned < baseline on partial_score_mean
+  Likely causes (check in order):
+    2. Eval sample count too small (<15) — scores are unreliable noise.
+       Fix: increase --eval_samples to at least 20.
+    3. Learning rate too high — try lr=2e-5 instead of 1e-4.
+    4. Too few training samples — model memorised rather than generalised.
+       Fix: add more diverse visual PBIP examples to the dataset.
+
+  [OK]  Save root: /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/data_visual/visuals_model_20260407_091018
+  [OK]  Adapter-only weights -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/data_visual/visuals_model_20260407_091018/adapter
+  [OK]  Merged model -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/data_visual/visuals_model_20260407_091018/merged
+  [OK]  Metadata -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/data_visual/visuals_model_20260407_091018/merged_model_metadata.json
+
+  +-- PHASE 11/11 --------------------------------------------------
+  |  Claude Benchmark  (claude-sonnet-4-6)
+  +----------------------------------------------------------
+
+========================================================================
+  CLAUDE BENCHMARK  |  model=claude-sonnet-4-6  |  n_samples=6
+========================================================================
+
+  [ 1/6]  eval_001  -> task: visual
+         preview  : {   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.…
+         exact=MISS  schema=OK  partial=0.7743  (2667.0ms)
+
+  [ 2/6]  eval_002  -> task: visual
+         preview  : {   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.…
+         exact=MISS  schema=OK  partial=0.7781  (2421.0ms)
+
+  [ 3/6]  eval_003  -> task: visual
+         preview  : {   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.…
+         exact=MISS  schema=OK  partial=0.777  (2650.5ms)
+
+  [ 4/6]  eval_004  -> task: visual
+         preview  : {   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.…
+         exact=MISS  schema=OK  partial=0.7725  (2633.7ms)
+
+  [ 5/6]  eval_005  -> task: visual
+         preview  : {   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.…
+         exact=MISS  schema=OK  partial=0.825  (2505.7ms)
+
+  [ 6/6]  eval_006  -> task: visual
+         preview  : {   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.…
+         exact=MISS  schema=OK  partial=0.7833  (2747.0ms)
+
+  Metric                       Claude (claude-sonnet-4-6)
+  ------------------------------------------
+  Exact Match Rate             0.0
+  Valid JSON Rate              1.0
+  Schema Valid Rate            1.0
+  Visual Type Accuracy         1.0
+  Position Accuracy            0.0417
+  Key Path Overlap             0.288
+  Partial Score Mean           0.785
+  Syntax Score Mean            1.0
+  Est. Cost (USD)              0.028989
+
+  Metric                       Fine-tuned     Claude (claude-sonnet-4-6)
+  ----------------------------------------------------------------
+  Schema Valid Rate            0.0            1.0 ← Claude
+  Visual Type Acc.             0.0            1.0 ← Claude
+  Partial Score                0.0            0.785 ← Claude
+  Exact Match Rate             0.0            0.0 ← FT
+  Position Accuracy            0.0            0.0417 ← Claude
+  Key Overlap                  0.0            0.288 ← Claude
+  Syntax Score                 0.0            1.0 ← Claude
+
+========================================================================
+
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/claude_benchmark/claude_benchmark_predictions.json
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/claude_benchmark/claude_benchmark_summary.json
+  [OK]  JSON   -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/claude_benchmark/claude_benchmark_comparison.json
+  [..]  [Claude Benchmark] Done. schema=1.0  partial=0.785  est_cost=$0.028989
+  [!!]  MLflow artefact log failed for /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/all_epochs_metrics.csv: azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
+  [!!]  MLflow artefact log failed for /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/system_info.json: azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
+  [!!]  MLflow artefact log failed for /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/pre_post_comparison.json: azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
+  [!!]  MLflow artefact log failed for /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/baseline_pre_ft/baseline_pre_ft_summary.json: azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
+  [!!]  MLflow artefact log failed for /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/final_post_ft/final_post_ft_summary.json: azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
+  [!!]  MLflow artefact log failed for /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/data_visual/visuals_model_20260407_091018/merged_model_metadata.json: azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
+  [!!]  MLflow artefact log failed for /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/claude_benchmark/claude_benchmark_summary.json: azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
+  [!!]  MLflow artefact log failed for /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/claude_benchmark/claude_benchmark_comparison.json: azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
+  [!!]  MLflow artefact log failed for /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/mlflow_store/run_20260407_081105/mlflow_run_info.json: azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
+  [OK]  Cost report -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105/cost_report.json
+
+  ── Cost summary ─────────────────────────────────────────────────────
+  VM SKU                              Standard_NC24ads_A100_v4
+  Rate (USD/hr)                       $3.67
+  Elapsed                             3659.0s  (1.0164h)
+  Estimated cost (USD)                $3.7302
+  [!!]  MLflow cost log failed (non-fatal): azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
+🏃 View run pbip-visual-qlora-v13-20260407-075828 at: https://eastus2.api.azureml.ms/mlflow/v2.0/subscriptions/0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2/resourceGroups/pbi-ft-rg/providers/Microsoft.MachineLearningServices/workspaces/pbi-ft-workspace/#/experiments/95293240-c4a2-4288-9b53-2980555d20c9/runs/serene_dream_cqrb268d65
+🧪 View experiment at: https://eastus2.api.azureml.ms/mlflow/v2.0/subscriptions/0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2/resourceGroups/pbi-ft-rg/providers/Microsoft.MachineLearningServices/workspaces/pbi-ft-workspace/#/experiments/95293240-c4a2-4288-9b53-2980555d20c9
+  [OK]  MLflow run ended.
+
+  +-- PHASE 11/11 --------------------------------------------------
+  |  Final results summary
+  +----------------------------------------------------------
+
+========================================================================
+FINAL REPORT  --  PowerNative PBIP Visual QLoRA v13  (2026-04-07 09:12:12)
+========================================================================
+
+  Stage                 Tasks       Exact    Syntax    Schema    Keys      Partial   TrLoss     ValLoss  
+  ---------------------------------------------------------------------------------------------------------
+  baseline_pre_ft       visual      0.0      0.0       0.0       0.2833    0.3533    ---        ---      
+  main_epoch_1          visual      0.0      0.0       0.0       0.0       0.0       6.9195     -1.0     
+  main_epoch_2          visual      0.0      0.0       0.0       0.0       0.0       5.1457     1.547408 
+  main_epoch_3          visual      0.0      0.0       0.0       0.0       0.0       4.9686     1.306282 
+  final_post_ft         visual      0.0      0.0       0.0       0.0       0.0       ---        ---      
+
+  Best stage by partial score:
+  Stage                          baseline_pre_ft
+  Task type                      visual
+  Epoch                          0
+  Partial score                  0.3533
+  Syntax score                   0.0
+  Schema valid                   0.0
+  Key overlap                    0.2833
+  Train loss                     ---
+  Eval loss                      ---
+
+========================================================================  END OF REPORT  ========================================================================
+
+========================================================================
+  [OK]  ALL DONE  run=run_20260407_081105
+  [..]  Eval results    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/eval_results/run_20260407_081105
+  [..]  Best ckpt       -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/checkpoints/run_20260407_081105/checkpoint-186
+  [..]  Merged model    -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/data_visual/visuals_model_20260407_091018
+  [..]  MLflow dump     -> /mnt/azureml/cr/j/dae286545b104302838f82cddfc58c98/cap/data-capability/wd/mlflow_store/run_20260407_081105
+========================================================================
+
