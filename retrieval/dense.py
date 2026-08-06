@@ -101,7 +101,7 @@ class SentenceTransformerEmbedder:
         Batch-encode a list of texts, using cache where possible.
         Returns an (N, D) array or None if dense is unavailable.
         """
-        if not _DENSE_AVAILABLE:
+        if not _DENSE_AVAILABLE or not texts:
             return None
 
         self._load()
@@ -128,6 +128,9 @@ class SentenceTransformerEmbedder:
                 if self._cache is not None:
                     self._cache.set(text, vec.tolist())
                 results.append((idx, vec))
+
+        if not results:
+            return None
 
         # Reconstruct in original order
         results.sort(key=lambda t: t[0])
@@ -203,6 +206,9 @@ def dense_search(
         if vecs is None:
             return []
         embedded = list(zip(pool, vecs))
+
+    if not embedded:
+        return []
 
     chunks_list, vecs_list = zip(*embedded)
     matrix = np.stack(vecs_list)           # (N, D)

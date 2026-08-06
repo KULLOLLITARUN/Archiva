@@ -59,36 +59,41 @@ def apply_mmr(
 
     # Relevance scores (cosine sim to query) — already stored in "score" or
     # recomputed from embedding to be accurate post-reranking.
-    vecs = np.stack([c["_embedding"] for c in embedded])   # (N, D)
-    relevance = (vecs @ query_vec)                          # (N,)
+    try:
+        vecs = np.stack([c["_embedding"] for c in embedded if c.get("_embedding") is not None])
+        if len(vecs) == 0:
+            return chunks[:top_k]
+        relevance = (vecs @ query_vec)                          # (N,)
 
-    selected_idxs: List[int] = []
-    remaining     = list(range(len(embedded)))
+        selected_idxs: List[int] = []
+        remaining     = list(range(len(embedded)))
 
-    for _ in range(min(top_k, len(embedded))):
-        if not remaining:
-            break
+        for _ in range(min(top_k, len(embedded))):
+            if not remaining:
+                break
 
-        if not selected_idxs:
-            # First pick: highest relevance
-            best = max(remaining, key=lambda i: relevance[i])
-        else:
-            selected_vecs = np.stack([vecs[i] for i in selected_idxs])  # (S, D)
-            # Max similarity to any already-selected chunk
-            sim_to_selected = (vecs[remaining] @ selected_vecs.T).max(axis=1)  # (R,)
-            rel_remaining   = relevance[remaining]
-            mmr_scores      = lambda_ * rel_remaining - (1 - lambda_) * sim_to_selected
-            local_best      = int(np.argmax(mmr_scores))
-            best            = remaining[local_best]
+            if not selected_idxs:
+                # First pick: highest relevance
+                best = max(remaining, key=lambda i: relevance[i])
+            else:
+                selected_vecs = np.stack([vecs[i] for i in selected_idxs])  # (S, D)
+                # Max similarity to any already-selected chunk
+                sim_to_selected = (vecs[remaining] @ selected_vecs.T).max(axis=1)  # (R,)
+                rel_remaining   = relevance[remaining]
+                mmr_scores      = lambda_ * rel_remaining - (1 - lambda_) * sim_to_selected
+                local_best      = int(np.argmax(mmr_scores))
+                best            = remaining[local_best]
 
-        selected_idxs.append(best)
-        remaining.remove(best)
+            selected_idxs.append(best)
+            remaining.remove(best)
 
-    result = [embedded[i] for i in selected_idxs]
-
-    # Append non-embedded chunks if we still have budget
-    budget = top_k - len(result)
-    result.extend(non_embedded[:budget])
+        result = [embedded[i] for i in selected_idxs]
+        budget = top_k - len(result)
+        result.extend(non_embedded[:budget])
+        return result
+    except Exception as exc:
+        print(f"  [WARN]  [context_optimizer] MMR calculation failed: {exc} — fallback to top_k chunks")
+        return chunks[:top_k]
 
     return result
 

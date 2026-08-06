@@ -42,14 +42,14 @@ def _heal_rewrite_query(state: AgentState) -> None:
     )
     state.rewritten_query = new_query
     state.search_queries.append(new_query)
-    print(f"  💊  [healer] REWRITE_QUERY → {new_query!r}")
+    print(f"  [HEAL]  [healer] REWRITE_QUERY -> {new_query!r}")
 
 
 def _heal_increase_top_k(state: AgentState) -> None:
     """Fetch more candidate chunks on the next retrieval pass."""
     old = state.top_k
     state.top_k = min(state.top_k + _TOP_K_STEP, _TOP_K_MAX)
-    print(f"  💊  [healer] INCREASE_TOP_K {old} → {state.top_k}")
+    print(f"  [HEAL]  [healer] INCREASE_TOP_K {old} -> {state.top_k}")
 
 
 def _heal_strict_prompt(state: AgentState) -> None:

@@ -45,6 +45,6 @@ def analyze_failure(state: AgentState) -> str:
     action = _FAILURE_TO_ACTION.get(state.failure_type, ACTION_NONE)
     print(
         f"  [TRACE]  [root_cause] failure_type={state.failure_type!r} "
-        f"→ action={action!r} (attempt {state.attempt})"
+        f"-> action={action!r} (attempt {state.attempt})"
     )
     return action

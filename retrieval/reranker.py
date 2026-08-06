@@ -105,13 +105,22 @@ class CrossEncoderReranker:
 
             candidates.sort(key=lambda c: c["reranker_score"], reverse=True)
 
+            # Filter out chunks that are score outliers compared to top result
+            top_score = candidates[0]["reranker_score"]
+            relevant = [
+                c for c in candidates
+                if c["reranker_score"] >= max(top_score - 4.5, -3.5)
+            ]
+            if not relevant:
+                relevant = candidates[:1]
+
             # Log scores for observability
             score_summary = [
-                round(c["reranker_score"], 3) for c in candidates[:top_k]
+                round(c["reranker_score"], 3) for c in relevant[:top_k]
             ]
             print(f"  [STATS]  [reranker] Cross-encoder top scores: {score_summary}")
 
-            return candidates[:top_k]
+            return relevant[:top_k]
 
         except Exception as exc:
             print(f"  [WARN]  [reranker] Cross-encoder predict failed: {exc} — using score-sort fallback.")

@@ -239,7 +239,7 @@ def run_reflection_loop(
                     apply_healing(state, action)
                     print(
                         f"  [RETRY]  [loop] No results (attempt {attempt + 1}) "
-                        f"→ {action} → {state.active_query()!r}"
+                        f"-> {action} -> {state.active_query()!r}"
                     )
                     continue
 
@@ -308,7 +308,7 @@ def run_reflection_loop(
 
             print(
                 f"  [RETRY]  [loop] attempt {attempt + 1} "
-                f"failure_type={state.failure_type!r} → action={action!r}"
+                f"failure_type={state.failure_type!r} -> action={action!r}"
             )
 
         # ── Max attempts exhausted ────────────────────────────────────────────
