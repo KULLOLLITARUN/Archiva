@@ -120,8 +120,8 @@ def _single_attempt(
 
     # 1. Hybrid retrieval (BM25 + dense + RRF)
     t_ret = time.monotonic()
-    if intent == "compare":
-        # For compare intent use balanced BM25, then fuse with dense via RRF
+    if intent in ("compare", "meta"):
+        # For compare/meta intent use balanced BM25, then fuse with dense via RRF
         bm25_results = balanced_retrieval(current_query, store)
         from retrieval.dense import dense_search
         dense_results = dense_search(current_query, store, top_k=20)
@@ -160,8 +160,15 @@ def _single_attempt(
     else:
         model_id = route(current_query, top_score)
 
-    # 7. Generate — pass prompt_mode from state (may be "strict")
-    prompt = build_prompt(current_query, context, intent, prompt_mode=state.prompt_mode)
+    # 7. Generate — pass prompt_mode from state and files_summary
+    files_summary = store.get_files_summary() if hasattr(store, "get_files_summary") else ""
+    prompt = build_prompt(
+        current_query,
+        context,
+        intent,
+        prompt_mode=state.prompt_mode,
+        files_summary=files_summary,
+    )
     answer = call_groq(model_id, prompt, current_query)
 
     # Collect reranker scores for observability

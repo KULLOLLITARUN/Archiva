@@ -5,10 +5,13 @@ def detect_intent(query: str) -> str:
     """
     q = query.lower()
 
+    meta_kw      = {"how many doc", "how many file", "how many docx", "how many pdf", "list file", "list doc", "what doc", "what file", "which file", "loaded doc", "uploaded doc", "do we have"}
     compare_kw   = {"compare", "difference", "versus", "vs", "between", "contrast", "similarities", "differences"}
     summarize_kw = {"summarize", "summary", "overview", "brief", "key points"}
     explain_kw   = {"explain", "what does", "meaning", "clarify", "simple", "how does"}
 
+    if any(kw in q for kw in meta_kw):
+        return "meta"
     if any(kw in q for kw in compare_kw):
         return "compare"
     if any(kw in q for kw in summarize_kw):

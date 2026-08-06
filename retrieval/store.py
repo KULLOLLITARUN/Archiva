@@ -179,6 +179,17 @@ class MultiDocStore:
     def get_files(self) -> List[dict]:
         return list(self.files.values())
 
+    def get_files_summary(self) -> str:
+        """Return a formatted text summary of all active documents in the store."""
+        if not self.files:
+            return "No documents currently uploaded."
+        lines = [f"[Loaded System Documents ({len(self.files)} total)]:"]
+        for f in self.files.values():
+            filename = f.get("filename", "Unknown")
+            chunks = f.get("chunk_count", 0)
+            lines.append(f"- {filename} ({chunks} chunks)")
+        return "\n".join(lines)
+
     def get_chunk_hashes(self) -> Set[str]:
         """Return all content hashes present in the store (for cross-doc dedup)."""
         return set(self._chunk_hashes)

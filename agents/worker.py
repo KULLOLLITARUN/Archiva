@@ -34,17 +34,26 @@ _BACKOFF_BASE_S = 1  # seconds; doubles each attempt (1 → 2 → 4)
 
 # ── Prompt builder ─────────────────────────────────────────────────────────────
 
-def build_prompt(query: str, context: str, intent: str, prompt_mode: str = "normal") -> str:
+def build_prompt(
+    query: str,
+    context: str,
+    intent: str,
+    prompt_mode: str = "normal",
+    files_summary: str = "",
+) -> str:
     """
     Construct the full system+user prompt string.
 
     Args:
-        query:       The user query.
-        context:     Source-labeled, trimmed context from retrieved chunks.
-        intent:      Detected intent (qa / explain / summarize / compare).
-        prompt_mode: "normal" (default) or "strict" (anti-hallucination mode,
-                     triggered by HALLUCINATION failure type in healer).
+        query:         The user query.
+        context:       Source-labeled, trimmed context from retrieved chunks.
+        intent:        Detected intent (qa / explain / summarize / compare / meta).
+        prompt_mode:   "normal" (default) or "strict" (anti-hallucination mode,
+                       triggered by HALLUCINATION failure type in healer).
+        files_summary: Document inventory summary string from store.
     """
+    full_context = f"{files_summary}\n\n{context}".strip() if files_summary else context
+
     if prompt_mode == "strict":
         base = (
             "You are Archiva, a strictly grounded AI document intelligence assistant.\n"
@@ -57,7 +66,7 @@ def build_prompt(query: str, context: str, intent: str, prompt_mode: str = "norm
             "- DO NOT invent numbers, dates, statistics, or names.\n"
             "- Every claim MUST have an inline citation: [Source: filename, page N]\n"
             "- If unsure about ANY word → omit it entirely.\n\n"
-            f"Context:\n{context}"
+            f"Context:\n{full_context}"
         )
     else:
         base = (
@@ -69,7 +78,7 @@ def build_prompt(query: str, context: str, intent: str, prompt_mode: str = "norm
             "- Do NOT infer, guess, or use general knowledge.\n"
             "- Do NOT make up facts or page numbers.\n"
             "- Cite your source: [Source: filename, page N]\n\n"
-            f"Context:\n{context}"
+            f"Context:\n{full_context}"
         )
 
     intent_additions = {
@@ -79,6 +88,10 @@ def build_prompt(query: str, context: str, intent: str, prompt_mode: str = "norm
         "compare": (
             "Compare across sources. Label each source clearly. "
             "Show differences and similarities."
+        ),
+        "meta": (
+            "List and count all relevant files accurately based on the system document summary "
+            "and provided context."
         ),
     }
 
