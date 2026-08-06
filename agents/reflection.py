@@ -87,14 +87,53 @@ def _numbers_are_grounded(answer: str, chunk_text: str) -> bool:
 
 
 def _has_contradiction(query: str, answer: str, chunk_text: str) -> bool:
+    """
+    Return True only when the answer appears to contradict a positive
+    assertion in the source chunks.
+
+    Stricter than the old co-occurrence check:
+      - Requires a negation phrase near a query keyword in the answer.
+      - Requires the chunk text to contain a positive form of that same
+        keyword (i.e. the chunk asserts it exists/happened, but the answer
+        says it doesn't).
+    This avoids flagging legitimate "not found in the document" answers
+    where the topic happens to appear in retrieved chunks.
+    """
     answer_lower = answer.lower()
+    chunk_lower  = chunk_text.lower()
+
+    # Short-circuit: no negation at all → no contradiction possible
     has_negation = any(phrase in answer_lower for phrase in _NEGATION_PHRASES)
     if not has_negation:
         return False
+
     query_keywords = _filter_stopwords(query)
     if not query_keywords:
         return False
-    return any(kw in chunk_text for kw in query_keywords)
+
+    # A contradiction requires:
+    #   1. A query keyword appears in the answer alongside a negation (answer
+    #      is actively denying something about this topic).
+    #   2. The chunk text contains a positive assertion about the SAME keyword
+    #      (the source says it exists; the answer says it doesn't).
+    for kw in query_keywords:
+        if kw not in answer_lower:
+            continue  # keyword not mentioned in answer at all
+        # Check: does the chunk positively assert something about this keyword?
+        # We look for the keyword in the chunk outside of negation contexts.
+        kw_idx = chunk_lower.find(kw)
+        while kw_idx != -1:
+            # Look at the surrounding window (50 chars) for negation phrases
+            window_start = max(0, kw_idx - 50)
+            window = chunk_lower[window_start : kw_idx + len(kw) + 50]
+            if not any(phrase in window for phrase in _NEGATION_PHRASES):
+                # Chunk positively asserts this keyword → contradiction
+                return True
+            kw_idx = chunk_lower.find(kw, kw_idx + 1)
+
+    return False
+
+
 
 
 def _build_confidence(overlap_ratio: float, attempt: int) -> float:

@@ -24,6 +24,7 @@ from config import (
     BM25_THRESHOLD,
     FINAL_K,
     GROQ_STRONG,
+    JUDGE_CONFIDENCE_THRESHOLD,
     MAX_CONTEXT_TOKENS,
     MAX_REFLECTION_ATTEMPTS,
     MIN_REFLECTION_CONFIDENCE,
@@ -38,6 +39,7 @@ from agents.router import route
 from agents.worker import build_prompt, call_groq
 from agents.reflection import reflect, should_force_strong_model
 from agents.query_rewriter import rewrite_for_retry
+from agents.judge import judge_faithfulness
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -218,7 +220,7 @@ def run_reflection_loop(
     )
     state.search_queries = [query]
 
-    force_strong: bool     = False
+    force_strong: bool      = False
     best_result: Optional[Dict] = None
 
     try:
@@ -231,7 +233,6 @@ def run_reflection_loop(
             # ── No results from retrieval ─────────────────────────────────────
             if result is None:
                 if attempt < MAX_ATTEMPTS - 1:
-                    # Apply healing: REWRITE_QUERY via LLM rewriter
                     state.failure_type   = "RETRIEVAL_FAILURE"
                     state.failure_reason = "no_results"
                     action = analyze_failure(state)
@@ -255,11 +256,44 @@ def run_reflection_loop(
 
             decision: Dict = result.pop("_decision")
 
-            # ── Early exit on high confidence ─────────────────────────────────
-            if decision["valid"] or decision.get("confidence", 0.0) >= MIN_REFLECTION_CONFIDENCE:
+            # ── Hard refuse: answer explicitly says not found ─────────────────
+            if decision["reason"] in (
+                "explicit_not_found",
+                "no_chunks_retrieved",
+                "answer_too_short_max_attempts",
+                "ungrounded_numbers_strong_model_failed",
+            ):
+                best_result["answer"] = _NOT_FOUND_ANSWER
+                best_result["chunks"] = []
                 return best_result
 
-            # ── Healing cycle ─────────────────────────────────────────────────
+            # ── Early exit: reflection says valid + sufficient confidence ─────
+            confidence = decision.get("confidence", 0.0)
+            if decision["valid"] and confidence >= MIN_REFLECTION_CONFIDENCE:
+                # Optional LLM judge for uncertain-but-passing answers (attempt 0 only)
+                if (
+                    attempt == 0
+                    and JUDGE_CONFIDENCE_THRESHOLD > 0.0
+                    and confidence < JUDGE_CONFIDENCE_THRESHOLD
+                ):
+                    verdict = judge_faithfulness(state.active_query(), result["answer"], result["chunks"])
+                    if not verdict["faithful"]:
+                        print(f"  [JUDGE]  [loop] Judge flagged unfaithful — escalating to healing")
+                        state.failure_type   = "HALLUCINATION"
+                        state.failure_reason = verdict["reason"]
+                        state.answer         = result["answer"]
+                        action = analyze_failure(state)
+                        apply_healing(state, action)
+                        if action == "STRICT_PROMPT" and should_force_strong_model(decision, result["model_used"]):
+                            force_strong = True
+                        continue
+                return best_result
+
+            # ── Last attempt: return best we have ────────────────────────────
+            if attempt >= MAX_ATTEMPTS - 1:
+                break
+
+            # ── Healing cycle (only runs when there are attempts remaining) ───
             state.failure_type   = decision.get("failure_type", "UNKNOWN")
             state.failure_reason = decision.get("reason", "")
             state.answer         = result["answer"]
@@ -267,23 +301,15 @@ def run_reflection_loop(
             action = analyze_failure(state)
             apply_healing(state, action)
 
-            # Legacy decision routing still works alongside healing
-            if decision["decision"] == "accept":
-                return best_result
+            # Escalate to strong model when healer returns STRICT_PROMPT
+            # (covers HALLUCINATION and FORMAT_ERROR failure types)
+            if action == "STRICT_PROMPT" and should_force_strong_model(decision, result["model_used"]):
+                force_strong = True
 
-            if decision["decision"] == "refuse":
-                best_result["answer"] = _NOT_FOUND_ANSWER
-                best_result["chunks"] = []
-                return best_result
-
-            if decision["decision"] in ("retry_search", "retry_model"):
-                if decision["decision"] == "retry_model" and \
-                        should_force_strong_model(decision, result["model_used"]):
-                    force_strong = True
-                print(
-                    f"  [RETRY]  [loop] {decision['decision']} (attempt {attempt + 1}) "
-                    f"— {decision['reason']}"
-                )
+            print(
+                f"  [RETRY]  [loop] attempt {attempt + 1} "
+                f"failure_type={state.failure_type!r} → action={action!r}"
+            )
 
         # ── Max attempts exhausted ────────────────────────────────────────────
         if best_result:
@@ -304,3 +330,4 @@ def run_reflection_loop(
         reason="max_attempts_no_result",
         search_queries=state.search_queries,
     )
+

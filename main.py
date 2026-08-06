@@ -616,6 +616,42 @@ async def admin_list_documents():
     return {"documents": [dict(r) for r in rows]}
 
 
+@app.get("/admin/reingestion-queue", tags=["admin"])
+async def admin_reingestion_queue(clear: bool = False):
+    """
+    Return all entries in the healer reingestion signal queue.
+    These are queries where the system detected OUTDATED_DATA failure.
+    Pass ?clear=true to flush the queue after reading.
+    """
+    import json as _json
+    from config import REINGESTION_QUEUE_PATH
+
+    queue_path = REINGESTION_QUEUE_PATH
+    entries = []
+    if os.path.exists(queue_path):
+        try:
+            with open(queue_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            entries.append(_json.loads(line))
+                        except Exception:
+                            pass
+            if clear:
+                open(queue_path, "w").close()
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to read queue: {exc}")
+
+    return {
+        "count":   len(entries),
+        "cleared": clear,
+        "entries": entries,
+    }
+
+
+
+
 @app.get("/admin/stats", tags=["admin"])
 async def admin_stats():
     sql_stats  = db_get_system_stats()

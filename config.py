@@ -155,3 +155,9 @@ MIN_REFLECTION_CONFIDENCE = float(os.getenv("MIN_REFLECTION_CONFIDENCE", 0.4))
 
 # Minimum overlap ratio between answer words and chunk words.
 MIN_OVERLAP_RATIO = float(os.getenv("MIN_OVERLAP_RATIO", 0.15))
+
+# Confidence below this threshold (but above MIN_REFLECTION_CONFIDENCE) triggers
+# an optional LLM faithfulness judge as a second-pass check.
+# Set to 0.0 to disable the judge entirely.
+JUDGE_CONFIDENCE_THRESHOLD = float(os.getenv("JUDGE_CONFIDENCE_THRESHOLD", 0.7))
+
