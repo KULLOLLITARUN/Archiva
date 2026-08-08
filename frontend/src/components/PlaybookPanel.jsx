@@ -162,10 +162,10 @@ export default function PlaybookPanel({ isOpen, onClose }) {
           </div>
 
           {[
-            { icon: <FileText size={16} />,      label: 'Your Docs chips', desc: 'Appear automatically once documents are indexed. Click a chip to see 4 questions about that topic.' },
-            { icon: <Sparkles size={16} />,       label: 'AI-generated topics', desc: 'Topics are created by the AI from your actual content — not generic templates.' },
-            { icon: <MessageCircle size={16} />,  label: 'One-click asking', desc: 'Click any suggested question and it is sent instantly to the chat.' },
-            { icon: <RefreshCw size={16} />,      label: 'Auto-refreshes', desc: 'Upload a new file and topics update to reflect all your documents.' },
+            { icon: <FileText size={16} />, label: 'Your Docs chips', desc: 'Appear automatically once documents are indexed. Click a chip to see 4 questions about that topic.' },
+            { icon: <Sparkles size={16} />, label: 'AI-generated topics', desc: 'Topics are created by the AI from your actual content — not generic templates.' },
+            { icon: <MessageCircle size={16} />, label: 'One-click asking', desc: 'Click any suggested question and it is sent instantly to the chat.' },
+            { icon: <RefreshCw size={16} />, label: 'Auto-refreshes', desc: 'Upload a new file and topics update to reflect all your documents.' },
           ].map((item) => (
             <div key={item.label} className="play-qa" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <span style={{ flexShrink: 0, color: 'var(--accent2)' }}>{item.icon}</span>
@@ -180,10 +180,10 @@ export default function PlaybookPanel({ isOpen, onClose }) {
           <div className="play-section-title" style={{ marginTop: 4 }}>Answer Quality Colours</div>
 
           {[
-            { color: 'var(--green)', label: 'Green dot',   desc: 'Server is online and documents are loaded' },
-            { color: '#fbbf24',      label: 'Amber badge', desc: 'The AI retried before answering — still a valid answer, just double-check it' },
-            { color: '#f87171',      label: 'Red badge',   desc: 'The AI retried several times and is less certain — worth verifying against the source' },
-            { color: '#9ca3af',      label: 'Grey badge',  desc: 'Answer not found in your documents' },
+            { color: 'var(--green)', label: 'Green dot', desc: 'Server is online and documents are loaded' },
+            { color: '#fbbf24', label: 'Amber badge', desc: 'The AI retried before answering — still a valid answer, just double-check it' },
+            { color: '#f87171', label: 'Red badge', desc: 'The AI retried several times and is less certain — worth verifying against the source' },
+            { color: '#9ca3af', label: 'Grey badge', desc: 'Answer not found in your documents' },
           ].map((item, i) => (
             <div key={i} className="play-qa" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 12, height: 12, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
@@ -196,7 +196,7 @@ export default function PlaybookPanel({ isOpen, onClose }) {
 
           {/* Footer */}
           <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', padding: '8px 0' }}>
-            {BRAND.name} · Document Intelligence · v{BRAND.version}
+            {BRAND.name} · {BRAND.sub} · v{BRAND.version}
           </div>
         </div>
       </aside>

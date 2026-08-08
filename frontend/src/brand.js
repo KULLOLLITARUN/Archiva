@@ -16,9 +16,14 @@
 // ── Brand constants ────────────────────────────────────────────────────────────
 
 export const BRAND = {
-  name:    'Archiva',
+  name: 'Archiva',
   tagline: 'Ask Your Documents Anything',
-  sub:     'AI Document Intelligence',
+  // Was "AI Document Intelligence" — generic AI-product boilerplate that
+  // could describe literally any RAG tool. This names the thing that
+  // actually differentiates Archiva: answers are refused rather than
+  // guessed, retried against a deterministic quality check, and every
+  // claim traces to a cited page.
+  sub: 'Every Answer, Sourced',
   version: '2.0',
 }
 
@@ -35,21 +40,21 @@ export const BRAND = {
 const MODEL_RULES = [
   // Ultra / Reasoning tier — large or reasoning-class models
   {
-    test:  id => /120b|qwen3|32b|reasoning|ultra|large/i.test(id),
+    test: id => /120b|qwen3|32b|reasoning|ultra|large/i.test(id),
     label: 'Archiva Ultra',
-    tier:  'ultra',
+    tier: 'ultra',
   },
   // Pro tier — default quality models
   {
-    test:  id => /70b|pro|strong|gpt|claude|gemini|llama/i.test(id),
+    test: id => /70b|pro|strong|gpt|claude|gemini|llama/i.test(id),
     label: 'Archiva Pro',
-    tier:  'pro',
+    tier: 'pro',
   },
   // Swift tier — fast / small models
   {
-    test:  id => /8b|13b|7b|mini|swift|fast|small|turbo|20b/i.test(id),
+    test: id => /8b|13b|7b|mini|swift|fast|small|turbo|20b/i.test(id),
     label: 'Archiva Swift',
-    tier:  'swift',
+    tier: 'swift',
   },
 ]
 
@@ -79,8 +84,8 @@ export function maskModel(rawModelId) {
 export function modelTierStyle(tier) {
   switch (tier) {
     case 'ultra': return { color: '#c9a24a' }  // amber
-    case 'pro':   return { color: '#dfb572' }  // gold
+    case 'pro': return { color: '#dfb572' }  // gold
     case 'swift': return { color: '#7fae8a' }  // sage
-    default:      return { color: '#8a8272' }  // warm grey
+    default: return { color: '#8a8272' }  // warm grey
   }
 }

@@ -1,39 +1,15 @@
 /**
  * Header.jsx — Archiva branded header.
  *
- * Logo: custom SVG mark (geometric stacked-pages with a spark).
- * No model names are shown here — only status info.
+ * Logo: shared ArchivaLogo mark (geometric stacked-pages) — see
+ * ArchivaLogo.jsx. No model names are shown here — only status info.
  */
 
 import { useEffect, useState } from 'react'
 import { BookOpen, FolderOpen, Settings } from 'lucide-react'
 import { apiHealth as checkHealth } from '../api.js'
 import { BRAND } from '../brand.js'
-
-/* ── Archiva SVG logo mark ──────────────────────────────────────────────────
-   Three stacked parallelogram "pages" — a simple, solid ink-gold mark.
-   Fully original, no trademark conflicts.
----------------------------------------------------------------------------- */
-function ArchivaLogo() {
-  return (
-    <svg
-      className="archiva-logo"
-      viewBox="0 0 38 38"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="Archiva logo"
-    >
-      {/* Bottom page (farthest back) */}
-      <rect x="6" y="22" width="22" height="10" rx="3" fill="var(--accent)" opacity="0.35" />
-
-      {/* Middle page */}
-      <rect x="4" y="15" width="22" height="10" rx="3" fill="var(--accent)" opacity="0.65" />
-
-      {/* Top page (foreground) */}
-      <rect x="2" y="8" width="22" height="10" rx="3" fill="var(--accent)" />
-    </svg>
-  )
-}
+import ArchivaLogo from './ArchivaLogo.jsx'
 
 export default function Header({ docsInfo, onUploadClick, onPlaybookClick, onAdminClick, backendStatus = '' }) {
   const { total_files = 0 } = docsInfo
@@ -43,7 +19,7 @@ export default function Header({ docsInfo, onUploadClick, onPlaybookClick, onAdm
     checkHealth().then(() => setOnline(true)).catch(() => setOnline(false))
     const id = setInterval(() =>
       checkHealth().then(() => setOnline(true)).catch(() => setOnline(false)),
-    30_000)
+      30_000)
     return () => clearInterval(id)
   }, [])
 
