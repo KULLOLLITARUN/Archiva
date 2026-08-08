@@ -43,8 +43,8 @@ const STEPS = [
     num: 5,
     icon: <RefreshCw size={16} />,
     title: 'Self-healing AI',
-    desc: `If the first answer isn't confident enough, ${BRAND.name} automatically retries with smarter settings. You'll see a yellow/orange badge when this happens.`,
-    tip: 'A green result means the AI was confident. Orange = it had to try harder.',
+    desc: `If the first answer isn't confident enough, ${BRAND.name} automatically retries with smarter settings. You'll see a small badge under the answer when this happens.`,
+    tip: 'No badge = confident on the first try. Amber badge = it had to try harder. Red badge = it retried several times — worth double-checking.',
   },
   {
     num: 6,
@@ -73,8 +73,8 @@ const FAQ = [
     a: 'Open the Documents panel and click the close button next to the file you want to delete.',
   },
   {
-    q: 'What does "Reflected" mean?',
-    a: 'The AI checked its own answer and decided to try again to give you something better. It\'s a quality guarantee!',
+    q: 'What do the badges under an answer mean?',
+    a: 'A short label like "Expanded search" or "Used stronger AI" means the AI checked its own answer and tried again to give you something better before showing it to you. No badge at all means it was confident on the very first try.',
   },
   {
     q: 'What is "Re-index Documents"?',
@@ -180,10 +180,10 @@ export default function PlaybookPanel({ isOpen, onClose }) {
           <div className="play-section-title" style={{ marginTop: 4 }}>Answer Quality Colours</div>
 
           {[
-            { color: 'var(--green)',  label: 'Green dot',    desc: 'Server is online and documents are loaded' },
-            { color: 'var(--yellow)', label: 'Yellow badge', desc: 'AI retried once — answer may be less certain' },
-            { color: 'var(--orange)', label: 'Orange badge', desc: 'AI retried multiple times — approach with care' },
-            { color: 'var(--red)',    label: 'Grey badge',   desc: 'Answer not found in your documents' },
+            { color: 'var(--green)', label: 'Green dot',   desc: 'Server is online and documents are loaded' },
+            { color: '#fbbf24',      label: 'Amber badge', desc: 'The AI retried before answering — still a valid answer, just double-check it' },
+            { color: '#f87171',      label: 'Red badge',   desc: 'The AI retried several times and is less certain — worth verifying against the source' },
+            { color: '#9ca3af',      label: 'Grey badge',  desc: 'Answer not found in your documents' },
           ].map((item, i) => (
             <div key={i} className="play-qa" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 12, height: 12, borderRadius: '50%', background: item.color, flexShrink: 0 }} />
