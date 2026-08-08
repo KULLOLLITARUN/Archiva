@@ -75,6 +75,14 @@ MAX_CHUNK_TOKENS = int(os.getenv("MAX_CHUNK_TOKENS", 300))
 
 # ── Storage ───────────────────────────────────────────────────────────────────
 
+# Dense retrieval (retrieval/dense.py) is exact brute-force cosine similarity
+# over every chunk in the store — no ANN index (FAISS/HNSW/etc). That's a
+# deliberate choice at this cap: numpy's matrix @ query_vec is sub-millisecond
+# at a few thousand chunks, and skipping an ANN index avoids graph tuning,
+# tombstoning on delete, and a new native dependency for accuracy no one needs
+# yet. If this cap is ever raised well past its current default (tens of
+# thousands of chunks), THAT is the signal to revisit an ANN index — not
+# before, and not preemptively.
 MAX_TOTAL_CHUNKS    = int(os.getenv("MAX_TOTAL_CHUNKS", 5000))
 MAX_CHUNKS_PER_FILE = int(os.getenv("MAX_CHUNKS_PER_FILE", 500))
 

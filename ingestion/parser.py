@@ -183,6 +183,13 @@ def parse_html(content: bytes, filename: str) -> List[Dict]:
 
 # ── Dispatcher ────────────────────────────────────────────────────────────────
 
+# No OCR: scanned/image-only PDFs return an explicit "no readable text
+# extracted" error (see main.py's /upload handler) rather than silently
+# ingesting low-confidence OCR noise that would pollute BM25/dense search
+# and increase hallucination risk. This is deliberate, not an oversight —
+# revisit only if scanned documents become an actual input source, and if
+# so, run OCR as a background job (Tesseract on a 50-page scan can take
+# 30-60s, which would block the synchronous /upload request today).
 SUPPORTED_EXTENSIONS = {".txt", ".pdf", ".docx", ".md", ".csv", ".html", ".htm"}
 
 _PARSERS = {

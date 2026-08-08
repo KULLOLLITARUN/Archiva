@@ -233,6 +233,17 @@ Edit `.env` to tune behaviour:
 
 ---
 
+## Known Limitations (Deliberate, Not Oversights)
+
+| Limitation | Why | Revisit when |
+|---|---|---|
+| Dense retrieval is exact brute-force cosine, no ANN index | Sub-millisecond at the current chunk cap; avoids graph tuning/tombstoning and a new native dependency | `MAX_TOTAL_CHUNKS` is raised well past its current default (tens of thousands of chunks) |
+| No OCR for scanned/image PDFs | Avoids a system-level binary dependency (Tesseract, not pip-installable) and silent low-confidence text polluting search/hallucination risk; upload returns an explicit error instead | Scanned documents become an actual input source — implement as a background job, not inline in `/upload` (a 50-page scan can take 30-60s) |
+| Single-process, in-memory store (pickled to disk) | Simple, no external infra, fine for one instance | You need multiple worker processes or horizontal scaling — requires moving to a real vector DB / shared store |
+| No auth on any endpoint, including destructive ones (`/documents/clear-all`) | Intentional — this is the "open/no-auth edition," see `main.py`'s module docstring | Never, unless the deployment model changes (e.g. public-facing) — then auth needs to be designed in, not bolted on |
+
+---
+
 ## Roadmap
 
 - [x] **Phase 1** — TXT ingestion, in-memory store, BM25 retrieval
