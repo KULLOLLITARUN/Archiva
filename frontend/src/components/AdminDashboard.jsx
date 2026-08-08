@@ -5,6 +5,10 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import {
+  CheckCircle2, Database, FileText, MessageCircle,
+  Puzzle, RefreshCw, Settings, X,
+} from 'lucide-react'
+import {
   adminGetStats, adminGetDocuments,
   adminDeleteDocument, adminDeleteAllDocuments,
 } from '../api.js'
@@ -67,10 +71,10 @@ export default function AdminDashboard({ onClose }) {
         {/* Header */}
         <div className="admin-header">
           <div className="admin-header-left">
-            <span className="admin-badge">⚙ Admin</span>
+            <span className="admin-badge"><Settings size={11} style={{ display: 'inline', verticalAlign: -1, marginRight: 3 }} /> Admin</span>
             <span className="admin-title">System Dashboard</span>
           </div>
-          <button className="admin-close-btn" onClick={onClose} aria-label="Close admin">✕</button>
+          <button className="admin-close-btn" onClick={onClose} aria-label="Close admin"><X size={14} /></button>
         </div>
 
         {/* Tabs */}
@@ -83,7 +87,7 @@ export default function AdminDashboard({ onClose }) {
             >{t}</button>
           ))}
           <button className="admin-refresh-btn" onClick={() => fetchTab(tab)} disabled={busy} title="Refresh">
-            {busy ? '⟳' : '↺'}
+            <RefreshCw size={14} className={busy ? 'spin' : ''} />
           </button>
         </div>
 
@@ -97,11 +101,11 @@ export default function AdminDashboard({ onClose }) {
                 <>
                   <div className="admin-stat-grid">
                     {[
-                      { label: 'Total Documents', value: data.stats.total_docs,    icon: '📄', color: 'var(--green)'   },
-                      { label: 'Total Chunks',    value: data.stats.total_chunks,  icon: '🧩', color: 'var(--yellow)'  },
-                      { label: 'Total Queries',   value: data.stats.total_queries, icon: '💬', color: 'var(--orange)'  },
-                      { label: 'Success Rate',    value: `${data.stats.success_rate}%`, icon: '✅', color: 'var(--green)' },
-                      { label: 'Live Chunks',     value: data.stats.store_chunks,  icon: '🗄', color: 'var(--accent)'  },
+                      { label: 'Total Documents', value: data.stats.total_docs,    icon: <FileText size={20} />,     color: 'var(--green)'   },
+                      { label: 'Total Chunks',    value: data.stats.total_chunks,  icon: <Puzzle size={20} />,       color: 'var(--yellow)'  },
+                      { label: 'Total Queries',   value: data.stats.total_queries, icon: <MessageCircle size={20} />, color: 'var(--orange)'  },
+                      { label: 'Success Rate',    value: `${data.stats.success_rate}%`, icon: <CheckCircle2 size={20} />, color: 'var(--green)' },
+                      { label: 'Live Chunks',     value: data.stats.store_chunks,  icon: <Database size={20} />,     color: 'var(--accent)'  },
                     ].map(s => (
                       <div className="admin-stat-card" key={s.label}>
                         <span className="admin-stat-icon">{s.icon}</span>
@@ -144,9 +148,9 @@ export default function AdminDashboard({ onClose }) {
                   {(data.docs || []).map(d => (
                     <tr key={d.id} className={d.is_deleted ? 'admin-row--deleted' : ''}>
                       <td className="admin-cell-main">
-                        <span style={{ fontSize: 14 }}>
-                          {d.file_type === 'pdf' ? '📕' : d.file_type === 'docx' ? '📘' : '📄'}
-                          &nbsp;{d.filename}
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <FileText size={13} style={{ color: 'var(--text3)', flexShrink: 0 }} />
+                          {d.filename}
                         </span>
                       </td>
                       <td className="admin-cell-dim">{d.file_type}</td>

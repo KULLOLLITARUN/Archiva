@@ -561,11 +561,11 @@ async def get_suggestions() -> dict:
         '  {\n'
         '    "label": "Topic Name",\n'
         '    "icon": "📊",\n'
-        '    "color": "#7c6fff",\n'
+        '    "color": "#c98f3f",\n'
         '    "prompts": ["question 1", "question 2", "question 3", "question 4"]\n'
         '  }\n'
         ']\n\n'
-        "Use a variety of colours from: #7c6fff #2dd4bf #fb923c #f472b6 #38bdf8 #a78bfa #fbbf24 #34d399"
+        "Use a variety of colours from: #c98f3f #7fae8a #c17a4a #8fb4c2 #bd6b5c #c9a24a #a68a64 #6f8f7a"
     )
 
     user_msg = f"Document excerpts:\n{sample_text}"
@@ -588,8 +588,8 @@ async def get_suggestions() -> dict:
 
         topics = json.loads(match.group())
 
-        ALLOWED_COLORS = {"#7c6fff","#2dd4bf","#fb923c","#f472b6",
-                          "#38bdf8","#a78bfa","#fbbf24","#34d399"}
+        ALLOWED_COLORS = {"#c98f3f","#7fae8a","#c17a4a","#8fb4c2",
+                          "#bd6b5c","#c9a24a","#a68a64","#6f8f7a"}
         COLOR_CYCLE = list(ALLOWED_COLORS)
         clean = []
         for i, t in enumerate(topics[:4]):

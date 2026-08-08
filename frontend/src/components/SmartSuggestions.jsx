@@ -7,6 +7,7 @@
  */
 
 import { useState } from 'react'
+import { FolderOpen, Sparkles } from 'lucide-react'
 
 export default function SmartSuggestions({ onPromptClick, disabled, dynamicTopics = [] }) {
   const [activeId, setActiveId] = useState(null)
@@ -22,12 +23,12 @@ export default function SmartSuggestions({ onPromptClick, disabled, dynamicTopic
     return (
       <div className="ss-root">
         <div className="ss-heading">
-          <span className="ss-heading-icon">✨</span>
+          <span className="ss-heading-icon"><Sparkles size={15} /></span>
           <span>Smart Suggestions</span>
           <span className="ss-heading-sub">Upload documents to unlock personalised questions</span>
         </div>
         <div className="ss-empty">
-          <div className="ss-empty-icon">📂</div>
+          <div className="ss-empty-icon"><FolderOpen size={22} strokeWidth={1.5} /></div>
           <div className="ss-empty-text">
             Once you upload a document, the AI will analyse it and suggest
             specific questions you can ask — tailored to your content.
@@ -41,7 +42,7 @@ export default function SmartSuggestions({ onPromptClick, disabled, dynamicTopic
   return (
     <div className="ss-root">
       <div className="ss-heading">
-        <span className="ss-heading-icon">✨</span>
+        <span className="ss-heading-icon"><Sparkles size={15} /></span>
         <span>Smart Suggestions</span>
         <span className="ss-heading-sub">Topics discovered from your documents — click to explore</span>
       </div>

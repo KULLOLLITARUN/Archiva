@@ -1,16 +1,17 @@
 /** ChatWindow.jsx — Scrollable message list with welcome screen */
 
 import { useEffect, useRef } from 'react'
+import { BarChart3, GitCompare, Lightbulb, Library, Search } from 'lucide-react'
 import MessageBubble      from './MessageBubble.jsx'
 import TypingIndicator    from './TypingIndicator.jsx'
 import SmartSuggestions   from './SmartSuggestions.jsx'
 import { BRAND }          from '../brand.js'
 
 const SUGGESTIONS = [
-  { icon: '🔍', text: 'What are the main errors in the logs?' },
-  { icon: '📊', text: 'Summarize the key findings across all documents' },
-  { icon: '🔀', text: 'Compare the differences between the log files' },
-  { icon: '💡', text: 'Explain the most critical issues found' },
+  { icon: <Search size={16} />,     text: 'What are the main errors in the logs?' },
+  { icon: <BarChart3 size={16} />,  text: 'Summarize the key findings across all documents' },
+  { icon: <GitCompare size={16} />, text: 'Compare the differences between the log files' },
+  { icon: <Lightbulb size={16} />,  text: 'Explain the most critical issues found' },
 ]
 
 export default function ChatWindow({ messages, isLoading, streamStatus, onSuggestionClick, dynamicTopics = [] }) {
@@ -28,7 +29,7 @@ export default function ChatWindow({ messages, isLoading, streamStatus, onSugges
       {/* ── Welcome screen ──────────────────────────────── */}
       {isEmpty && (
         <div className="welcome">
-          <div className="welcome-orb">🧠</div>
+          <div className="welcome-orb"><Library size={28} strokeWidth={1.5} /></div>
           <div>
             <h1>Ask your documents anything</h1>
             <p>

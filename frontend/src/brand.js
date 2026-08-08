@@ -78,9 +78,9 @@ export function maskModel(rawModelId) {
  */
 export function modelTierStyle(tier) {
   switch (tier) {
-    case 'ultra': return { color: '#fbbf24' }  // gold
-    case 'pro':   return { color: '#a78bfa' }  // violet
-    case 'swift': return { color: '#22d3a5' }  // teal
-    default:      return { color: '#6b7280' }  // grey
+    case 'ultra': return { color: '#c9a24a' }  // amber
+    case 'pro':   return { color: '#dfb572' }  // gold
+    case 'swift': return { color: '#7fae8a' }  // sage
+    default:      return { color: '#8a8272' }  // warm grey
   }
 }

@@ -1,6 +1,7 @@
 /** InputBar.jsx — Auto-resizing textarea with glowing send button */
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { Loader2, Send } from 'lucide-react'
 
 export default function InputBar({ onSend, isLoading }) {
   const [value, setValue] = useState('')
@@ -50,7 +51,7 @@ export default function InputBar({ onSend, isLoading }) {
           aria-label="Send message"
           title="Send (Enter)"
         >
-          {isLoading ? '⏳' : '➤'}
+          {isLoading ? <Loader2 size={17} className="spin" /> : <Send size={17} />}
         </button>
       </div>
       <p className="input-hint">

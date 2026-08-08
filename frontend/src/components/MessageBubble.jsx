@@ -1,30 +1,31 @@
 /** MessageBubble.jsx — Beautiful animated message with badges */
 
+import { ClipboardList, GitCompare, Lightbulb, Sparkle } from 'lucide-react'
 import SourceBadge from './SourceBadge.jsx'
 import { maskModel, modelTierStyle } from '../brand.js'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
 const INTENT_TAG = {
-  compare:   { icon: '🔀', label: 'Compare' },
-  summarize: { icon: '📋', label: 'Summary' },
-  explain:   { icon: '💡', label: 'Explain' },
+  compare:   { icon: <GitCompare size={12} />,    label: 'Compare' },
+  summarize: { icon: <ClipboardList size={12} />, label: 'Summary' },
+  explain:   { icon: <Lightbulb size={12} />,     label: 'Explain' },
   qa:        null,
 }
 
 const REASON_LABELS = {
-  passed_all_checks:                       '✓ Accepted first try',
-  low_overlap:                             '🔄 Expanded search',
-  low_overlap_retry_model:                 '🔄 Used stronger AI',
-  answer_too_short:                        '🔄 Answer too short, retried',
-  ungrounded_numbers:                      '🛡 Hallucination check',
-  ungrounded_numbers_strong_model_failed:  '⚠ Numbers unverifiable',
-  possible_contradiction:                  '⚠ Contradiction detected',
-  no_results_after_retry:                  '✕ Not found after retry',
-  explicit_not_found:                      '✕ Not in documents',
-  answer_too_long:                         '✂ Trimmed with stronger AI',
-  max_attempts_no_result:                  '✕ Max attempts reached',
-  no_chunks_retrieved:                     '✕ No matching chunks',
+  passed_all_checks:                       'Accepted first try',
+  low_overlap:                             'Expanded search',
+  low_overlap_retry_model:                 'Used stronger AI',
+  answer_too_short:                        'Answer too short, retried',
+  ungrounded_numbers:                      'Hallucination check',
+  ungrounded_numbers_strong_model_failed:  'Numbers unverifiable',
+  possible_contradiction:                  'Contradiction detected',
+  no_results_after_retry:                  'Not found after retry',
+  explicit_not_found:                      'Not in documents',
+  answer_too_long:                         'Trimmed with stronger AI',
+  max_attempts_no_result:                  'Max attempts reached',
+  no_chunks_retrieved:                     'No matching chunks',
 }
 
 function badgeVariant(attempts, reason) {
@@ -68,7 +69,7 @@ export default function MessageBubble({ message }) {
 
   return (
     <div className="msg-row msg-row--bot">
-      <div className="avatar avatar--bot">◈</div>
+      <div className="avatar avatar--bot"><Sparkle size={16} /></div>
       <div className="bot-content">
 
         {/* Intent tag */}

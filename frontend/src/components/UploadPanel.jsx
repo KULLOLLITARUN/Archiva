@@ -10,6 +10,10 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import {
+  AlertTriangle, Check, FileText, FolderOpen, Info,
+  RefreshCw, Trash2, Upload, X,
+} from 'lucide-react'
 import { apiUpload as uploadFile, apiReload as reloadDocs, apiDeleteFile as deleteFile, apiClearAllDocs } from '../api.js'
 import { BRAND } from '../brand.js'
 
@@ -17,11 +21,8 @@ const ACCEPTED = '.txt,.pdf,.docx'
 const ACCEPTED_TYPES = ['text/plain', 'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 
-function fileIcon(filename) {
-  const ext = filename?.split('.').pop()?.toLowerCase()
-  if (ext === 'pdf')  return '📕'
-  if (ext === 'docx') return '📘'
-  return '📄'
+function fileIcon() {
+  return <FileText size={15} />
 }
 
 function StatusPill({ status }) {
@@ -36,12 +37,14 @@ function StatusPill({ status }) {
   return <span className={`up-pill ${cls}`}>{label}</span>
 }
 
+const TOAST_ICON = { ok: <Check size={14} />, info: <Info size={14} />, err: <X size={14} /> }
+
 function Toast({ toasts }) {
   return (
     <div className="toast-stack" aria-live="polite">
       {toasts.map(t => (
         <div key={t.id} className={`toast toast--${t.type}`}>
-          <span className="toast-icon">{t.type === 'ok' ? '✓' : t.type === 'info' ? 'ℹ' : '✕'}</span>
+          <span className="toast-icon">{TOAST_ICON[t.type] ?? TOAST_ICON.info}</span>
           <span>{t.msg}</span>
         </div>
       ))}
@@ -176,10 +179,10 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
         {/* ── Header ─────────────────────────────────────────────── */}
         <div className="up-header">
           <div className="up-header-left">
-            <span className="up-header-icon">🗂</span>
+            <span className="up-header-icon"><FolderOpen size={17} /></span>
             <span className="up-header-title">{BRAND.name} — Documents</span>
           </div>
-          <button className="up-close-btn" onClick={onClose} aria-label="Close panel">✕</button>
+          <button className="up-close-btn" onClick={onClose} aria-label="Close panel"><X size={14} /></button>
         </div>
 
         {/* ── Stats bar ──────────────────────────────────────────── */}
@@ -225,7 +228,9 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
               className="up-hidden-input"
               aria-hidden="true"
             />
-            <div className="up-dropzone-icon">{dragging ? '📂' : '⬆'}</div>
+            <div className="up-dropzone-icon">
+              {dragging ? <FolderOpen size={26} strokeWidth={1.5} /> : <Upload size={26} strokeWidth={1.5} />}
+            </div>
             <p className="up-dropzone-primary">
               {dragging ? 'Drop to upload' : 'Drop files or click to browse'}
             </p>
@@ -262,7 +267,7 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
             >
               {reloading
                 ? <><span className="up-spinner" />Indexing…</>
-                : <><span>🔄</span> Re-index Documents</>
+                : <><RefreshCw size={14} /> Re-index Documents</>
               }
             </button>
 
@@ -310,7 +315,7 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
                         title={`Remove ${f.filename}`}
                         onClick={() => handleDelete(f.file_id, f.filename)}
                         aria-label={`Delete ${f.filename}`}
-                      >✕</button>
+                      ><X size={12} /></button>
                     )}
                   </li>
                 ))}
@@ -320,7 +325,10 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
 
           {/* ── Danger zone ──────────────────────────────────────── */}
           <div className="up-section up-section--last up-danger-zone">
-            <h3 className="up-section-title up-section-title--danger">⚠ Danger Zone</h3>
+            <h3 className="up-section-title up-section-title--danger">
+              <AlertTriangle size={11} style={{ display: 'inline', verticalAlign: -1, marginRight: 4 }} />
+              Danger Zone
+            </h3>
 
             <div className="up-danger-row">
               <div>
@@ -335,7 +343,7 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
                   disabled={total_files === 0 || clearing}
                   title={total_files === 0 ? 'No documents to clear' : 'Clear all RAG data'}
                 >
-                  🗑 Clear All
+                  <Trash2 size={13} /> Clear All
                 </button>
               ) : (
                 <div className="up-confirm-row">
@@ -351,7 +359,7 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
             <div className="up-danger-divider" />
 
             <button className="up-danger-btn" onClick={onClearChat}>
-              🗑 Clear Chat History
+              <Trash2 size={13} /> Clear Chat History
             </button>
           </div>
 

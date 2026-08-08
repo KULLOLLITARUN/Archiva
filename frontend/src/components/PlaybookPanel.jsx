@@ -4,47 +4,51 @@
  */
 
 import { useState } from 'react'
+import {
+  BookOpen, FileText, FolderOpen, HelpCircle, MessageCircle,
+  RefreshCw, Sparkles, Upload, X, Zap,
+} from 'lucide-react'
 import { BRAND } from '../brand.js'
 
 const STEPS = [
   {
     num: 1,
-    icon: '📂',
+    icon: <FolderOpen size={16} />,
     title: 'Open Documents panel',
-    desc: `Click the blue "Documents" button in the top-right corner to open the file manager.`,
+    desc: `Click the "Documents" button in the top-right corner to open the file manager.`,
     tip: 'You can upload PDF, Word (.docx), or plain text (.txt) files.',
   },
   {
     num: 2,
-    icon: '⬆️',
+    icon: <Upload size={16} />,
     title: 'Upload your file',
     desc: 'Drag your file into the dotted box, or click it to open a file picker. Wait for the green "indexed" badge to appear.',
     tip: 'You can upload multiple files at the same time!',
   },
   {
     num: 3,
-    icon: '💬',
+    icon: <MessageCircle size={16} />,
     title: 'Ask a question',
-    desc: 'Type your question in the chat box at the bottom and press Enter (or the ➤ button).',
+    desc: 'Type your question in the chat box at the bottom and press Enter (or the send button).',
     tip: 'Ask in plain English — no special commands needed.',
   },
   {
     num: 4,
-    icon: '⚡',
+    icon: <Zap size={16} />,
     title: 'Get your answer',
     desc: `${BRAND.name} reads your documents and types back the answer with the exact source so you can verify it.`,
-    tip: 'Look for the 📄 source chips below each answer to see where the info came from.',
+    tip: 'Look for the source chips below each answer to see where the info came from.',
   },
   {
     num: 5,
-    icon: '🔄',
+    icon: <RefreshCw size={16} />,
     title: 'Self-healing AI',
     desc: `If the first answer isn't confident enough, ${BRAND.name} automatically retries with smarter settings. You'll see a yellow/orange badge when this happens.`,
     tip: 'A green result means the AI was confident. Orange = it had to try harder.',
   },
   {
     num: 6,
-    icon: '✨',
+    icon: <Sparkles size={16} />,
     title: 'Use Smart Suggestions',
     desc: 'On the home screen, click any topic chip (Explore, Analyze, Issues…) to see ready-made questions — then click any question to send it instantly.',
     tip: 'Smart Suggestions are great when you don\'t know where to start!',
@@ -53,27 +57,27 @@ const STEPS = [
 
 const FAQ = [
   {
-    q: '❓ Why does it say "Not found in the document"?',
+    q: 'Why does it say "Not found in the document"?',
     a: 'The answer isn\'t in any uploaded file. Try uploading a document that contains the information you\'re looking for.',
   },
   {
-    q: '❓ Can I ask follow-up questions?',
+    q: 'Can I ask follow-up questions?',
     a: 'Yes! Archiva remembers the conversation. Ask naturally, just like talking to a person.',
   },
   {
-    q: '❓ What file types does it support?',
-    a: 'PDF (📕), Word DOCX (📘), and plain Text TXT (📄). One file can be any size.',
+    q: 'What file types does it support?',
+    a: 'PDF, Word DOCX, and plain Text TXT. One file can be any size.',
   },
   {
-    q: '❓ How do I remove a file?',
-    a: 'Open the Documents panel and click the ✕ button next to the file you want to delete.',
+    q: 'How do I remove a file?',
+    a: 'Open the Documents panel and click the close button next to the file you want to delete.',
   },
   {
-    q: '❓ What does "Reflected" mean?',
+    q: 'What does "Reflected" mean?',
     a: 'The AI checked its own answer and decided to try again to give you something better. It\'s a quality guarantee!',
   },
   {
-    q: '❓ What is "Re-index Documents"?',
+    q: 'What is "Re-index Documents"?',
     a: `If you added files directly to the server's test_docs/ folder, click Re-index to make ${BRAND.name} aware of them.`,
   },
 ]
@@ -99,10 +103,10 @@ export default function PlaybookPanel({ isOpen, onClose }) {
         {/* Header */}
         <div className="play-header">
           <div className="play-header-left">
-            <span className="play-header-icon">📖</span>
+            <span className="play-header-icon"><BookOpen size={16} /></span>
             <span className="play-header-title">How to Use {BRAND.name}</span>
           </div>
-          <button className="play-close-btn" onClick={onClose} aria-label="Close playbook">✕</button>
+          <button className="play-close-btn" onClick={onClose} aria-label="Close playbook"><X size={14} /></button>
         </div>
 
         <div className="play-body">
@@ -136,15 +140,20 @@ export default function PlaybookPanel({ isOpen, onClose }) {
           {/* FAQ */}
           <div className="play-section-title" style={{ marginTop: 4 }}>Common Questions</div>
 
-          {FAQ.map((item, i) => (
-            <div className="play-qa" key={i}>
-              <div className="play-qa-q">{item.q}</div>
-              <div className="play-qa-a">{item.a}</div>
+          {FAQ.map((item) => (
+            <div className="play-qa" key={item.q} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <HelpCircle size={15} style={{ flexShrink: 0, marginTop: 1, color: 'var(--text3)' }} />
+              <div>
+                <div className="play-qa-q" style={{ marginBottom: 2 }}>{item.q}</div>
+                <div className="play-qa-a">{item.a}</div>
+              </div>
             </div>
           ))}
 
           {/* ── Smart Suggestions Explorer ─────────────────────── */}
-          <div className="play-section-title" style={{ marginTop: 4 }}>✨ Smart Suggestions</div>
+          <div className="play-section-title" style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Sparkles size={12} /> Smart Suggestions
+          </div>
 
           <div className="play-intro" style={{ fontSize: 12 }}>
             After you upload a document, {BRAND.name} uses its most powerful AI
@@ -153,13 +162,13 @@ export default function PlaybookPanel({ isOpen, onClose }) {
           </div>
 
           {[
-            { icon: '📄', label: 'Your Docs chips', desc: 'Appear automatically once documents are indexed. Click a chip to see 4 questions about that topic.' },
-            { icon: '✨',  label: 'AI-generated topics', desc: 'Topics are created by the AI from your actual content — not generic templates.' },
-            { icon: '💭', label: 'One-click asking', desc: 'Click any suggested question and it is sent instantly to the chat.' },
-            { icon: '🔄', label: 'Auto-refreshes', desc: 'Upload a new file and topics update to reflect all your documents.' },
-          ].map((item, i) => (
-            <div key={i} className="play-qa" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+            { icon: <FileText size={16} />,      label: 'Your Docs chips', desc: 'Appear automatically once documents are indexed. Click a chip to see 4 questions about that topic.' },
+            { icon: <Sparkles size={16} />,       label: 'AI-generated topics', desc: 'Topics are created by the AI from your actual content — not generic templates.' },
+            { icon: <MessageCircle size={16} />,  label: 'One-click asking', desc: 'Click any suggested question and it is sent instantly to the chat.' },
+            { icon: <RefreshCw size={16} />,      label: 'Auto-refreshes', desc: 'Upload a new file and topics update to reflect all your documents.' },
+          ].map((item) => (
+            <div key={item.label} className="play-qa" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <span style={{ flexShrink: 0, color: 'var(--accent2)' }}>{item.icon}</span>
               <div>
                 <div className="play-qa-q" style={{ marginBottom: 2 }}>{item.label}</div>
                 <div className="play-qa-a">{item.desc}</div>
