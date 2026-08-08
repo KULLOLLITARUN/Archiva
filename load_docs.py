@@ -6,61 +6,32 @@ Usage:
 
 Fix #3:  failed counter now increments on actual parse/chunk errors.
 Fix #9:  Globs *.txt, *.pdf, *.docx (in that priority order).
-Fix #12: Version-checks the loaded store; discards and rebuilds on mismatch.
+Persistence: Postgres (db/postgres.py / db/store_sync.py), not a pickle
+file — matches main.py, which no longer reads store_state.pkl at all.
 """
 
-import os
-import pickle
 import sys
 import uuid
 from pathlib import Path
 
+from db.postgres import init_db
+from db.store_sync import load_store_from_postgres, sync_file_to_postgres
 from ingestion.chunker import chunk_document
 from ingestion.parser import compute_hash, parse_file, SUPPORTED_EXTENSIONS
 from retrieval.store import MultiDocStore
 
 DOCS_DIR  = Path("test_docs")
-STORE_PKL = Path("store_state.pkl")
-STORE_TMP = Path("store_state.tmp")
 
 
 def load_store() -> MultiDocStore:
-    if not STORE_PKL.exists():
-        return MultiDocStore()
-
+    init_db()
     try:
-        with open(STORE_PKL, "rb") as f:
-            store = pickle.load(f)
-
-        # Fix #12: version check — discard old pickle if schema has changed
-        loaded_version = getattr(store, "STORE_VERSION", "1.0")
-        if loaded_version != MultiDocStore.CURRENT_VERSION:
-            print(
-                f"[!] Store version mismatch: found v{loaded_version}, "
-                f"expected v{MultiDocStore.CURRENT_VERSION}. "
-                "Rebuilding from source files."
-            )
-            return MultiDocStore()
-
-        print(
-            f"[+] Loaded existing store v{loaded_version}: "
-            f"{len(store.files)} file(s), {store.total_chunks()} chunks"
-        )
+        store = load_store_from_postgres()
+        print(f"[+] Loaded existing store: {len(store.files)} file(s), {store.total_chunks()} chunks")
         return store
-
     except Exception as exc:
         print(f"[!] Failed to load existing store ({exc}). Rebuilding from source files.")
         return MultiDocStore()
-
-
-def save_store(store: MultiDocStore) -> None:
-    try:
-        with open(STORE_TMP, "wb") as f:
-            pickle.dump(store, f)
-        os.replace(STORE_TMP, STORE_PKL)
-    except Exception as exc:
-        print(f"\n[Error] Failed to save store: {exc}")
-        sys.exit(1)
 
 
 def main() -> None:
@@ -83,6 +54,7 @@ def main() -> None:
     loaded = 0
     failed = 0  # Fix #3: will now actually increment on errors
     stopped_early = False
+    newly_added_ids: list = []
 
     for filepath in doc_files:
         filename = filepath.name
@@ -138,11 +110,7 @@ def main() -> None:
         if status == "ok":
             print(f"  [OK] {filename} -- {len(chunks)} chunks indexed")
             loaded += 1
-            try:
-                from database import db_create_document
-                db_create_document(file_id, filename, file_type, len(chunks))
-            except Exception:
-                pass
+            newly_added_ids.append(file_id)
 
         elif status == "duplicate":
             print(f"  [Skip] {filename} -- skipped (duplicate)")
@@ -167,7 +135,13 @@ def main() -> None:
             print(f"[Embed] Done — {embedded}/{store.total_chunks()} chunks have embeddings.")
         except Exception as exc:
             print(f"[Warn] Embedding precompute failed: {exc} — saving without embeddings.")
-        save_store(store)
+
+        print("[DB] Syncing newly-added files to Postgres…")
+        for file_id in newly_added_ids:
+            try:
+                sync_file_to_postgres(store, file_id)
+            except Exception as exc:
+                print(f"[Warn] Failed to sync {file_id!r} to Postgres: {exc}")
 
 
     print()

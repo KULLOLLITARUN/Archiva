@@ -1,17 +1,18 @@
 """
 db/postgres.py — Postgres connection and data-access layer for Archiva.
 
-Additive at this point — NOT yet wired into main.py/database.py/
-retrieval/store.py. Those still run on SQLite + a pickled MultiDocStore.
-This module exists so the schema and repository functions are built and
-tested against a real database before anything in the live app is
-switched over to depend on them (that cutover is a separate, deliberate
-step — see the module docstring in db/schema.sql for the reasoning on
-why there's no pgvector/ANN index here yet).
+The persistence layer for document metadata, chunks (text + JSONB
+metadata + embedding), and feedback logs — replaces the old SQLite
+(database.py, now deleted) + pickled MultiDocStore (store_state.pkl)
+combination entirely. See db/schema.sql's module docstring for why
+there's no pgvector/ANN index on the embedding column.
 
-Mirrors database.py's style (a connection-per-call context manager, one
-function per query) so the two are easy to compare while both exist, and
-easy to fold into one once the app cuts over.
+MultiDocStore (retrieval/store.py) itself stays persistence-agnostic —
+it doesn't import this module. db/store_sync.py is the bridge: it loads
+a MultiDocStore from here at startup and syncs it back on every mutation
+(upload, delete, reload, reingestion refresh). See main.py's lifespan
+and the /upload, /files/{id}, /reload, /documents/clear-all endpoints
+for where those calls happen.
 """
 
 import os
@@ -89,6 +90,32 @@ def db_create_document(
         db.execute(
             """INSERT INTO documents (id, filename, file_type, chunk_count, content_hash)
                VALUES (%s, %s, %s, %s, %s)""",
+            (doc_id, filename, file_type, chunk_count, content_hash),
+        )
+
+
+def db_upsert_document(
+    doc_id: str, filename: str, file_type: str, chunk_count: int,
+    content_hash: Optional[str] = None,
+) -> None:
+    """
+    Insert a document, or update it in place (and un-delete it) if a row
+    with this id already exists. Used by the reingestion refresh path
+    (ingestion/reingest.py via db/store_sync.py), where the document row
+    already exists and only its chunk_count/content_hash may have
+    changed — a plain db_create_document() would fail on the id conflict.
+    """
+    with get_db() as db:
+        db.execute(
+            """INSERT INTO documents (id, filename, file_type, chunk_count, content_hash)
+               VALUES (%s, %s, %s, %s, %s)
+               ON CONFLICT (id) DO UPDATE SET
+                   filename     = EXCLUDED.filename,
+                   file_type    = EXCLUDED.file_type,
+                   chunk_count  = EXCLUDED.chunk_count,
+                   content_hash = EXCLUDED.content_hash,
+                   is_deleted   = false,
+                   deleted_at   = NULL""",
             (doc_id, filename, file_type, chunk_count, content_hash),
         )
 

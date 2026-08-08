@@ -15,6 +15,26 @@ jobs:
       matrix:
         python-version: ["3.10", "3.12"]
 
+    # Backs db/postgres.py — document/chunk/feedback persistence
+    # (tests/test_postgres.py, tests/test_api_integration.py). Both files
+    # skip gracefully if this isn't reachable, but running it here means
+    # CI actually exercises upload/delete/persistence, not just the parts
+    # that don't need a database.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: archiva
+          POSTGRES_PASSWORD: archiva_ci_password
+          POSTGRES_DB: archiva
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U archiva"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -31,4 +51,6 @@ jobs:
         # No GROQ_API_KEY needed: every Groq/LLM call in the suite is mocked
         # (see tests/test_api_integration.py's module docstring for the one
         # deliberate exception to that rule and why it's out of scope here).
+        env:
+          DATABASE_URL: postgresql://archiva:archiva_ci_password@localhost:5432/archiva
         run: pytest -v

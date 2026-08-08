@@ -23,19 +23,22 @@ if [ -z "$GROQ_API_KEY" ] || [ "$GROQ_API_KEY" = "your_groq_api_key_here" ]; the
   exit 1
 fi
 
+if [ -z "$DATABASE_URL" ]; then
+  echo "[X] DATABASE_URL is not set in .env — see README's Database Setup section."
+  exit 1
+fi
+
 # Check Python deps
 echo "-> Checking Python dependencies..."
 pip install -q -r requirements.txt
 echo "   [OK] Dependencies ready"
 
-# Ingest docs
-if [ ! -f "store_state.pkl" ]; then
-  echo ""
-  echo "-> No store found. Running document ingestion..."
-  python load_docs.py
-else
-  echo "   [OK] Store already exists (delete store_state.pkl to re-ingest)"
-fi
+# Ingest any files in test_docs/ not already in Postgres. Safe to run every
+# time — load_store_from_postgres() + content-hash dedup mean this is a
+# no-op past the first run, no store_state.pkl file to check for anymore.
+echo ""
+echo "-> Syncing test_docs/ with Postgres..."
+python load_docs.py
 
 # Start backend in background
 echo ""

@@ -24,7 +24,7 @@ numpy>=1.26.0
 # Disk-based embedding cache (avoids recomputing at query time)
 diskcache>=5.6.3
 
-# Postgres driver (db/postgres.py) — additive, not yet wired into main.py
+# Postgres driver — document/chunk/feedback persistence (db/postgres.py)
 psycopg[binary]>=3.1
 
 # ── Testing ────────────────────────────────────────────────────────────────────

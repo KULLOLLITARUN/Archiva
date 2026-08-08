@@ -33,19 +33,19 @@ if exist "venv\Scripts\activate.bat" (
 )
 
 
-:: ── Document store (skip if pickle already exists) ───────────────────────────
+:: ── Document store (Postgres — see README's Database Setup) ──────────────────
+:: Safe to run every time: load_docs.py loads existing state from Postgres
+:: first, then only ingests files in test_docs\ not already there (dedup by
+:: content hash). No store_state.pkl file to check for anymore.
 echo.
-if exist "store_state.pkl" (
-    echo - Store found — skipping re-ingestion.  ^(Delete store_state.pkl to force a rebuild.^)
-) else (
-    echo - No store found. Running document ingestion...
-    python load_docs.py
-    if errorlevel 1 (
-        echo.
-        echo [X] Document ingestion failed and no usable store was created.
-        echo     Add supported files to test_docs\ and run start.bat again.
-        exit /b 1
-    )
+echo - Syncing test_docs\ with Postgres...
+python load_docs.py
+if errorlevel 1 (
+    echo.
+    echo [X] Document ingestion failed and no usable store was created.
+    echo     Add supported files to test_docs\ and run start.bat again,
+    echo     or upload documents directly via the /upload endpoint.
+    exit /b 1
 )
 
 :: ── Frontend dependencies (only if node_modules missing) ─────────────────────

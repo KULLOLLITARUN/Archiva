@@ -10,9 +10,9 @@ failures before ever returning an answer.
 > service. See [Known Limitations](#known-limitations-deliberate-not-oversights)
 > before deploying it anywhere other endpoints can reach.
 
-CI: the full test suite (97 tests) runs on every push/PR via
-`.github/workflows/tests.yml` — no API key required, every LLM call in the
-suite is mocked.
+CI: the full test suite (156 tests) runs on every push/PR via
+`.github/workflows/tests.yml`, including a real Postgres service — no
+Groq API key required, every LLM call in the suite is mocked.
 
 ---
 
@@ -82,12 +82,15 @@ Validator → Response + Sources
 - Python 3.10+
 - Node.js 18+
 - A Groq API key → https://console.groq.com
+- A local Postgres instance (document/chunk/feedback persistence — see
+  [Database Setup](#database-setup) below)
 
 ### 2. Configure
 
 ```bash
 cp .env.example .env
-# Only GROQ_API_KEY is required; everything else has a sane default.
+# GROQ_API_KEY and DATABASE_URL are both required; everything else has a
+# sane default.
 ```
 
 ### 3. Install & Run
@@ -130,6 +133,36 @@ npm run dev
 
 ---
 
+## Database Setup
+
+Archiva persists documents, chunks (+ embeddings), and feedback logs in
+Postgres — no SQLite, no pickle file. Use a dedicated role/database, not
+your Postgres superuser:
+
+```sql
+CREATE ROLE archiva LOGIN PASSWORD 'choose_a_password';
+CREATE DATABASE archiva OWNER archiva;
+```
+
+Then set `DATABASE_URL` in `.env`:
+
+```
+DATABASE_URL=postgresql://archiva:choose_a_password@localhost:5432/archiva
+```
+
+That's it — `db/postgres.py`'s schema (`db/schema.sql`) is applied
+automatically and idempotently every time the app starts (`init_db()` in
+`main.py`'s lifespan, and at the top of `load_docs.py`). No separate
+migration step, no manual `psql -f schema.sql` required, on this machine
+or a fresh clone.
+
+No pgvector, and that's deliberate, not a gap: embeddings are stored as a
+plain array column and similarity search stays application-side
+brute-force cosine — see `db/schema.sql`'s module docstring for the full
+reasoning and the exact condition for revisiting it.
+
+---
+
 ## Project Structure
 
 ```
@@ -137,7 +170,11 @@ rag_agentic/
 │
 ├── main.py               ← FastAPI app: all HTTP endpoints
 ├── config.py              ← All settings, thresholds, and constants
-├── database.py             ← SQLite schema (document metadata, feedback logs)
+│
+├── db/                     ← Postgres persistence
+│   ├── postgres.py            connection + schema application + data-access
+│   ├── schema.sql              documents / chunks / feedback_logs tables
+│   └── store_sync.py            loads/persists MultiDocStore to Postgres
 │
 ├── agents/                ← The reasoning layer
 │   ├── loop.py               orchestrates retrieve→generate→reflect→heal
@@ -182,8 +219,8 @@ rag_agentic/
 ├── eval/                   ← Offline retrieval-quality regression harness
 │   ├── run_eval.py, golden_queries.json, fixtures/
 │
-├── tests/                  ← 97 tests, unit + HTTP integration
-├── .github/workflows/       ← CI
+├── tests/                  ← 156 tests, unit + HTTP integration + Postgres
+├── .github/workflows/       ← CI (runs a Postgres service too)
 │
 └── frontend/                ← React + Vite UI
 ```
@@ -266,14 +303,20 @@ explanations. The most commonly tuned:
 
 ```bash
 pip install -r requirements.txt   # includes pytest
-pytest -v                          # 97 tests, ~8-10s, no API key needed
+pytest -v                          # 156 tests, no API key needed
 python eval/run_eval.py            # retrieval-quality report (BM25 + hybrid/dense)
 ```
 
 `tests/` covers the deterministic core (reflection, healing, chunking, fusion,
 caching, decomposition) as unit tests, plus HTTP-layer integration tests
-against the real FastAPI app (`tests/test_api_integration.py`). None of it
-needs a live Groq call — the suite mocks every LLM boundary.
+against the real FastAPI app (`tests/test_api_integration.py`) and direct
+Postgres integration tests (`tests/test_postgres.py`). None of it needs a
+live Groq call — the suite mocks every LLM boundary.
+
+The Postgres-dependent tests (`test_postgres.py`, `test_api_integration.py`)
+skip automatically — not fail — when `DATABASE_URL` isn't reachable, so the
+rest of the suite still runs fine without a database up. CI runs a real
+Postgres service, so nothing is permanently skipped there.
 
 ---
 
@@ -296,9 +339,9 @@ needs a live Groq call — the suite mocks every LLM boundary.
 
 | Limitation | Why | Revisit when |
 |---|---|---|
-| Dense retrieval is exact brute-force cosine, no ANN index | Sub-millisecond at the current chunk cap; avoids graph tuning/tombstoning and a new native dependency | `MAX_TOTAL_CHUNKS` is raised well past its current default (tens of thousands of chunks) |
+| Dense retrieval is exact brute-force cosine, no ANN index (pgvector or otherwise) | Sub-millisecond at the current chunk cap; avoids graph tuning/tombstoning and a new native dependency (pgvector has no official Windows binary — see `db/schema.sql`) | `MAX_TOTAL_CHUNKS` is raised well past its current default (tens of thousands of chunks) |
 | No OCR for scanned/image PDFs | Avoids a system-level binary dependency (Tesseract, not pip-installable) and silent low-confidence text polluting search/hallucination risk; upload returns an explicit error instead | Scanned documents become an actual input source — implement as a background job, not inline in `/upload` (a 50-page scan can take 30-60s) |
-| Single-process, in-memory store (pickled to disk) | Simple, no external infra, fine for one instance | You need multiple worker processes or horizontal scaling — requires moving to a real vector DB / shared store |
+| Single-process, in-memory retrieval hot path | Chunks/embeddings/BM25 index all live in one process's memory for query speed — Postgres is the durable source of truth (see [Database Setup](#database-setup)), but each process still holds its own full in-memory copy, not a shared one | You need multiple worker processes or horizontal scaling — retrieval would need to query Postgres per-request (or a shared cache) instead of an in-memory copy |
 | No auth on any endpoint, including destructive ones (`/documents/clear-all`) | Intentional — this is the "open/no-auth edition," see `main.py`'s module docstring | Never, unless the deployment model changes (e.g. public-facing) — then auth needs to be designed in, not bolted on |
 | Multi-hop decomposition runs sub-questions independently after resolving simple pronoun references | `agents/decomposer.py`'s `anchor_to_prior_answer()` handles "who manages X, and what's THEIR policy" but not deeper multi-step reasoning chains | A dependent chain needs more than one pronoun resolved, or genuinely sequential reasoning (not just reference-anchoring) |
 
@@ -346,7 +389,9 @@ of rows the model can't reason over directly.
 - [x] `.txt/.pdf/.docx/.md/.csv/.html` ingestion
 - [x] Structured/tabular extraction + retrieval, with verified-arithmetic grounding
 - [x] Retrieval-quality eval harness + CI
-- [ ] Real vector DB (Qdrant/pgvector) + ANN index
+- [x] Postgres persistence (documents, chunks + embeddings, feedback logs) — replaces SQLite + pickle
+- [ ] ANN index (pgvector or otherwise) once chunk-count scale actually needs it
 - [ ] OCR (background job)
 - [ ] Optional auth layer for non-local deployments
 - [ ] Deeper sequential multi-hop reasoning (beyond single-pronoun anchoring)
+- [ ] Multi-process/horizontal scaling (retrieval hot path is still per-process in-memory)

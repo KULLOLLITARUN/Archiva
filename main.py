@@ -7,7 +7,6 @@ Auth fully removed. All endpoints are open — no login, register, or tokens.
 import asyncio
 import json
 import os
-import pickle
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -26,11 +25,13 @@ from config import (
     GROQ_FAST, GROQ_STRONG, GROQ_QWEN, UPLOADED_DOCS_DIR, REINGESTION_QUEUE_PATH,
     MAX_UPLOAD_BYTES,
 )
-from database import (
+from db.postgres import (
     init_db,
-    db_create_document, db_list_all_documents,
-    db_get_document, db_soft_delete_document,
+    db_list_all_documents, db_get_document,
     db_log_feedback, db_get_system_stats,
+)
+from db.store_sync import (
+    load_store_from_postgres, sync_file_to_postgres, delete_file_from_postgres,
 )
 from models.schemas import (
     ChatRequest, ChatResponse, SourceRef,
@@ -51,38 +52,30 @@ from agents.validator import validate
 from agents.loop import run_reflection_loop, build_labeled_context
 from monitor.logger import log_pipeline, get_stats
 
-# Env-overridable (same pattern as database.py's DB_PATH) so tests can point
-# the store at a temp file instead of the real on-disk state.
-STORE_PKL = os.getenv("STORE_PKL_PATH", "store_state.pkl")
-STORE_TMP = os.getenv("STORE_TMP_PATH", "store_state.tmp")
-
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 store = MultiDocStore()
 memory = ConversationMemory()
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global store, memory
 
-    # Initialise SQLite DB (idempotent)
+    # Apply the Postgres schema (idempotent)
     init_db()
 
-    # Load persisted vector store
+    # Load the store from Postgres — replaces the old store_state.pkl load.
+    # No STORE_VERSION migration concern here: every call reconstructs a
+    # fresh MultiDocStore from source data (documents + chunks), never
+    # deserializes an old pickled instance, so there's nothing to be
+    # version-mismatched with.
     try:
-        with open(STORE_PKL, "rb") as f:
-            store = pickle.load(f)
-        loaded_version = getattr(store, "STORE_VERSION", "1.0")
-        if loaded_version != MultiDocStore.CURRENT_VERSION:
-            print(f"[Warn] Store version mismatch — starting fresh.")
-            store = MultiDocStore()
-        else:
-            print(f"[OK] Store loaded: {store.total_chunks()} chunks across {len(store.files)} file(s)")
+        store = load_store_from_postgres()
+        print(f"[OK] Store loaded from Postgres: {store.total_chunks()} chunks across {len(store.files)} file(s)")
     except Exception as e:
         store = MultiDocStore()
-        print(f"[Warn] No store found ({e}). Starting empty.")
+        print(f"[Warn] Could not load store from Postgres ({e}). Starting empty.")
 
     memory = ConversationMemory()
     yield
@@ -102,15 +95,6 @@ app.add_middleware(
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
-
-def _save_store() -> None:
-    # Wait for background embedding precompute to finish before pickling.
-    # This activates the Fix #2 race-condition guard in store.py.
-    store.wait_for_embeddings()
-    with open(STORE_TMP, "wb") as f:
-        pickle.dump(store, f)
-    os.replace(STORE_TMP, STORE_PKL)
-
 
 def _build_sources(chunks: list) -> list:
     return [
@@ -390,8 +374,6 @@ async def upload_file(
         return UploadResponse(filename=filename, file_id="", chunk_count=0,
                               status="limit", message="Store is full.")
 
-    db_create_document(file_id, filename, file_type, len(chunks))
-
     # Persist the raw bytes so /admin/reingestion-queue/process can later
     # re-parse + re-chunk this file. Non-fatal: the upload already succeeded
     # in-memory/in-store even if this write fails.
@@ -401,11 +383,11 @@ async def upload_file(
         print(f"[WARN] Failed to persist uploaded file {filename!r} for reingestion: {exc}")
 
     try:
-        _save_store()
+        sync_file_to_postgres(store, file_id)
     except Exception as exc:
         return UploadResponse(filename=filename, file_id=file_id, chunk_count=len(chunks),
                               status="error",
-                              message=f"Indexed but failed to persist to disk: {exc}")
+                              message=f"Indexed but failed to persist to database: {exc}")
 
     return UploadResponse(filename=filename, file_id=file_id, chunk_count=len(chunks),
                           status="ok", message=f"Successfully indexed {len(chunks)} chunks.")
@@ -421,10 +403,8 @@ async def delete_file(file_id: str) -> DeleteResponse:
     if not deleted:
         raise HTTPException(status_code=404, detail=f"File '{file_id}' not found in store.")
 
-    db_soft_delete_document(file_id)
-
     try:
-        _save_store()
+        delete_file_from_postgres(file_id)
     except Exception as exc:
         return DeleteResponse(file_id=file_id, deleted=True,
                               message=f"Deleted from memory but failed to persist: {exc}")
@@ -518,8 +498,7 @@ async def reload_docs() -> dict:
         _, add_status = store.add_file(file_id=file_id, filename=filename,
                                        content_hash=content_hash, chunks=chunks, file_type=file_type)
         if add_status == "ok":
-            db_create_document(file_id, filename, file_type, len(chunks))
-            _save_store()
+            sync_file_to_postgres(store, file_id)
             log.append({"file": filename, "status": "ok", "chunks": len(chunks)}); loaded += 1
         elif add_status == "duplicate":
             log.append({"file": filename, "status": "skipped", "msg": "duplicate"}); skipped += 1
@@ -718,10 +697,19 @@ async def admin_process_reingestion_queue() -> dict:
 
     summary = refresh_all_from_disk(store, UPLOADED_DOCS_DIR)
 
-    try:
-        _save_store()
-    except Exception as exc:
-        summary["save_error"] = str(exc)
+    # refresh_all_from_disk() already replaced each refreshed file's chunks
+    # in the in-memory store; sync those new chunks to Postgres so the
+    # refresh is durable, not just in-memory until the next restart.
+    sync_errors = []
+    for filename in summary["refreshed"]:
+        matching_ids = [fid for fid, rec in store.files.items() if rec["filename"] == filename]
+        for file_id in matching_ids:
+            try:
+                sync_file_to_postgres(store, file_id)
+            except Exception as exc:
+                sync_errors.append({"file": filename, "error": str(exc)})
+    if sync_errors:
+        summary["sync_errors"] = sync_errors
 
     open(REINGESTION_QUEUE_PATH, "w").close()  # clear queue after processing
 
@@ -745,11 +733,10 @@ async def admin_delete_document(doc_id: str):
         raise HTTPException(status_code=404, detail="Document not found.")
 
     store.delete_file(doc_id)
-    db_soft_delete_document(doc_id)
     try:
-        _save_store()
-    except Exception:
-        pass
+        delete_file_from_postgres(doc_id)
+    except Exception as exc:
+        print(f"[WARN] Failed to persist deletion of {doc_id!r}: {exc}")
 
     return {"deleted": True, "doc_id": doc_id}
 
@@ -764,20 +751,29 @@ async def admin_delete_all_documents():
 async def clear_all_documents():
     """Delete ALL documents from the store."""
     count = len(store.files)
+    file_ids_in_store = list(store.files.keys())
+
     store.files.clear()
     store.chunks.clear()
     store.file_hash_map.clear()
     store._chunk_hashes.clear()
     store._rebuild_index()
 
+    for file_id in file_ids_in_store:
+        try:
+            delete_file_from_postgres(file_id)
+        except Exception as exc:
+            print(f"[WARN] Failed to persist deletion of {file_id!r}: {exc}")
+
+    # Catch any documents that exist in Postgres but weren't in the
+    # in-memory store (e.g. a prior sync failure) so clear-all is thorough.
     rows = db_list_all_documents()
     for d in rows:
-        db_soft_delete_document(d["id"])
-
-    try:
-        _save_store()
-    except Exception as exc:
-        print(f"[WARN] Failed to save empty store: {exc}")
+        if not d["is_deleted"]:
+            try:
+                delete_file_from_postgres(d["id"])
+            except Exception as exc:
+                print(f"[WARN] Failed to persist deletion of {d['id']!r}: {exc}")
 
     return {
         "deleted": True,
