@@ -11,6 +11,26 @@ async function safeJson(res) {
   try { return await res.json() } catch { return null }
 }
 
+// ── Backend readiness probe ────────────────────────────────────────────────────
+
+/**
+ * Poll /health until the backend responds or maxWaitMs elapses.
+ * Returns true if the backend came up, false if we timed out.
+ */
+export async function waitForBackend(maxWaitMs = 60_000, intervalMs = 1_500) {
+  const deadline = Date.now() + maxWaitMs
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`${BASE}/health`, { signal: AbortSignal.timeout(1_000) })
+      if (res.ok) return true
+    } catch {
+      // ECONNREFUSED or timeout — backend not ready yet, keep polling
+    }
+    await new Promise(r => setTimeout(r, intervalMs))
+  }
+  return false
+}
+
 // ── Chat SSE stream ────────────────────────────────────────────────────────────
 
 export async function streamChat({ message, session_id, onToken, onDone, onError }) {

@@ -100,6 +100,9 @@ app.add_middleware(
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
 def _save_store() -> None:
+    # Wait for background embedding precompute to finish before pickling.
+    # This activates the Fix #2 race-condition guard in store.py.
+    store.wait_for_embeddings()
     with open(STORE_TMP, "wb") as f:
         pickle.dump(store, f)
     os.replace(STORE_TMP, STORE_PKL)
@@ -557,8 +560,17 @@ async def get_suggestions() -> dict:
 
     user_msg = f"Document excerpts:\n{sample_text}"
 
+    def _call_suggestions(model_id: str) -> str:
+        return call_groq(model_id, f"{system_prompt}\n\n{user_msg}", "")
+
     try:
-        raw = call_groq(GROQ_QWEN, f"{system_prompt}\n\n{user_msg}", "")
+        # Try preferred Qwen model first; fall back to GROQ_STRONG if unavailable
+        try:
+            raw = _call_suggestions(GROQ_QWEN)
+        except Exception as qwen_err:
+            print(f"  [WARN]  [suggestions] {GROQ_QWEN} failed ({qwen_err}) -- falling back to {GROQ_STRONG}")
+            raw = _call_suggestions(GROQ_STRONG)
+
         raw = _re.sub(r"```(?:json)?|```", "", raw).strip()
         match = _re.search(r'\[.*\]', raw, _re.DOTALL)
         if not match:
@@ -679,23 +691,8 @@ async def admin_delete_document(doc_id: str):
 
 @app.delete("/admin/bulk-delete/documents", tags=["admin"])
 async def admin_delete_all_documents():
-    count = len(store.files)
-    store.files.clear()
-    store.chunks.clear()
-    store.file_hash_map.clear()
-    store._chunk_hashes.clear()
-    store._rebuild_index()
-
-    rows = db_list_all_documents()
-    for d in rows:
-        db_soft_delete_document(d["id"])
-
-    try:
-        _save_store()
-    except Exception:
-        pass
-
-    return {"deleted": True, "count": max(count, len(rows))}
+    """Alias for DELETE /documents/clear-all — prefer that endpoint."""
+    return await clear_all_documents()
 
 
 @app.delete("/documents/clear-all", tags=["documents"])

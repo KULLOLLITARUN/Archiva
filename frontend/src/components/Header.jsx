@@ -57,7 +57,7 @@ function ArchivaLogo() {
   )
 }
 
-export default function Header({ docsInfo, onUploadClick, onPlaybookClick, onAdminClick }) {
+export default function Header({ docsInfo, onUploadClick, onPlaybookClick, onAdminClick, backendStatus = '' }) {
   const { total_files = 0 } = docsInfo
   const [online, setOnline] = useState(false)
 
@@ -69,17 +69,24 @@ export default function Header({ docsInfo, onUploadClick, onPlaybookClick, onAdm
     return () => clearInterval(id)
   }, [])
 
-  const statusLabel = !online
-    ? 'Offline'
-    : total_files > 0
-      ? `${total_files} doc${total_files !== 1 ? 's' : ''} ready`
-      : 'No documents'
+  // If a backendStatus message is set, show that instead of the normal pill
+  const isConnecting = backendStatus !== ''
 
-  const dotClass = !online
-    ? 'status-dot'
-    : total_files > 0
-      ? 'status-dot status-dot--ready'
-      : 'status-dot status-dot--empty'
+  const statusLabel = isConnecting
+    ? backendStatus
+    : !online
+      ? 'Offline'
+      : total_files > 0
+        ? `${total_files} doc${total_files !== 1 ? 's' : ''} ready`
+        : 'No documents'
+
+  const dotClass = isConnecting
+    ? 'status-dot status-dot--connecting'
+    : !online
+      ? 'status-dot'
+      : total_files > 0
+        ? 'status-dot status-dot--ready'
+        : 'status-dot status-dot--empty'
 
   return (
     <header className="header">

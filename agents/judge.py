@@ -81,10 +81,10 @@ def judge_faithfulness(
         raw: str = (response.choices[0].message.content or "").strip().upper()
         faithful = raw.startswith("YES")
         reason   = "judge_pass" if faithful else "judge_fail"
-        print(f"  🔍 [judge] faithfulness={faithful!r} (raw={raw!r})")
+        print(f"  [INFO]  [judge] faithfulness={faithful!r} (raw={raw!r})")
         return {"faithful": faithful, "reason": reason}
 
     except Exception as exc:
         # Never block the loop on a judge error
-        print(f"  ⚠️  [judge] LLM judge failed ({exc}) — assuming faithful")
+        print(f"  [WARN]  [judge] LLM judge failed ({exc}) -- assuming faithful")
         return {"faithful": True, "reason": "judge_error"}

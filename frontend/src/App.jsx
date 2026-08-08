@@ -11,7 +11,7 @@ import UploadPanel     from './components/UploadPanel.jsx'
 import PlaybookPanel   from './components/PlaybookPanel.jsx'
 import AdminDashboard  from './components/AdminDashboard.jsx'
 import {
-  streamChat, apiGetFiles, apiGetSuggestions,
+  streamChat, apiGetFiles, apiGetSuggestions, waitForBackend,
 } from './api.js'
 import './styles.css'
 import './auth-admin.css'
@@ -27,6 +27,8 @@ export default function App() {
   const [showAdmin,    setShowAdmin]   = useState(false)
   const [docsInfo,     setDocsInfo]    = useState({ files: [], total_files: 0, total_chunks: 0 })
   const [dynTopics,    setDynTopics]   = useState([])
+  const [backendReady, setBackendReady]= useState(false)
+  const [backendStatus,setBackendStatus]=useState('Connecting to backend…')
 
 
 
@@ -46,7 +48,19 @@ export default function App() {
       .catch(() => {})
   }, [])
 
-  useEffect(() => { refreshDocs(); refreshSuggestions() }, [refreshDocs, refreshSuggestions])
+  // Wait for backend, then load initial data
+  useEffect(() => {
+    waitForBackend(60_000, 1_500).then(ready => {
+      if (ready) {
+        setBackendReady(true)
+        setBackendStatus('')
+        refreshDocs()
+        refreshSuggestions()
+      } else {
+        setBackendStatus('Backend unavailable — reload to retry.')
+      }
+    })
+  }, [refreshDocs, refreshSuggestions])
   useEffect(() => () => cancelStreamRef.current?.(), [])
 
   // ── Chat handler ──────────────────────────────────────────────────────────
@@ -165,6 +179,7 @@ export default function App() {
           onUploadClick={openPanel}
           onPlaybookClick={openPlay}
           onAdminClick={() => setShowAdmin(true)}
+          backendStatus={backendStatus}
         />
 
 
@@ -177,7 +192,7 @@ export default function App() {
         />
         <InputBar
           onSend={handleSend}
-          isLoading={isLoading || messages.some(m => m.streaming)}
+          isLoading={isLoading || messages.some(m => m.streaming) || !backendReady}
         />
       </div>
     </div>

@@ -28,9 +28,9 @@ API_KEY = os.getenv("API_KEY", "")
 
 # ── Models ────────────────────────────────────────────────────────────────────
 
-GROQ_FAST   = os.getenv("GROQ_FAST",   "openai/gpt-oss-20b")
-GROQ_STRONG = os.getenv("GROQ_STRONG", "openai/gpt-oss-120b")
-GROQ_QWEN   = os.getenv("GROQ_QWEN",   "qwen/qwen3-32b")
+GROQ_FAST   = os.getenv("GROQ_FAST",   "llama-3.1-8b-instant")
+GROQ_STRONG = os.getenv("GROQ_STRONG", "llama-3.3-70b-versatile")
+GROQ_QWEN   = os.getenv("GROQ_QWEN",   "llama-3.3-70b-versatile")  # override with Qwen if available on your plan
 
 # ── BM25 Retrieval ────────────────────────────────────────────────────────────
 

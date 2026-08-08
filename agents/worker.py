@@ -127,8 +127,8 @@ def call_groq(model_id: str, prompt: str, query: str) -> str:
             )
             return response.choices[0].message.content
 
-        except (RateLimitError, APIStatusError) as exc:
-            # Key-level failure: blacklist this key and immediately retry with next.
+        except RateLimitError as exc:
+            # Genuine rate-limit — blacklist this key and rotate to the next one.
             groq_manager.mark_failed(current_key)
             last_exc = exc
             print(
@@ -136,6 +136,27 @@ def call_groq(model_id: str, prompt: str, query: str) -> str:
                 f"(attempt {attempt + 1}/{_MAX_RETRIES}): {exc}"
             )
             # No sleep — rotate to next key immediately.
+
+        except APIStatusError as exc:
+            # Check if this is a permanent model error (not a key/rate issue).
+            # model_not_found / model_decommissioned → no point rotating keys or retrying.
+            err_code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+            body = str(exc)
+            is_model_error = (
+                "model_not_found" in body
+                or "model_decommissioned" in body
+                or err_code == 404
+            )
+            if is_model_error:
+                print(f"  [ERR]  [worker] Permanent model error — not retrying: {exc}")
+                raise  # Re-raise so callers (e.g. suggestions fallback) can catch it.
+            # Any other APIStatusError (server errors etc.) → treat like rate limit.
+            groq_manager.mark_failed(current_key)
+            last_exc = exc
+            print(
+                f"  [WARN]  [worker] Key …{current_key[-6:]} API error "
+                f"(attempt {attempt + 1}/{_MAX_RETRIES}): {exc}"
+            )
 
         except Exception as exc:
             last_exc = exc

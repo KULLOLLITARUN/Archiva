@@ -22,6 +22,7 @@ from typing import Dict, List, Optional
 
 from config import (
     BM25_THRESHOLD,
+    CROSS_ENCODER_TOP_N,
     FINAL_K,
     GROQ_STRONG,
     JUDGE_CONFIDENCE_THRESHOLD,
@@ -128,7 +129,7 @@ def _single_attempt(
         from retrieval.search import reciprocal_rank_fusion
         results = reciprocal_rank_fusion(bm25_results, dense_results)
     else:
-        results = hybrid_retrieve(current_query, store, top_k=state.top_k)
+        results = hybrid_retrieve(current_query, store, top_k=CROSS_ENCODER_TOP_N)
     retrieval_latency_ms = int((time.monotonic() - t_ret) * 1000)
 
     # 2. Score gate (BM25_THRESHOLD on the RRF score; RRF scores are small

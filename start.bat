@@ -32,9 +32,6 @@ if exist "venv\Scripts\activate.bat" (
     exit /b 1
 )
 
-:: ── Python dependencies (only if not already satisfied) ──────────────────────
-echo - Checking Python dependencies...
-pip install -q -r requirements.txt
 
 :: ── Document store (skip if pickle already exists) ───────────────────────────
 echo.
@@ -65,16 +62,16 @@ echo.
 echo - Starting FastAPI backend on http://localhost:8000 ...
 start "Archiva Backend" cmd /k "if exist venv\Scripts\activate.bat (call venv\Scripts\activate.bat) & uvicorn main:app --host 0.0.0.0 --port 8000"
 
-:: ── Wait for backend to be ready (up to 60 seconds) ──────────────────────────
+:: ── Wait for backend HTTP /health to respond (up to ~60 seconds) ────────────
 echo - Waiting for backend to start...
 set /a tries=0
 :wait_loop
     set /a tries+=1
-    if %tries% gtr 30 (
-        echo   [!] Backend took too long — starting frontend anyway.
+    if %tries% gtr 60 (
+        echo   [!] Backend took too long - starting frontend anyway.
         goto start_frontend
     )
-    netstat -ano | findstr ":8000 " | findstr "LISTENING" >nul 2>&1
+    powershell -Command "try { $r=(Invoke-WebRequest -Uri http://127.0.0.1:8000/health -UseBasicParsing -TimeoutSec 1).StatusCode; exit ($r -ne 200) } catch { exit 1 }" >nul 2>&1
     if errorlevel 1 (
         ping -n 2 127.0.0.1 >nul
         goto wait_loop
