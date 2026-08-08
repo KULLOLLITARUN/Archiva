@@ -77,7 +77,7 @@ Validator → Response + Sources
 
 ## Quick Start
 
-> **Setting this up on a new machine?** See [SETUP.md](SETUP.md) for a full
+> **Setting this up on a new machine?** See [docs/SETUP.md](docs/SETUP.md) for a full
 > step-by-step walkthrough — including creating the Postgres role/database
 > and troubleshooting (forgotten password, port conflicts, etc.). The
 > summary below assumes Postgres and `.env` are already in place.

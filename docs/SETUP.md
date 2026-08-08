@@ -2,7 +2,7 @@
 
 Step-by-step instructions to get Archiva running from a fresh clone, on
 Windows, macOS, or Linux. For the architecture overview and API reference,
-see [README.md](README.md) — this file is just the "zero to running" path.
+see [README.md](../README.md) — this file is just the "zero to running" path.
 
 ---
 
