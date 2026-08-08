@@ -13,3 +13,4 @@ frontend/dist/
 rag_system.db
 rag_agentic_project.zip
 .DS_Store
+cache/embeddings/

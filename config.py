@@ -21,11 +21,6 @@ def _load_groq_keys() -> list:
 
 GROQ_API_KEYS: list = _load_groq_keys()
 
-# Fix #10: API key for endpoint authentication.
-# Set API_KEY in .env to protect /chat, /upload, /files endpoints.
-# Leave empty (or unset) to disable authentication (dev-only).
-API_KEY = os.getenv("API_KEY", "")
-
 # ── Models ────────────────────────────────────────────────────────────────────
 
 GROQ_FAST   = os.getenv("GROQ_FAST",   "llama-3.1-8b-instant")
@@ -88,9 +83,23 @@ MAX_CHUNKS_PER_FILE = int(os.getenv("MAX_CHUNKS_PER_FILE", 500))
 CHUNK_SIZE    = 400
 CHUNK_OVERLAP = 50
 
+# ── Parent-Child Chunking ─────────────────────────────────────────────────────
+# Parent chunks are large sections fed to the LLM as rich context.
+# Child chunks are small units used for precise vector / BM25 search.
+PARENT_CHUNK_SIZE = int(os.getenv("PARENT_CHUNK_SIZE", 1200))  # tokens
+CHILD_CHUNK_SIZE  = int(os.getenv("CHILD_CHUNK_SIZE",  200))   # tokens (was 120, raised to reduce over-fragmentation)
+
 # ── Context ───────────────────────────────────────────────────────────────────
 
 MAX_CONTEXT_TOKENS = 6000
+
+# ── Semantic Query Cache ──────────────────────────────────────────────────────
+# Cosine similarity threshold for a query to be considered a cache hit.
+# 0.97+ required to avoid false hits on structurally similar but topically
+# different queries (e.g. "give summary of linkedin" vs "give summary of roadmap").
+SEMANTIC_CACHE_THRESHOLD = float(os.getenv("SEMANTIC_CACHE_THRESHOLD", 0.97))
+# Maximum number of (query, result) pairs to keep in memory.
+SEMANTIC_CACHE_MAX_SIZE  = int(os.getenv("SEMANTIC_CACHE_MAX_SIZE", 200))
 
 # ── Router ────────────────────────────────────────────────────────────────────
 

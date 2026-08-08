@@ -78,10 +78,24 @@ def _extract_numbers(text: str) -> List[str]:
     return _NUMBER_PATTERN.findall(text)
 
 
+def _normalize_number_text(text: str) -> str:
+    """
+    Collapse formatting differences that don't change a number's meaning:
+    thousands-separator commas ("1,000" -> "1000") and whitespace between a
+    digit and a trailing "%" ("50 %" -> "50%"). Applied to both the answer
+    and the chunk text before comparison so cosmetic reformatting by the
+    LLM isn't mistaken for a hallucinated number.
+    """
+    text = re.sub(r"(\d)\s+%", r"\1%", text)
+    return text.replace(",", "")
+
+
 def _numbers_are_grounded(answer: str, chunk_text: str) -> bool:
-    numbers = _extract_numbers(answer)
-    for number in numbers:
-        if number not in chunk_text:
+    """Check that every number in *answer* also appears in *chunk_text*."""
+    normalized_answer = _normalize_number_text(answer)
+    normalized_chunk  = _normalize_number_text(chunk_text)
+    for number in _extract_numbers(normalized_answer):
+        if number not in normalized_chunk:
             return False
     return True
 
