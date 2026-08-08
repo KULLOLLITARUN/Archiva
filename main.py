@@ -50,8 +50,10 @@ from agents.validator import validate
 from agents.loop import run_reflection_loop, build_labeled_context
 from monitor.logger import log_pipeline, get_stats
 
-STORE_PKL = "store_state.pkl"
-STORE_TMP = "store_state.tmp"
+# Env-overridable (same pattern as database.py's DB_PATH) so tests can point
+# the store at a temp file instead of the real on-disk state.
+STORE_PKL = os.getenv("STORE_PKL_PATH", "store_state.pkl")
+STORE_TMP = os.getenv("STORE_TMP_PATH", "store_state.tmp")
 
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
