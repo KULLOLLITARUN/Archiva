@@ -264,6 +264,7 @@ body::before {
 
 .hdr-btn--accent:hover {
   background: var(--accent2);
+  color: var(--on-accent);
 }
 
 .hdr-btn .icon {
