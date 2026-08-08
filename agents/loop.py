@@ -14,6 +14,13 @@ Upgrade (Part 1.4 — self-healing loop):
 Backward compat:
   - run_reflection_loop() signature and return dict keys unchanged.
   - build_labeled_context() kept for /chat/stream in main.py.
+
+Multi-hop query decomposition:
+  - run_reflection_loop() first checks whether the query is plausibly
+    multiple distinct sub-questions (agents/decomposer.py). If so, each
+    sub-question runs its own full retrieve->generate->reflect pass
+    (recursively, with decomposition disabled) and the results are merged
+    into one answer — see _maybe_decompose() / _run_decomposed().
 """
 
 import time
@@ -31,6 +38,7 @@ from config import (
     MIN_REFLECTION_CONFIDENCE,
 )
 from cache.semantic_cache import semantic_cache
+from agents.decomposer import decompose_query, should_decompose
 from agents.state import AgentState
 from agents.root_cause import analyze_failure
 from agents.healer import apply_healing
@@ -260,6 +268,107 @@ def _single_attempt(
     }
 
 
+# ── Multi-hop query decomposition ─────────────────────────────────────────────
+
+def _maybe_decompose(query: str, allow_decompose: bool) -> Optional[List[str]]:
+    """
+    Return sub-questions to run separately, or None to run *query* as one.
+
+    Pure decision function — no store/retrieval dependency — so the branch
+    logic is unit-testable without a real store. `allow_decompose=False`
+    (used on the recursive per-sub-question call) short-circuits before
+    should_decompose() even runs, which is what prevents infinite recursion.
+    """
+    if not allow_decompose or not should_decompose(query):
+        return None
+    sub_queries = decompose_query(query)
+    if len(sub_queries) <= 1:
+        return None
+    return sub_queries
+
+
+def _merge_sub_results(sub_results: List[tuple]) -> Dict:
+    """
+    Merge per-sub-question result dicts (each shaped like a normal
+    run_reflection_loop() return value) into one combined result.
+
+    Confidence is the MIN across sub-answers (an answer is only as
+    trustworthy as its weakest part); latency/tokens are summed (total
+    work done); chunks are unioned and deduplicated by chunk_id.
+    """
+    answer_parts: List[str] = []
+    all_chunks: List[dict] = []
+    seen_chunk_ids: set = set()
+    all_search_queries: List[str] = []
+    all_reranker_scores: List[float] = []
+    models_used: List[str] = []
+    failure_types: List[str] = []
+
+    max_attempts = 0
+    any_reflected = False
+    total_retrieval_ms = 0
+    total_tokens = 0
+    min_confidence = 1.0
+
+    for sub_query, result in sub_results:
+        answer_parts.append(f"**{sub_query}**\n{result['answer']}")
+
+        for chunk in result.get("chunks", []):
+            cid = chunk.get("chunk_id", "")
+            if cid and cid in seen_chunk_ids:
+                continue
+            if cid:
+                seen_chunk_ids.add(cid)
+            all_chunks.append(chunk)
+
+        all_search_queries.extend(result.get("search_queries", []))
+        all_reranker_scores.extend(result.get("reranker_scores", []))
+
+        model = result.get("model_used", "none")
+        if model not in models_used:
+            models_used.append(model)
+        failure_types.append(result.get("failure_type", "UNKNOWN"))
+
+        max_attempts = max(max_attempts, result.get("attempts", 1))
+        any_reflected = any_reflected or result.get("reflected", False)
+        total_retrieval_ms += result.get("retrieval_latency_ms", 0)
+        total_tokens += result.get("tokens_used", 0)
+        min_confidence = min(min_confidence, result.get("confidence", 0.0))
+
+    # UNKNOWN/NONE mean "no failure" in the per-attempt schema — surface a
+    # real failure_type only if at least one sub-answer actually had one.
+    distinct_failures = sorted({f for f in failure_types if f not in ("UNKNOWN", "NONE")})
+
+    return {
+        "answer":               "\n\n".join(answer_parts),
+        "chunks":               all_chunks,
+        "model_used":           "+".join(models_used) if models_used else "none",
+        "attempts":             max_attempts,
+        "reflected":            any_reflected,
+        "reflection_reason":    f"decomposed_{len(sub_results)}_subquestions",
+        "confidence":           round(min_confidence, 3),
+        "search_queries":       all_search_queries,
+        "failure_type":         distinct_failures[0] if distinct_failures else "UNKNOWN",
+        "retrieval_latency_ms": total_retrieval_ms,
+        "reranker_scores":      all_reranker_scores,
+        "tokens_used":          total_tokens,
+    }
+
+
+def _run_decomposed(
+    sub_queries: List[str],
+    store,
+    intent: str,
+    force_model: Optional[str],
+) -> Dict:
+    """Run each sub-question through its own full loop, then merge."""
+    sub_results = []
+    for sub_query in sub_queries:
+        result = run_reflection_loop(sub_query, store, intent, force_model, _allow_decompose=False)
+        sub_results.append((sub_query, result))
+    return _merge_sub_results(sub_results)
+
+
 # ── Public orchestrator ───────────────────────────────────────────────────────
 
 def run_reflection_loop(
@@ -267,21 +376,32 @@ def run_reflection_loop(
     store,
     intent: str,
     force_model: Optional[str] = None,
+    _allow_decompose: bool = True,
 ) -> Dict:
     """
     Self-healing retrieve → generate → reflect loop (up to MAX_ATTEMPTS times).
 
     Args:
-        query:        Normalised/rewritten user query.
-        store:        MultiDocStore instance.
-        intent:       Detected intent (qa / explain / summarize / compare).
-        force_model:  Override router model for every attempt.
+        query:            Normalised/rewritten user query.
+        store:            MultiDocStore instance.
+        intent:           Detected intent (qa / explain / summarize / compare).
+        force_model:      Override router model for every attempt.
+        _allow_decompose: Internal — set False on the recursive per-
+                           sub-question call to prevent infinite recursion.
+                           Callers outside this module should never pass this.
 
     Returns a result dict with keys:
         answer, chunks, model_used, attempts, reflected, reflection_reason,
         confidence, search_queries, failure_type, retrieval_latency_ms,
         reranker_scores, tokens_used
     """
+    # ── Multi-hop decomposition (checked before anything else — a merged
+    #    result is built from independent sub-question loops, not this one) ──
+    sub_queries = _maybe_decompose(query, _allow_decompose)
+    if sub_queries:
+        print(f"  [DECOMPOSE]  [loop] Split into {len(sub_queries)} sub-question(s): {sub_queries}")
+        return _run_decomposed(sub_queries, store, intent, force_model)
+
     state = AgentState(
         original_query = query,
         max_attempts   = MAX_ATTEMPTS,
