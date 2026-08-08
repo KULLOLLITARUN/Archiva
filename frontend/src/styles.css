@@ -5,32 +5,45 @@
 /* ── Google Fonts ────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* ── Design tokens ───────────────────────────────────────── */
+/* ── Design tokens ───────────────────────────────────────────────────────────
+   "Modern Parchment" — warm-light editorial palette (paper, not glass).
+   Replaces the earlier warm-dark "ink" theme for a more client-presentable,
+   Notion/Linear-adjacent feel. Every color below was chosen and then
+   contrast-checked against WCAG AA (4.5:1 body text, 3:1 large text/UI) —
+   see the design note in PR history for the exact ratios; text3 in
+   particular is deliberately darker than a "light gray hint" would
+   normally be, specifically to still clear 4.5:1 on this background. ── */
 :root {
-  --bg: #17140f;
-  --bg2: #1d1a14;
-  --bg3: #24201a;
-  --surface: rgba(247, 241, 229, 0.045);
-  --surface2: rgba(247, 241, 229, 0.075);
-  --border: rgba(247, 241, 229, 0.09);
-  --border2: rgba(247, 241, 229, 0.16);
+  --bg: #fbf9f5;
+  --bg2: #f5f1e8;
+  --bg3: #efe9dc;
+  --surface: #f3efe6;
+  --surface2: #ebe4d4;
+  --border: #e2dacd;
+  --border2: #d3c6b0;
 
-  --accent: #c98f3f;
-  --accent2: #dfb572;
-  --accent-dark: #8a6530;
-  --accent-glow: rgba(201, 143, 63, 0.22);
-  --green: #7fae8a;
-  --green-dim: rgba(127, 174, 138, 0.15);
-  --green-dark: #567a63;
-  --orange: #c17a4a;
-  --red: #bd6b5c;
-  --yellow: #c9a24a;
-  --link: #8fb4c2;
-  --link-hover: #a9c8d4;
+  --accent: #8b4a12;
+  --accent2: #6b3910;
+  --accent-dark: #4a2a0c;
+  --accent-glow: rgba(139, 74, 18, 0.10);
+  --green: #3f7350;
+  --green-dim: rgba(63, 115, 80, 0.12);
+  --green-dark: #2c5439;
+  --orange: #9c5a28;
+  --red: #a1483a;
+  --yellow: #8a5d14;
+  --link: #3d6b78;
+  --link-hover: #2a4f59;
 
-  --text: #f2ede1;
-  --text2: #a89d89;
-  --text3: #6f6551;
+  /* Text color that sits on a solid --accent button fill (e.g. Send,
+     header "Documents" button) — needs to be light, not the old dark
+     #1a1408, now that --accent itself is a dark terracotta rather than a
+     light gold. Kept as a token so every button uses the same value. */
+  --on-accent: #fbf9f5;
+
+  --text: #241e15;
+  --text2: #6b5f4d;
+  --text3: #7a6c54;
 
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -79,8 +92,8 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(201, 143, 63, 0.06), transparent 60%),
-    radial-gradient(ellipse 700px 500px at 100% 100%, rgba(127, 174, 138, 0.04), transparent 60%);
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(139, 74, 18, 0.05), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 100%, rgba(63, 115, 80, 0.035), transparent 60%);
 }
 
 /* ── App layout ──────────────────────────────────────────── */
@@ -115,7 +128,7 @@ body::before {
   align-items: center;
   justify-content: space-between;
   padding: 0 22px;
-  background: rgba(23, 20, 15, 0.85);
+  background: rgba(251, 249, 245, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
@@ -237,7 +250,7 @@ body::before {
 .hdr-btn--accent {
   background: var(--accent);
   border-color: transparent;
-  color: #1a1408;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -441,13 +454,13 @@ body::before {
 }
 
 .bubble--notfound {
-  border-color: rgba(193, 122, 74, 0.3);
-  background: rgba(193, 122, 74, 0.06);
+  border-color: rgba(156, 90, 40, 0.35);
+  background: rgba(156, 90, 40, 0.07);
 }
 
 .bubble--error {
-  border-color: rgba(189, 107, 92, 0.3);
-  background: rgba(189, 107, 92, 0.06);
+  border-color: rgba(161, 72, 58, 0.35);
+  background: rgba(161, 72, 58, 0.07);
 }
 
 .bubble-text {
@@ -499,7 +512,7 @@ body::before {
   color: var(--link);
   font-weight: 500;
   text-decoration: none;
-  border-bottom: 1px dashed rgba(143, 180, 194, 0.5);
+  border-bottom: 1px dashed rgba(61, 107, 120, 0.45);
   transition: color 0.15s;
 }
 
@@ -703,7 +716,7 @@ body::before {
 /* ── Input bar ───────────────────────────────────────────── */
 .input-area {
   padding: 16px 20px;
-  background: rgba(23, 20, 15, 0.9);
+  background: rgba(251, 249, 245, 0.9);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--border);
@@ -753,7 +766,7 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1a1408;
+  color: var(--on-accent);
   flex-shrink: 0;
   transition: background 0.15s;
 }
@@ -833,7 +846,7 @@ body::before {
   padding: 20px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  background: rgba(29, 26, 20, 0.95);
+  background: rgba(245, 241, 232, 0.95);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
@@ -1019,26 +1032,26 @@ body::before {
 .pill--ok {
   background: var(--green-dim);
   color: var(--green);
-  border: 1px solid rgba(127, 174, 138, 0.3);
+  border: 1px solid rgba(63, 115, 80, 0.3);
 }
 
 .pill--skip {
-  background: rgba(201, 162, 74, 0.12);
+  background: rgba(138, 93, 20, 0.12);
   color: var(--yellow);
-  border: 1px solid rgba(201, 162, 74, 0.3);
+  border: 1px solid rgba(138, 93, 20, 0.3);
 }
 
 .pill--busy {
-  background: rgba(201, 143, 63, 0.12);
+  background: rgba(139, 74, 18, 0.12);
   color: var(--accent2);
-  border: 1px solid rgba(201, 143, 63, 0.3);
+  border: 1px solid rgba(139, 74, 18, 0.3);
   animation: pill-pulse 1.2s ease-in-out infinite;
 }
 
 .pill--err {
-  background: rgba(189, 107, 92, 0.12);
+  background: rgba(161, 72, 58, 0.12);
   color: var(--red);
-  border: 1px solid rgba(189, 107, 92, 0.3);
+  border: 1px solid rgba(161, 72, 58, 0.3);
 }
 
 @keyframes pill-pulse {
@@ -1133,7 +1146,7 @@ body::before {
   border-radius: var(--radius-sm);
   background: var(--accent);
   border: none;
-  color: #1a1408;
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -1156,8 +1169,8 @@ body::before {
 .up-spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(26, 20, 8, 0.3);
-  border-top-color: #1a1408;
+  border: 2px solid rgba(251, 249, 245, 0.35);
+  border-top-color: var(--on-accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   display: inline-block;
@@ -1211,7 +1224,7 @@ body::before {
   width: 100%;
   padding: 11px;
   background: none;
-  border: 1px solid rgba(189, 107, 92, 0.3);
+  border: 1px solid rgba(161, 72, 58, 0.3);
   border-radius: var(--radius-sm);
   color: var(--red);
   font-size: 12.5px;
@@ -1225,15 +1238,15 @@ body::before {
 }
 
 .up-danger-btn:hover {
-  background: rgba(189, 107, 92, 0.1);
+  background: rgba(161, 72, 58, 0.1);
 }
 
 /* ── Danger zone section ─────────────────────────────────── */
 .up-danger-zone {
-  border: 1px solid rgba(189, 107, 92, 0.2);
+  border: 1px solid rgba(161, 72, 58, 0.2);
   border-radius: var(--radius);
   padding: 14px;
-  background: rgba(189, 107, 92, 0.03);
+  background: rgba(161, 72, 58, 0.03);
 }
 
 .up-section-title--danger {
@@ -1265,7 +1278,7 @@ body::before {
   padding: 8px 14px;
   border-radius: var(--radius-sm);
   background: none;
-  border: 1px solid rgba(189, 107, 92, 0.4);
+  border: 1px solid rgba(161, 72, 58, 0.4);
   color: var(--red);
   font-size: 12px;
   font-weight: 600;
@@ -1279,7 +1292,7 @@ body::before {
 }
 
 .up-clear-btn:hover:not(:disabled) {
-  background: rgba(189, 107, 92, 0.12);
+  background: rgba(161, 72, 58, 0.12);
 }
 
 .up-clear-btn:disabled {
@@ -1341,7 +1354,7 @@ body::before {
 
 .up-danger-divider {
   height: 1px;
-  background: rgba(189, 107, 92, 0.15);
+  background: rgba(161, 72, 58, 0.15);
   margin: 8px 0;
 }
 
@@ -1382,7 +1395,7 @@ body::before {
   padding: 20px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  background: rgba(29, 26, 20, 0.95);
+  background: rgba(245, 241, 232, 0.95);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
@@ -1423,7 +1436,7 @@ body::before {
 
 .play-close-btn:hover {
   background: var(--accent);
-  color: #1a1408;
+  color: var(--on-accent);
   border-color: var(--accent);
 }
 
@@ -1572,7 +1585,7 @@ body::before {
   font-size: 13px;
   font-weight: 500;
   backdrop-filter: blur(12px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px rgba(36, 30, 21, 0.12);
   animation: toast-in 0.3s var(--trans) both;
   border: 1px solid var(--border);
   pointer-events: auto;
@@ -1591,21 +1604,21 @@ body::before {
 }
 
 .toast--ok {
-  background: rgba(127, 174, 138, 0.14);
+  background: rgba(63, 115, 80, 0.14);
   color: var(--green);
-  border-color: rgba(127, 174, 138, 0.3);
+  border-color: rgba(63, 115, 80, 0.3);
 }
 
 .toast--info {
-  background: rgba(201, 143, 63, 0.14);
+  background: rgba(139, 74, 18, 0.14);
   color: var(--accent2);
-  border-color: rgba(201, 143, 63, 0.3);
+  border-color: rgba(139, 74, 18, 0.3);
 }
 
 .toast--err {
-  background: rgba(189, 107, 92, 0.14);
+  background: rgba(161, 72, 58, 0.14);
   color: var(--red);
-  border-color: rgba(189, 107, 92, 0.3);
+  border-color: rgba(161, 72, 58, 0.3);
 }
 
 .toast-icon {
@@ -1743,7 +1756,7 @@ body::before {
 
 .ss-prompt-btn:hover:not(:disabled) {
   border-color: var(--accent);
-  background: rgba(201, 143, 63, 0.08);
+  background: rgba(139, 74, 18, 0.08);
 }
 
 .ss-prompt-btn:disabled {

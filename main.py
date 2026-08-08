@@ -596,8 +596,12 @@ async def get_suggestions() -> dict:
 
         topics = json.loads(match.group())
 
-        ALLOWED_COLORS = {"#c98f3f","#7fae8a","#c17a4a","#8fb4c2",
-                          "#bd6b5c","#c9a24a","#a68a64","#6f8f7a"}
+        # Deep/saturated so these are still legible as text on the light
+        # "Modern Parchment" palette (frontend/src/styles.css) — the old
+        # values were tuned for a dark background and read as washed-out
+        # pastel there.
+        ALLOWED_COLORS = {"#8b4a12","#3f7350","#9c5a28","#3d6b78",
+                          "#a1483a","#8a5d14","#6b5638","#3d5c48"}
         COLOR_CYCLE = list(ALLOWED_COLORS)
         clean = []
         for i, t in enumerate(topics[:4]):

@@ -29,11 +29,16 @@ const REASON_LABELS = {
   no_chunks_retrieved: 'No matching chunks',
 }
 
+// Colors here are hardcoded (not var(--…)) because they're computed in JS,
+// not CSS — kept in sync with the palette in styles.css :root by hand.
+// These are the "as text" variants (darker/more saturated than the base
+// --red/--accent tokens) since a badge on the light --surface background
+// needs the text itself to carry contrast, not just a translucent tint.
 function badgeVariant(attempts, reason) {
   const isRefused = reason?.includes('not_found') || reason?.includes('no_result') || reason?.includes('no_chunks')
-  if (isRefused) return { bg: 'rgba(156,163,175,0.12)', color: '#9ca3af', border: 'rgba(156,163,175,0.25)' }
-  if (attempts >= 3) return { bg: 'rgba(248,113,113,0.12)', color: '#f87171', border: 'rgba(248,113,113,0.3)' }
-  return { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: 'rgba(251,191,36,0.3)' }
+  if (isRefused) return { bg: 'rgba(107,95,77,0.10)', color: '#6b5f4d', border: 'rgba(107,95,77,0.3)' }
+  if (attempts >= 3) return { bg: 'rgba(161,72,58,0.10)', color: '#a1483a', border: 'rgba(161,72,58,0.3)' }
+  return { bg: 'rgba(139,74,18,0.10)', color: '#8b4a12', border: 'rgba(139,74,18,0.3)' }
 }
 
 function isNotFound(text) {

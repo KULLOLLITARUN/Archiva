@@ -181,9 +181,9 @@ export default function PlaybookPanel({ isOpen, onClose }) {
 
           {[
             { color: 'var(--green)', label: 'Green dot', desc: 'Server is online and documents are loaded' },
-            { color: '#fbbf24', label: 'Amber badge', desc: 'The AI retried before answering — still a valid answer, just double-check it' },
-            { color: '#f87171', label: 'Red badge', desc: 'The AI retried several times and is less certain — worth verifying against the source' },
-            { color: '#9ca3af', label: 'Grey badge', desc: 'Answer not found in your documents' },
+            { color: '#8b4a12', label: 'Amber badge', desc: 'The AI retried before answering — still a valid answer, just double-check it' },
+            { color: '#a1483a', label: 'Red badge', desc: 'The AI retried several times and is less certain — worth verifying against the source' },
+            { color: '#6b5f4d', label: 'Grey badge', desc: 'Answer not found in your documents' },
           ].map((item, i) => (
             <div key={i} className="play-qa" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 12, height: 12, borderRadius: '50%', background: item.color, flexShrink: 0 }} />

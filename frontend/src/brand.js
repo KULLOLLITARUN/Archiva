@@ -83,9 +83,9 @@ export function maskModel(rawModelId) {
  */
 export function modelTierStyle(tier) {
   switch (tier) {
-    case 'ultra': return { color: '#c9a24a' }  // amber
-    case 'pro': return { color: '#dfb572' }  // gold
-    case 'swift': return { color: '#7fae8a' }  // sage
-    default: return { color: '#8a8272' }  // warm grey
+    case 'ultra': return { color: '#8b4a12' }  // deep terracotta — matches --accent
+    case 'pro': return { color: '#6b3910' }  // deeper terracotta — matches --accent2
+    case 'swift': return { color: '#3f7350' }  // deep sage — matches --green
+    default: return { color: '#6b5f4d' }  // warm grey — matches --text2
   }
 }
