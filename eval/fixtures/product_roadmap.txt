@@ -1,0 +1,12 @@
+Product Roadmap — Q3 2026
+
+The Q3 2026 roadmap centers on two initiatives: launching the mobile app
+on iOS and Android, and expanding availability to the European market.
+
+The mobile app launch is scheduled for August 2026 and will ship with
+offline mode and push notifications in the first release. European
+expansion begins with Germany and France, targeted for September 2026,
+pending completion of GDPR compliance review.
+
+Longer term, the team is exploring a public API for third-party
+integrations, tentatively planned for Q1 2027.

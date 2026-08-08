@@ -23,7 +23,7 @@ from slowapi.util import get_remote_address
 
 # ── Project imports ───────────────────────────────────────────────────────────
 from config import (
-    GROQ_FAST, GROQ_STRONG, GROQ_QWEN,
+    GROQ_FAST, GROQ_STRONG, GROQ_QWEN, UPLOADED_DOCS_DIR, REINGESTION_QUEUE_PATH,
 )
 from database import (
     init_db,
@@ -39,6 +39,7 @@ from models.schemas import (
 from retrieval.store import MultiDocStore
 from ingestion.parser import parse_file, SUPPORTED_EXTENSIONS, compute_hash
 from ingestion.chunker import chunk_document
+from ingestion.reingest import save_uploaded_file, refresh_all_from_disk
 from chatbot.memory import ConversationMemory
 from chatbot.normalizer import normalize
 from chatbot.rewriter import rewrite
@@ -374,6 +375,14 @@ async def upload_file(
 
     db_create_document(file_id, filename, file_type, len(chunks))
 
+    # Persist the raw bytes so /admin/reingestion-queue/process can later
+    # re-parse + re-chunk this file. Non-fatal: the upload already succeeded
+    # in-memory/in-store even if this write fails.
+    try:
+        save_uploaded_file(content, file_id, file_type, UPLOADED_DOCS_DIR)
+    except Exception as exc:
+        print(f"[WARN] Failed to persist uploaded file {filename!r} for reingestion: {exc}")
+
     try:
         _save_store()
     except Exception as exc:
@@ -661,6 +670,40 @@ async def admin_reingestion_queue(clear: bool = False):
         "entries": entries,
     }
 
+
+@app.post("/admin/reingestion-queue/process", tags=["admin"])
+async def admin_process_reingestion_queue() -> dict:
+    """
+    Consume the reingestion signal queue: re-parse + re-chunk every active
+    document from its persisted upload (see ingestion/reingest.py), replace
+    its chunks in the store, then clear the queue.
+
+    Limitation: this re-runs today's parser/chunker against the ORIGINAL
+    uploaded bytes — it refreshes chunking, not the underlying data. If a
+    queued entry means the source document itself is out of date, someone
+    still needs to upload a newer version; this just makes sure that once
+    they do (or once parsing/chunking logic improves), a refresh is one
+    call away instead of nothing at all.
+    """
+    entries = 0
+    if os.path.exists(REINGESTION_QUEUE_PATH):
+        with open(REINGESTION_QUEUE_PATH, "r", encoding="utf-8") as f:
+            entries = sum(1 for line in f if line.strip())
+
+    if entries == 0:
+        return {"processed_queue_entries": 0, "refreshed": [], "skipped": [],
+                "message": "Queue is empty — nothing to process."}
+
+    summary = refresh_all_from_disk(store, UPLOADED_DOCS_DIR)
+
+    try:
+        _save_store()
+    except Exception as exc:
+        summary["save_error"] = str(exc)
+
+    open(REINGESTION_QUEUE_PATH, "w").close()  # clear queue after processing
+
+    return {"processed_queue_entries": entries, **summary}
 
 
 

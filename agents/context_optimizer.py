@@ -10,9 +10,10 @@ Public API:
     optimize_context(chunks, query, top_k) → List[dict]
 """
 
+import re
 from typing import List, Optional
 
-from config import FINAL_K, MMR_LAMBDA, MAX_CHUNK_TOKENS
+from config import DOCUMENT_INJECTION_PATTERNS, FINAL_K, MMR_LAMBDA, MAX_CHUNK_TOKENS
 
 # ── Graceful numpy import ──────────────────────────────────────────────────────
 
@@ -22,6 +23,39 @@ try:
 except ImportError:
     _NP_AVAILABLE = False
     np = None  # type: ignore[assignment]
+
+
+# ── Document-content injection screening ─────────────────────────────────────
+
+def _contains_injection_pattern(text: str) -> bool:
+    lowered = text.lower()
+    return any(re.search(pattern, lowered) for pattern in DOCUMENT_INJECTION_PATTERNS)
+
+
+def screen_injected_chunks(chunks: List[dict]) -> List[dict]:
+    """
+    Drop chunks whose source text matches a known prompt-injection pattern
+    before they reach the LLM context.
+
+    agents/safety.py screens the user's *query* for these phrases, but a
+    retrieved chunk's text comes from an uploaded document — untrusted
+    content that flows straight into the system prompt via `Context: ...`
+    with no screening otherwise. An uploaded file containing "ignore
+    previous instructions..." would reach the model unfiltered without
+    this check.
+    """
+    safe = []
+    for chunk in chunks:
+        if _contains_injection_pattern(chunk.get("text", "")):
+            meta = chunk.get("metadata", {})
+            print(
+                f"  [WARN]  [context_optimizer] Dropped chunk with "
+                f"injection-like content: {meta.get('filename', '?')} "
+                f"p{meta.get('page', '?')}"
+            )
+            continue
+        safe.append(chunk)
+    return safe
 
 
 # ── MMR (Maximal Marginal Relevance) ─────────────────────────────────────────
@@ -141,9 +175,10 @@ def optimize_context(
 ) -> List[dict]:
     """
     Full context optimization pipeline:
-      1. MMR deduplication (remove semantically redundant chunks).
-      2. Compress any chunk exceeding MAX_CHUNK_TOKENS words.
-      3. Attach inline citation headers.
+      1. Screen out chunks containing prompt-injection-like content.
+      2. MMR deduplication (remove semantically redundant chunks).
+      3. Compress any chunk exceeding MAX_CHUNK_TOKENS words.
+      4. Attach inline citation headers.
 
     Args:
         chunks: Reranked chunks (from cross-encoder or score-sort).
@@ -153,13 +188,16 @@ def optimize_context(
     Returns:
         Optimized, cited, compressed chunk list ready for context window.
     """
-    # Step 1 — MMR
-    diverse = apply_mmr(chunks, query, top_k=top_k)
+    # Step 1 — Screen document-content injection attempts
+    screened = screen_injected_chunks(chunks)
 
-    # Step 2 — Compress long chunks
+    # Step 2 — MMR
+    diverse = apply_mmr(screened, query, top_k=top_k)
+
+    # Step 3 — Compress long chunks
     compressed = [compress_chunk(c) for c in diverse]
 
-    # Step 3 — Attach citations
+    # Step 4 — Attach citations
     cited = attach_citations(compressed)
 
     return cited

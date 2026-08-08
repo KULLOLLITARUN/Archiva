@@ -154,6 +154,34 @@ AMBIGUITY_TRIGGERS = [
     "instructions", "forget", "pretend"
 ]
 
+# ── Document-content injection screening ──────────────────────────────────────
+# Retrieved chunk text is untrusted — it can come from any uploaded file, and
+# an injected instruction embedded in a document ("ignore previous
+# instructions...") would otherwise flow straight into the LLM context.
+#
+# Deliberately narrower than BLOCK_PATTERNS (query screening): bare
+# single-word patterns like "override"/"bypass" are common in ordinary
+# technical prose and would false-positive constantly at document length,
+# where BLOCK_PATTERNS only ever sees one short user query at a time.
+DOCUMENT_INJECTION_PATTERNS = [
+    r"ignore (previous|above|all) instructions",
+    r"disregard (all|the) (previous|above|prior) (instructions|rules)",
+    r"you are now (a|an|the)",
+    r"pretend you are",
+    r"act as if you (are|were)",
+    r"forget (all|your) (previous|prior) instructions",
+    r"jailbreak",
+    r"new persona",
+    r"reveal (the|your) system prompt",
+]
+
+# ── Reingestion / uploaded-file persistence ───────────────────────────────────
+
+# Directory where raw uploaded file bytes are persisted so the reingestion
+# queue (agents/healer.py REINGEST action) can trigger a real re-parse +
+# re-chunk pass instead of only logging a signal. See ingestion/reingest.py.
+UPLOADED_DOCS_DIR = os.getenv("UPLOADED_DOCS_DIR", "uploaded_docs")
+
 # ── Reflection loop ───────────────────────────────────────────────────────────
 
 # Maximum retrieve→generate→reflect cycles per query.

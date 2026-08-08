@@ -1,0 +1,13 @@
+Engineering On-Call Runbook
+
+Oncall engineers must acknowledge a paging alert within 15 minutes of it
+firing. If an alert is not acknowledged within 15 minutes, it automatically
+escalates to the secondary oncall engineer, and after 30 minutes to the
+engineering manager.
+
+Severity 1 incidents (full outage) require a status page update within
+10 minutes of acknowledgment. Severity 2 incidents (partial degradation)
+require a status page update within 30 minutes.
+
+All incidents must have a postmortem written within 5 business days of
+resolution.

@@ -1,0 +1,27 @@
+[
+  {
+    "query": "How many vacation days do employees get per year?",
+    "expected_filename": "hr_policy.txt",
+    "expected_keywords": ["20"]
+  },
+  {
+    "query": "What happens if I don't acknowledge a page in time?",
+    "expected_filename": "oncall_runbook.txt",
+    "expected_keywords": ["15", "escalat"]
+  },
+  {
+    "query": "What is planned for Q3 2026?",
+    "expected_filename": "product_roadmap.txt",
+    "expected_keywords": ["mobile", "europe"]
+  },
+  {
+    "query": "How much paid parental leave does the secondary caregiver get?",
+    "expected_filename": "hr_policy.txt",
+    "expected_keywords": ["6 weeks"]
+  },
+  {
+    "query": "How quickly must a status page be updated for a full outage?",
+    "expected_filename": "oncall_runbook.txt",
+    "expected_keywords": ["10"]
+  }
+]
