@@ -1,5 +1,3 @@
-from typing import Optional
-
 from chatbot.memory import ConversationMemory
 from config import FOLLOWUP_SIGNALS
 
@@ -12,14 +10,25 @@ _PREV_ANSWER_PREVIEW = 300
 def is_followup(query: str) -> bool:
     """
     Deterministic follow-up detector (no LLM).
-    True if any FOLLOWUP_SIGNAL is in the query OR word count < 6.
+    True if any FOLLOWUP_SIGNAL is in the query.
+
+    Deliberately NOT based on word count. A blanket "< 6 words → treat as
+    a follow-up" fallback used to be here, but short queries are routinely
+    self-contained new questions on their own topic - "what need to be in
+    resume" (5 words) and "give summary" (2 words) are complete, unambiguous
+    requests, not references to whatever the previous answer happened to be
+    about. Anchoring them to unrelated prior context drags retrieval toward
+    the wrong chunks and can turn a perfectly answerable question into a
+    false "not found in the document" (found live: a DOB/age-omission
+    answer got dragged into the anchor for "what need to be in resume",
+    and that failure then cascaded into "give summary" too, since each
+    follow-up anchors to the previous turn's answer - including a bad one).
+    Same principle agents/decomposer.py's anchor_to_prior_answer() already
+    follows for sub-questions: only anchor on an actual reference signal,
+    never on length alone.
     """
     q = query.lower()
-    if any(signal in q for signal in FOLLOWUP_SIGNALS):
-        return True
-    if len(query.split()) < 6:
-        return True
-    return False
+    return any(signal in q for signal in FOLLOWUP_SIGNALS)
 
 
 def rewrite(query: str, memory: ConversationMemory, session_id: str) -> str:

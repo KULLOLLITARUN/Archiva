@@ -143,10 +143,10 @@ async def chat(
     request_id = str(uuid.uuid4())
     event_loop = asyncio.get_event_loop()
 
-    query  = normalize(body.message)
-    query  = rewrite(query, memory, body.session_id)
-    intent = detect_intent(query)
-    safety = safety_check(query)
+    raw_query = normalize(body.message)
+    query     = rewrite(raw_query, memory, body.session_id)
+    intent    = detect_intent(query)
+    safety    = safety_check(query)
 
     if not safety["safe"]:
         elapsed = int((time.time() - t_start) * 1000)
@@ -176,7 +176,13 @@ async def chat(
     flagged    = validation["flagged"]
     sources    = [SourceRef(**s) for s in _build_sources(top_chunks)]
 
-    memory.add(body.session_id, query, answer, sources, intent)
+    # Store the ORIGINAL query, not the rewritten/anchored one - otherwise
+    # each follow-up's anchor text (which already embeds the prior question
+    # and answer) would get baked into memory as "the question", and the
+    # next follow-up would anchor to THAT, compounding wrapper text turn
+    # over turn instead of resolving cleanly against what the user actually
+    # asked each time.
+    memory.add(body.session_id, raw_query, answer, sources, intent)
     elapsed = int((time.time() - t_start) * 1000)
 
     asyncio.create_task(_async_log_feedback(
@@ -213,10 +219,10 @@ async def chat_stream(
     t_start    = time.time()
     event_loop = asyncio.get_event_loop()
 
-    query  = normalize(body.message)
-    query  = rewrite(query, memory, body.session_id)
-    intent = detect_intent(query)
-    safety = safety_check(query)
+    raw_query = normalize(body.message)
+    query     = rewrite(raw_query, memory, body.session_id)
+    intent    = detect_intent(query)
+    safety    = safety_check(query)
 
     async def _error_stream(msg: str):
         payload = json.dumps({
@@ -259,7 +265,9 @@ async def chat_stream(
         elapsed     = int((time.time() - t_start) * 1000)
         validation  = validate(answer, top_chunks)
         source_refs = [SourceRef(**s) for s in sources]
-        memory.add(body.session_id, query, answer, source_refs, intent)
+        # See /chat above: store the original query, not the rewritten one,
+        # so anchors don't compound turn over turn.
+        memory.add(body.session_id, raw_query, answer, source_refs, intent)
 
         asyncio.create_task(_async_log_feedback(
             query,
