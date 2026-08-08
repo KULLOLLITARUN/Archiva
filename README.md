@@ -300,7 +300,38 @@ needs a live Groq call — the suite mocks every LLM boundary.
 | No OCR for scanned/image PDFs | Avoids a system-level binary dependency (Tesseract, not pip-installable) and silent low-confidence text polluting search/hallucination risk; upload returns an explicit error instead | Scanned documents become an actual input source — implement as a background job, not inline in `/upload` (a 50-page scan can take 30-60s) |
 | Single-process, in-memory store (pickled to disk) | Simple, no external infra, fine for one instance | You need multiple worker processes or horizontal scaling — requires moving to a real vector DB / shared store |
 | No auth on any endpoint, including destructive ones (`/documents/clear-all`) | Intentional — this is the "open/no-auth edition," see `main.py`'s module docstring | Never, unless the deployment model changes (e.g. public-facing) — then auth needs to be designed in, not bolted on |
-| Tables in PDF/DOCX flatten to text | Keeps parsing dependency-light | You need to answer "sum this column"-style questions over tabular data — needs structured extraction, not text chunking |
+| Multi-hop decomposition runs sub-questions independently after resolving simple pronoun references | `agents/decomposer.py`'s `anchor_to_prior_answer()` handles "who manages X, and what's THEIR policy" but not deeper multi-step reasoning chains | A dependent chain needs more than one pronoun resolved, or genuinely sequential reasoning (not just reference-anchoring) |
+
+Tables in PDF/DOCX/CSV are extracted with real structure (not flattened
+prose) — see [Tabular data](#tabular-data) below. Tables spanning
+thousands of rows still get split at `PARENT_CHUNK_SIZE`, same as any
+other large single-blob content (see `MAX_INGEST_CHARS` in config.py).
+
+---
+
+## Tabular Data
+
+Tables in PDF (via `pdfplumber`), DOCX, and CSV are extracted as
+structured `column=value` rows — not flattened into prose — and kept as
+one retrievable unit (up to `PARENT_CHUNK_SIZE`) instead of being
+fragmented across scattered chunks, so a retrieved table brings its
+**whole** row set into the LLM's context, not just whichever row happened
+to match the search query.
+
+The hallucination-grounding check (`agents/reflection.py`) has a narrow,
+bounded exception for this: a number in the answer that doesn't appear
+verbatim in the source is still accepted if it exactly equals the sum of
+a small set of numbers that DO appear (e.g. summing a costs column) —
+without this, the system would refuse to answer "what's the total?"
+questions even when the underlying arithmetic is fully grounded and
+correct. A number with no such explanation is still rejected exactly as
+before; this doesn't loosen the check for anything else.
+
+This is retrieval + verified-arithmetic, not a computation engine —
+there's no SQL/pandas execution layer. It relies on the LLM performing
+the arithmetic itself with the full table in context, which works well
+for tables that fit in context but won't scale to a table with thousands
+of rows the model can't reason over directly.
 
 ---
 
@@ -309,12 +340,13 @@ needs a live Groq call — the suite mocks every LLM boundary.
 - [x] Hybrid retrieval — BM25 + dense embeddings + reciprocal rank fusion
 - [x] Cross-encoder reranking, MMR diversification, parent-child chunking
 - [x] Self-healing reflection loop with structured failure classification
-- [x] Multi-hop query decomposition
+- [x] Multi-hop query decomposition (independent + simple reference-anchored)
 - [x] Semantic query cache
 - [x] Document-content prompt-injection screening
 - [x] `.txt/.pdf/.docx/.md/.csv/.html` ingestion
+- [x] Structured/tabular extraction + retrieval, with verified-arithmetic grounding
 - [x] Retrieval-quality eval harness + CI
 - [ ] Real vector DB (Qdrant/pgvector) + ANN index
-- [ ] Structured/tabular retrieval
 - [ ] OCR (background job)
 - [ ] Optional auth layer for non-local deployments
+- [ ] Deeper sequential multi-hop reasoning (beyond single-pronoun anchoring)

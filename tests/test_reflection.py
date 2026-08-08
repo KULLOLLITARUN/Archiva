@@ -1,7 +1,7 @@
 """Tests for agents/reflection.py — the deterministic answer-quality checks
 that drive the self-healing loop's retry/refuse decisions."""
 
-from agents.reflection import reflect, should_force_strong_model
+from agents.reflection import _numbers_are_grounded, reflect, should_force_strong_model
 from config import GROQ_STRONG
 
 WEAK_MODEL = "llama-3.1-8b-instant"
@@ -87,3 +87,56 @@ def test_should_force_strong_model_only_on_retry_model_with_weak_model():
 
     refuse_decision = {"decision": "refuse"}
     assert should_force_strong_model(refuse_decision, WEAK_MODEL) is False
+
+
+# ── _numbers_are_grounded: verified-sum exception (table aggregation) ──────────
+
+TABLE_CHUNK_TEXT = (
+    "Quarter=Q1, Revenue=120000, Costs=80000\n"
+    "Quarter=Q2, Revenue=135000, Costs=85000\n"
+    "Quarter=Q3, Revenue=150000, Costs=90000\n"
+    "Quarter=Q4, Revenue=160000, Costs=95000"
+)
+
+
+def test_correct_column_sum_is_accepted_as_grounded():
+    answer = "The total costs across all four quarters were 350000."
+    assert _numbers_are_grounded(answer, TABLE_CHUNK_TEXT) is True
+
+
+def test_correct_two_number_sum_is_accepted_as_grounded():
+    answer = "Q1 and Q2 revenue combined is 255000."
+    assert _numbers_are_grounded(answer, TABLE_CHUNK_TEXT) is True
+
+
+def test_incorrect_sum_is_still_rejected():
+    # Off-by-one from the real total (350000) - must NOT be waved through
+    # just because it's "close" to a real sum. Exact match only.
+    answer = "The total costs across all four quarters were 350001."
+    assert _numbers_are_grounded(answer, TABLE_CHUNK_TEXT) is False
+
+
+def test_fabricated_unrelated_number_is_still_rejected():
+    # The core anti-hallucination protection must still catch a number
+    # that has no relationship to anything in the source at all.
+    answer = "The total costs across all four quarters were 92345."
+    assert _numbers_are_grounded(answer, TABLE_CHUNK_TEXT) is False
+
+
+def test_dates_are_not_treated_as_summable_values():
+    chunk = "The report was filed on 2024-01-01 and covers Q1 revenue of 120000."
+    # "20240101" (if the hyphens were stripped) must not silently become a
+    # candidate for subset-sum arithmetic - dates aren't table values.
+    answer = "The total was 20240101."
+    assert _numbers_are_grounded(answer, chunk) is False
+
+
+def test_reflect_accepts_a_verified_table_sum_end_to_end():
+    chunks = [{"text": TABLE_CHUNK_TEXT}]
+    answer = (
+        "To find the total costs, add each quarter: "
+        "80000 + 85000 + 90000 + 95000 = 350000."
+    )
+    decision = reflect("What are the total costs?", answer, chunks, attempt=0, model_used=WEAK_MODEL)
+    assert decision["decision"] == "accept"
+    assert decision["valid"] is True

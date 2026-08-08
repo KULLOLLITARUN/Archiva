@@ -1,0 +1,5 @@
+# Binary formats — never apply line-ending conversion, diffing, or merging.
+*.pdf  binary
+*.docx binary
+*.pkl  binary
+*.db   binary

@@ -8,6 +8,9 @@ pydantic==2.7.1
 # Fix #9: PDF and DOCX support
 pypdf==4.2.0
 python-docx==1.1.2
+# Table-structure-aware PDF extraction (optional at runtime — parse_pdf()
+# degrades gracefully to plain-text-only if this isn't installed)
+pdfplumber>=0.11.0
 # Fix #11: rate limiting
 slowapi==0.1.9
 

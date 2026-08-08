@@ -20,8 +20,9 @@ Original design principles retained:
   - Full type annotations: no implicit Any.
 """
 
+import math
 import re
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
 from config import GROQ_STRONG, MIN_OVERLAP_RATIO, STOPWORDS
 
@@ -90,12 +91,77 @@ def _normalize_number_text(text: str) -> str:
     return text.replace(",", "")
 
 
+_MAX_SUM_VERIFY_POOL: int = 12   # cap subset-sum search regardless of chunk size
+
+
+def _plain_numeric_value(number_str: str) -> Optional[float]:
+    """
+    Parse *number_str* as a plain numeric value for arithmetic
+    verification, or None if it's not a clean number — a date
+    ("2024-01-01"), a fraction ("3/4"), etc. aren't meaningful as table
+    values to sum, and treating them as such would risk false-clearing a
+    genuinely fabricated number that happens to coincide with some sum.
+    """
+    s = number_str.rstrip("%")
+    if not re.fullmatch(r"\d+(\.\d+)?", s):
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def _achievable_sums(values: List[float], max_pool: int = _MAX_SUM_VERIFY_POOL) -> Set[float]:
+    """
+    Every sum achievable by adding together any subset (2+ terms — a
+    single grounded value is already covered by the direct verbatim
+    check in _numbers_are_grounded) of *values*. Capped to the first
+    `max_pool` values so this stays bounded regardless of how many
+    numbers a chunk contains (2^12 = 4096 combinations, trivial).
+    """
+    pool = values[:max_pool]
+    reachable: Set[float] = {0.0}
+    for v in pool:
+        reachable |= {s + v for s in reachable}
+    return reachable
+
+
+def _isclose_to_any(value: float, candidates: Set[float]) -> bool:
+    return any(math.isclose(value, c, rel_tol=1e-9, abs_tol=1e-6) for c in candidates)
+
+
 def _numbers_are_grounded(answer: str, chunk_text: str) -> bool:
-    """Check that every number in *answer* also appears in *chunk_text*."""
+    """
+    Check that every number in *answer* is grounded: either it appears
+    verbatim in *chunk_text*, or it's exactly explainable as the sum of a
+    small set of numbers that DO appear in *chunk_text* — e.g. an LLM
+    correctly summing a table column ("total costs" = 80000 + 85000 +
+    90000 + 95000 = 350000) shouldn't be flagged as a hallucination just
+    because "350000" itself isn't written anywhere in the source.
+
+    This is a narrow, bounded exception, not a general "trust computed
+    numbers" rule: a number that doesn't match any subset sum of the
+    grounded values is still rejected, same as before.
+    """
     normalized_answer = _normalize_number_text(answer)
     normalized_chunk  = _normalize_number_text(chunk_text)
-    for number in _extract_numbers(normalized_answer):
-        if number not in normalized_chunk:
+
+    ungrounded = [n for n in _extract_numbers(normalized_answer) if n not in normalized_chunk]
+    if not ungrounded:
+        return True
+
+    grounded_values = [
+        v for v in (
+            _plain_numeric_value(n) for n in _extract_numbers(normalized_chunk)
+        ) if v is not None
+    ]
+    if not grounded_values:
+        return False
+
+    achievable = _achievable_sums(grounded_values)
+    for number_str in ungrounded:
+        value = _plain_numeric_value(number_str)
+        if value is None or not _isclose_to_any(value, achievable):
             return False
     return True
 

@@ -65,15 +65,50 @@ def parse_txt(content: bytes, filename: str) -> List[Dict]:
 
 # ── PDF ───────────────────────────────────────────────────────────────────────
 
+def _render_table_rows(rows: List[List]) -> str:
+    """
+    Render a pdfplumber-extracted table (list of rows, each a list of cell
+    strings) as "col=value, col=value" lines — one line per data row, header
+    row supplying field names. Same format parse_csv() already produces, so
+    is_table_text()/chunk_page()'s row-aware chunking (ingestion/chunker.py)
+    pick this up automatically regardless of which parser produced it.
+    """
+    rows = [r for r in rows if r and any(c for c in r)]
+    if len(rows) < 2:
+        return ""
+
+    header = [str(h or "").strip() for h in rows[0]]
+    lines = []
+    for row in rows[1:]:
+        pairs = [
+            f"{h}={str(v).strip()}"
+            for h, v in zip(header, row)
+            if h and v is not None and str(v).strip()
+        ]
+        if pairs:
+            lines.append(", ".join(pairs))
+    return "\n".join(lines)
+
+
 def parse_pdf(content: bytes, filename: str) -> Iterator[Dict]:
     """
-    Lazily parse a PDF file into per-page dicts using pypdf, one page at a
-    time. Each PDF page becomes one element with its 1-based page number.
+    Lazily parse a PDF file into per-page dicts, one page at a time: plain
+    text via pypdf (unchanged from before), plus any detected tables via
+    pdfplumber, rendered as structured "col=value" rows instead of the
+    jumbled left-to-right text pypdf alone would produce for a table.
 
-    Yielding instead of building the full list upfront means
-    chunk_document()'s existing MAX_CHUNKS_PER_FILE early-stop actually
-    skips extracting text from pages beyond the cap — for a huge PDF, only
-    the pages that end up needed are ever text-extracted.
+    Both extractions stay page-synchronized inside one loop so the whole
+    function is still lazy — chunk_document()'s MAX_CHUNKS_PER_FILE
+    early-stop keeps skipping pages beyond the cap for BOTH passes, not
+    just the text one.
+
+    Note: the table's cells also appear (jumbled) in the plain-text yield
+    for that page, since pypdf has no notion of "skip the table region."
+    That's accepted duplication, not a bug — retrieval reliably prefers
+    the clean structured version for exact term matches (e.g. "Costs=90000"),
+    and the LLM sees both either way once a chunk from that page is retrieved.
+    pdfplumber is optional: if it's not installed, PDFs still parse fine,
+    just without the table-structure improvement.
     """
     try:
         from pypdf import PdfReader
@@ -83,23 +118,44 @@ def parse_pdf(content: bytes, filename: str) -> Iterator[Dict]:
             "pypdf is required for PDF support. Run: pip install pypdf"
         ) from exc
 
+    try:
+        import pdfplumber
+        plumber_pdf = pdfplumber.open(io.BytesIO(content))
+    except Exception:
+        plumber_pdf = None
+
     reader = PdfReader(io.BytesIO(content))
     yielded_any = False
-    for i, page in enumerate(reader.pages, start=1):
-        raw = ""
-        try:
-            raw = page.extract_text() or ""
-        except Exception:
-            pass
-        if not raw.strip():
+    try:
+        for i, page in enumerate(reader.pages, start=1):
+            raw = ""
             try:
-                raw = page.extract_text(extraction_mode="layout") or ""
+                raw = page.extract_text() or ""
             except Exception:
                 pass
-        cleaned = clean_text(raw)
-        if cleaned:
-            yielded_any = True
-            yield {"page": i, "text": cleaned}
+            if not raw.strip():
+                try:
+                    raw = page.extract_text(extraction_mode="layout") or ""
+                except Exception:
+                    pass
+            cleaned = clean_text(raw)
+            if cleaned:
+                yielded_any = True
+                yield {"page": i, "text": cleaned}
+
+            if plumber_pdf is not None:
+                try:
+                    plumber_page = plumber_pdf.pages[i - 1]
+                    for table_rows in plumber_page.extract_tables():
+                        table_text = _render_table_rows(table_rows)
+                        if table_text:
+                            yielded_any = True
+                            yield {"page": i, "text": table_text}
+                except Exception:
+                    pass
+    finally:
+        if plumber_pdf is not None:
+            plumber_pdf.close()
 
     if not yielded_any:
         yield {"page": 1, "text": ""}
@@ -109,8 +165,15 @@ def parse_pdf(content: bytes, filename: str) -> Iterator[Dict]:
 
 def parse_docx(content: bytes, filename: str) -> List[Dict]:
     """
-    Parse a DOCX file from raw bytes into a single-page dict using python-docx.
-    Extracts text from paragraphs and tables.
+    Parse a DOCX file from raw bytes using python-docx.
+
+    Paragraph text becomes one page entry. Each table becomes its OWN page
+    entry too, rendered as "col=value" rows (first row as headers) instead
+    of raw "|"-joined cells — the same format parse_csv() and parse_pdf()'s
+    table extraction already use, so is_table_text() picks it up and
+    chunk_page() (ingestion/chunker.py) keeps the whole table together as
+    one retrievable unit instead of fragmenting it into scattered row
+    chunks mixed in with prose.
     """
     try:
         from docx import Document
@@ -121,19 +184,25 @@ def parse_docx(content: bytes, filename: str) -> List[Dict]:
         ) from exc
 
     doc = Document(io.BytesIO(content))
-    elements = []
-    for p in doc.paragraphs:
-        if p.text.strip():
-            elements.append(p.text)
-    for table in doc.tables:
-        for row in table.rows:
-            row_text = " | ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
-            if row_text:
-                elements.append(row_text)
 
-    raw = "\n\n".join(elements)
+    paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+    raw = "\n\n".join(paragraphs)
     cleaned = clean_text(_bound_for_ingest(raw, filename))
-    return [{"page": 1, "text": cleaned}]
+
+    pages: List[Dict] = []
+    if cleaned:
+        pages.append({"page": 1, "text": cleaned})
+
+    for table in doc.tables:
+        rows = [[cell.text.strip() for cell in row.cells] for row in table.rows]
+        table_text = _render_table_rows(rows)
+        if table_text:
+            pages.append({"page": 1, "text": table_text})
+
+    if not pages:
+        pages.append({"page": 1, "text": ""})
+
+    return pages
 
 
 
