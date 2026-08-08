@@ -1,15 +1,23 @@
 """
-ingestion/chunker.py — Text chunker with semantic deduplication.
+ingestion/chunker.py — Two-level Parent-Child text chunker.
 
-Upgrade (Part 3):
-  - SHA-256 content hash stored in every chunk's metadata["content_hash"].
-  - chunk_document() maintains a seen-hash set and skips duplicate chunks
-    within the same document (prevents redundant ingestion).
-  - metadata["doc_id"], metadata["date"] fields added for clarity.
-  - Paragraph + log-aware chunking strategy retained.
+Upgrade (Production Part 1 — Parent-Child Chunking):
+  - chunk_page() now produces a TWO-LEVEL hierarchy:
+      Parent chunks  — large sections (≤ PARENT_CHUNK_SIZE tokens).
+                       Each parent gets a unique parent_id.
+      Child chunks   — small precision units (≤ CHILD_CHUNK_SIZE tokens)
+                       sliced from each parent.  Each child carries:
+                         metadata["parent_id"]   — links back to parent
+                         metadata["parent_text"] — full parent text (for LLM)
+  - chunk_document() returns child chunks only (unchanged interface).
+  - Log-file chunking is NOT split into parent-child — log entries are
+    already semantically self-contained; they are returned as flat chunks
+    with parent_id == chunk_id (self-referential).
 
-Fix #5:  No "embedding": [] field (BM25 needs no embeddings).
-Fix #13: Log-file detection and stack-trace-aware chunking.
+Backward compat:
+  - chunk_document() signature, return type, and all metadata keys unchanged.
+  - New metadata keys added: parent_id, parent_text.
+  - All previously produced chunk_ids remain unique.
 """
 
 import hashlib
@@ -17,7 +25,10 @@ import re
 from datetime import datetime, timezone
 from typing import Dict, List, Set
 
-from config import CHUNK_SIZE, CHUNK_OVERLAP, MAX_CHUNKS_PER_FILE
+from config import (
+    CHUNK_SIZE, CHUNK_OVERLAP, MAX_CHUNKS_PER_FILE,
+    PARENT_CHUNK_SIZE, CHILD_CHUNK_SIZE,
+)
 
 
 # ── Token estimator ───────────────────────────────────────────────────────────
@@ -99,7 +110,9 @@ def chunk_log(
     uploaded_at: str,
     user_id: str = "",
 ) -> List[Dict]:
-    """Log-aware chunker; keeps stack traces whole within one chunk."""
+    """Log-aware chunker; keeps stack traces whole within one chunk.
+    Log entries are flat chunks — parent_id == chunk_id (self-referential).
+    """
     entries = _split_log_entries(text)
     chunks: List[Dict] = []
     current_entries: List[str] = []
@@ -108,8 +121,9 @@ def chunk_log(
 
     def _make_log_chunk(entries_list: List[str], idx: int) -> Dict:
         body = "\n".join(entries_list)
+        cid = f"{file_id}_p{page_num}_c{idx}"
         return {
-            "chunk_id": f"{file_id}_p{page_num}_c{idx}",
+            "chunk_id": cid,
             "text": body,
             "metadata": {
                 "doc_id":        file_id,
@@ -122,7 +136,10 @@ def chunk_log(
                 "uploaded_at":   uploaded_at,
                 "date":          uploaded_at,
                 "content_hash":  content_hash(body),
-                "user_id":       user_id,      # ← tenant isolation key
+                "user_id":       user_id,
+                # Log chunks are self-referential parents
+                "parent_id":     cid,
+                "parent_text":   body,
             },
         }
 
@@ -144,7 +161,7 @@ def chunk_log(
     return chunks
 
 
-# ── Paragraph chunking ────────────────────────────────────────────────────────
+# ── Paragraph splitting ───────────────────────────────────────────────────────
 
 def split_into_paragraphs(text: str) -> List[str]:
     parts = []
@@ -162,37 +179,83 @@ def split_into_paragraphs(text: str) -> List[str]:
     return parts
 
 
-def chunk_page(
-    page_text: str,
+# ── Parent chunker ────────────────────────────────────────────────────────────
+
+def _build_parents(
+    paragraphs: List[str],
     page_num: int,
+    file_id: str,
+) -> List[Dict]:
+    """
+    Accumulate paragraphs into parent chunks ≤ PARENT_CHUNK_SIZE tokens.
+    Returns a list of parent dicts with keys: parent_id, text, page.
+    """
+    parents: List[Dict] = []
+    current_paras: List[str] = []
+    current_tokens = 0
+    parent_index = 0
+
+    def _flush(paras: List[str], idx: int) -> Dict:
+        body = "\n".join(paras)
+        return {
+            "parent_id":  f"{file_id}_p{page_num}_parent{idx}",
+            "text":       body,
+            "page":       page_num,
+        }
+
+    for para in paragraphs:
+        para_tokens = estimate_tokens(para)
+
+        if current_tokens + para_tokens > PARENT_CHUNK_SIZE and current_paras:
+            parents.append(_flush(current_paras, parent_index))
+            parent_index += 1
+            current_paras  = []
+            current_tokens = 0
+
+        current_paras.append(para)
+        current_tokens += para_tokens
+
+    if current_paras:
+        parents.append(_flush(current_paras, parent_index))
+
+    return parents
+
+
+# ── Child chunker ─────────────────────────────────────────────────────────────
+
+def _build_children(
+    parent: Dict,
     file_id: str,
     filename: str,
     file_type: str,
-    user_id: str = "",
+    uploaded_at: str,
+    user_id: str,
+    child_start_index: int,
 ) -> List[Dict]:
     """
-    Chunk a single page of text.
-
-    If the page looks like a log file, delegates to chunk_log().
-    Otherwise uses paragraph-accumulation with overlap.
-    SHA-256 content_hash added to every chunk's metadata.
+    Slice a parent chunk into child chunks ≤ CHILD_CHUNK_SIZE tokens.
+    Each child carries parent_id and parent_text so the LLM gets full context.
     """
-    uploaded_at = datetime.now(timezone.utc).isoformat()
+    parent_text = parent["text"]
+    parent_id   = parent["parent_id"]
+    page_num    = parent["page"]
 
-    if is_log_file(page_text):
-        return chunk_log(page_text, page_num, file_id, filename, file_type, uploaded_at, user_id)
+    # Split parent into sentences / lines for finer child boundaries
+    lines = [l.strip() for l in parent_text.replace(". ", ".\n").splitlines() if l.strip()]
+    if not lines:
+        return []
 
-    paragraphs   = split_into_paragraphs(page_text)
-    chunks: List[Dict] = []
-    current_paras: List[str] = []
+    children: List[Dict] = []
+    current_lines: List[str] = []
     current_tokens = 0
-    chunk_index = 0
+    child_index = child_start_index
 
-    def make_chunk(paras: List[str], idx: int) -> Dict:
-        text = "\n".join(paras)
+    def _flush_child(lines_list: List[str], idx: int) -> Dict:
+        body = " ".join(lines_list)
+        cid = f"{file_id}_p{page_num}_c{idx}"
         return {
-            "chunk_id": f"{file_id}_p{page_num}_c{idx}",
-            "text": text,
+            "chunk_id": cid,
+            "text": body,
             "metadata": {
                 "doc_id":        file_id,
                 "file_id":       file_id,
@@ -203,37 +266,71 @@ def chunk_page(
                 "chunk_index":   idx,
                 "uploaded_at":   uploaded_at,
                 "date":          uploaded_at,
-                "content_hash":  content_hash(text),
-                "user_id":       user_id,      # ← tenant isolation key
+                "content_hash":  content_hash(body),
+                "user_id":       user_id,
+                "parent_id":     parent_id,
+                "parent_text":   parent_text,   # ← full parent for LLM context
             },
         }
 
-    for para in paragraphs:
-        para_tokens = estimate_tokens(para)
+    for line in lines:
+        line_tokens = estimate_tokens(line)
 
-        if current_tokens + para_tokens > CHUNK_SIZE and current_paras:
-            chunks.append(make_chunk(current_paras, chunk_index))
-            chunk_index += 1
+        if current_tokens + line_tokens > CHILD_CHUNK_SIZE and current_lines:
+            children.append(_flush_child(current_lines, child_index))
+            child_index += 1
+            current_lines  = []
+            current_tokens = 0
 
-            overlap_paras: List[str] = []
-            overlap_tokens = 0
-            for prev_para in reversed(current_paras):
-                prev_tokens = estimate_tokens(prev_para)
-                overlap_paras.insert(0, prev_para)
-                overlap_tokens += prev_tokens
-                if overlap_tokens >= CHUNK_OVERLAP:
-                    break
+        current_lines.append(line)
+        current_tokens += line_tokens
 
-            current_paras  = overlap_paras
-            current_tokens = overlap_tokens
+    if current_lines:
+        children.append(_flush_child(current_lines, child_index))
 
-        current_paras.append(para)
-        current_tokens += para_tokens
+    return children
 
-    if current_paras:
-        chunks.append(make_chunk(current_paras, chunk_index))
 
-    return chunks
+# ── Page-level entry point ────────────────────────────────────────────────────
+
+def chunk_page(
+    page_text: str,
+    page_num: int,
+    file_id: str,
+    filename: str,
+    file_type: str,
+    user_id: str = "",
+) -> List[Dict]:
+    """
+    Chunk a single page into parent-child pairs.
+
+    If the page looks like a log file, delegates to chunk_log() (flat chunks).
+    Otherwise produces a two-level hierarchy:
+      1. Parent chunks (≤ PARENT_CHUNK_SIZE tokens) — rich LLM context.
+      2. Child chunks (≤ CHILD_CHUNK_SIZE tokens)  — precise search units.
+    Returns only child chunks; parent text is embedded in each child's metadata.
+    """
+    uploaded_at = datetime.now(timezone.utc).isoformat()
+
+    if is_log_file(page_text):
+        return chunk_log(page_text, page_num, file_id, filename, file_type, uploaded_at, user_id)
+
+    paragraphs = split_into_paragraphs(page_text)
+    if not paragraphs:
+        return []
+
+    parents  = _build_parents(paragraphs, page_num, file_id)
+    children: List[Dict] = []
+    child_counter = 0
+
+    for parent in parents:
+        parent_children = _build_children(
+            parent, file_id, filename, file_type, uploaded_at, user_id, child_counter
+        )
+        children.extend(parent_children)
+        child_counter += len(parent_children)
+
+    return children
 
 
 # ── Document-level entry point ────────────────────────────────────────────────
@@ -246,10 +343,11 @@ def chunk_document(
     user_id: str = "",
 ) -> List[Dict]:
     """
-    Chunk all pages of a document.
+    Chunk all pages of a document into parent-child child chunks.
 
     Enforces MAX_CHUNKS_PER_FILE cap.
-    Part 3.2: Deduplicates chunks by SHA-256 hash within this document.
+    Deduplicates chunks by SHA-256 hash within this document.
+    Returns child chunks only — parent context lives in metadata["parent_text"].
     """
     all_chunks: List[Dict] = []
     seen_hashes: Set[str]  = set()
@@ -267,7 +365,6 @@ def chunk_document(
         for chunk in page_chunks:
             h = chunk["metadata"].get("content_hash", "")
             if h and h in seen_hashes:
-                # Skip exact duplicate chunk within this document
                 continue
             if h:
                 seen_hashes.add(h)

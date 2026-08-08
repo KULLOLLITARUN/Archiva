@@ -30,6 +30,7 @@ from config import (
     MAX_REFLECTION_ATTEMPTS,
     MIN_REFLECTION_CONFIDENCE,
 )
+from cache.semantic_cache import semantic_cache
 from agents.state import AgentState
 from agents.root_cause import analyze_failure
 from agents.healer import apply_healing
@@ -146,11 +147,71 @@ def _single_attempt(
     # 3. Cross-encoder rerank (query needed for CE scoring)
     top_chunks = rerank(filtered, query=current_query, final_k=FINAL_K)
 
+    # 3b. Parent-context expansion: replace chunk text with rich parent section
+    for chunk in top_chunks:
+        parent_text = chunk["metadata"].get("parent_text", "")
+        if parent_text:
+            chunk["_context_text"] = parent_text
+        else:
+            chunk["_context_text"] = chunk["text"]
+
+    print(
+        f"  [RETRIEVAL]  [loop] candidates={len(filtered)} "
+        f"reranked_to={len(top_chunks)} "
+        f"intent={intent}"
+    )
+
     # 4. Context optimization — MMR + compression + citations
     optimized = optimize_context(top_chunks, query=current_query, top_k=FINAL_K)
 
-    # 5. Build context string
-    context = build_labeled_context(optimized) if optimized else ""
+    # 5. Build context — two-stage diversity filter:
+    #    a) Deduplicate by parent_id (same section can't appear twice)
+    #    b) Cap at MAX_CHUNKS_PER_DOC per file (stops one doc dominating context)
+    MAX_CHUNKS_PER_DOC = 2
+    if optimized:
+        seen_parents: set = set()
+        doc_counts: dict  = {}
+        unique_by_parent: list = []
+
+        for chunk in optimized:
+            pid   = chunk["metadata"].get("parent_id") or chunk.get("chunk_id", "")
+            fname = chunk["metadata"].get("filename", "")
+
+            if pid in seen_parents:
+                continue
+            if doc_counts.get(fname, 0) >= MAX_CHUNKS_PER_DOC:
+                continue
+
+            seen_parents.add(pid)
+            doc_counts[fname] = doc_counts.get(fname, 0) + 1
+            unique_by_parent.append(chunk)
+
+        context_chunks = unique_by_parent if unique_by_parent else optimized
+
+        groups: dict = {}
+        for chunk in context_chunks:
+            fname = chunk["metadata"]["filename"]
+            groups.setdefault(fname, []).append(chunk)
+        for fname in groups:
+            groups[fname].sort(
+                key=lambda c: (c["metadata"]["page"], c["metadata"]["chunk_index"])
+            )
+        labeled_parts = []
+        for fname, file_chunks in groups.items():
+            for chunk in file_chunks:
+                page = chunk["metadata"]["page"]
+                ctx  = chunk.get("_context_text", chunk["text"])
+                labeled_parts.append(f"[Source: {fname} | Page {page}]\n{ctx}\n")
+        raw_context = "\n".join(labeled_parts)
+        words = raw_context.split()
+        context = " ".join(words[:MAX_CONTEXT_TOKENS])
+        print(
+            f"  [CONTEXT]  [loop] unique_parents={len(unique_by_parent)} "
+            f"docs={list(doc_counts.keys())} total_words={len(words)}"
+        )
+    else:
+        context = ""
+
 
     # 6. Route — respect force_strong and force_model flags
     top_score = top_chunks[0]["score"] if top_chunks else 0.0
@@ -228,6 +289,11 @@ def run_reflection_loop(
     )
     state.search_queries = [query]
 
+    # ── Semantic cache lookup ─────────────────────────────────────────────────
+    cached = semantic_cache.lookup(query)
+    if cached is not None:
+        return cached
+
     force_strong: bool      = False
     best_result: Optional[Dict] = None
 
@@ -295,6 +361,8 @@ def run_reflection_loop(
                         if action == "STRICT_PROMPT" and should_force_strong_model(decision, result["model_used"]):
                             force_strong = True
                         continue
+                # Store successful result in semantic cache
+                semantic_cache.store(query, best_result)
                 return best_result
 
             # ── Last attempt: return best we have ────────────────────────────
@@ -330,6 +398,7 @@ def run_reflection_loop(
     except Exception as exc:
         print(f"  [ERR]  [loop] Unexpected error: {exc}")
         if best_result:
+            semantic_cache.store(query, best_result)
             return best_result
 
     return _not_found_result(

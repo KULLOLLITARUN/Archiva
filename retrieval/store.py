@@ -199,3 +199,15 @@ class MultiDocStore:
 
     def is_empty(self) -> bool:
         return len(self.chunks) == 0
+
+    def get_parent_text(self, parent_id: str) -> str:
+        """
+        Return the full parent_text for a given parent_id.
+        Falls back to empty string if the parent_id is not found.
+        Used by the agent loop to expand child chunks to rich LLM context.
+        """
+        for chunk in self.chunks:
+            if chunk.get("metadata", {}).get("parent_id") == parent_id:
+                return chunk["metadata"].get("parent_text", chunk.get("text", ""))
+        return ""
+

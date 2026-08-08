@@ -249,7 +249,17 @@ def hybrid_retrieve(
 
     # 4. Fusion
     if not bm25_results and not dense_results:
-        return []
+        # Final hardening fallback: try expand_query on BM25 alone with no threshold
+        expanded_query = expand_query(query)
+        if expanded_query != query:
+            bm25_results = search(
+                query=expanded_query,
+                store=store,
+                file_ids=effective_file_ids,
+                top_k=TOP_K_BM25,
+            )
+        if not bm25_results:
+            return []
 
     if not dense_results:
         # Dense unavailable — return BM25 results directly

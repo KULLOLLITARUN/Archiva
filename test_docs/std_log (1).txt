@@ -1,769 +1,0 @@
-/bin/bash: /azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/libtinfo.so.6: no version information available (required by /bin/bash)
-  [..]  Using single dataset file: /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-
-========================================================================
-  PowerNative — PBIP Visual QLoRA Fine-tuning v13
-========================================================================
-Data mode: visual
-  Run ID              : run_20260406_053113
-  Schema source       : /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_schema_source
-  Data dir            : /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  Data mode           : visual
-  Main epochs         : 3
-  Batch eff.          : 2 x 4 = 8
-  LR                  : 8e-05
-  max_seq_len         : 2048
-  max_new_tokens      : 1024
-  Eval samples        : 20
-  Azure VM SKU        : Standard_NC24ads_A100_v4
-  CUDA available      : True
-  GPU name            : NVIDIA A100 80GB PCIe
-  GPU count           : 1
-  Eval dir            : /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113
-  Ckpt dir            : /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/checkpoints/run_20260406_053113
-  MLflow dump dir     : /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/mlflow_store/run_20260406_053113
-
-  ── Overfitting Prevention ──────────────────────────────────
-  LoRA r/alpha/dropout: 8 / 16 / 0.1
-  Weight decay        : 0.01
-  Label smoothing     : 0.05
-  Max grad norm       : 1.0
-  NEFTune noise alpha : 0.0
-  Early stop patience : 2 epoch(s)
-  Early stop delta    : 0.001
-
-  [OK]  [MLflow] Using Azure ML tracking URI: 'azureml://eastus2.api.azureml.ms/mlflow/v1.0/subscriptions/0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2/resourceGroups/pbi-ft-rg/providers/Microsoft.MachineLearningServices/workspaces/pbi-ft-workspace'
-  [OK]  MLflow run started: lucid_wheel_cscng4nfms  experiment=pbip-visual-qlora-v13
-  [..]  MLflow params logged: ['learning_rate', 'batch_size', 'grad_accum', 'main_epochs', 'max_seq_len', 'max_new_tokens', 'weight_decay', 'label_smoothing', 'max_grad_norm', 'lora_r', 'lora_alpha', 'lora_dropout', 'val_ratio', 'data_mode', 'model_name', 'seed', 'mlflow_experiment_name', 'azure_vm_sku', 'neftune_noise_alpha', 'early_stopping_patience', 'early_stopping_delta']
-  [!!]  MLflow manifest log failed (non-fatal): azureml_artifacts_builder() got an unexpected keyword argument 'tracking_uri'
-
-  ── System info ──────────────────────────────────────────────────────
-  python_version                      3.10.20
-  platform                            Linux-5.15.0-1098-azure-x86_64-with-glibc2.35
-  hostname                            8b63c426cea44641b86a45b10e784791000000
-  cpu_count                           24
-  torch_version                       2.11.0+cu130
-  cuda_available                      True
-  cuda_version                        13.0
-  gpu_count                           1
-  gpu_0_name                          NVIDIA A100 80GB PCIe
-  gpu_0_memory_gb                     79.3
-  nvidia_driver                       580.95.05
-  pkg_transformers                    4.51.3
-  pkg_peft                            0.14.0
-  pkg_trl                             0.17.0
-  pkg_bitsandbytes                    0.49.2
-  pkg_accelerate                      1.13.0
-  env_AZUREML_ARM_WORKSPACE_NAME      pbi-ft-workspace
-  env_AZUREML_CR_TELEMETRY_CONFIG     {"collector":{"receiver":null,"exporter":{"appinsights":{"instrumentation_key":"d7481a2e-117d-49ac-8cc3-94ef59c96eab","endpoint_suffix":"services.visualstudio.com","ingestion_endpoint":null,"aad_audience":null},"jaeger":null,"prometheus":null,"timeout_millis":null,"level":null}},"logger":{"console":{"sink":"stdout","level":"info","enabled":true,"ansi":false},"appinsights":{"instrumentation_key":"d7481a2e-117d-49ac-8cc3-94ef59c96eab","level":"info","enabled":true,"endpoint_suffix":"services.visualstudio.com","ingestion_endpoint":null,"aad_audience":null},"file":{"extension":"log","level":"info","enabled":true}},"node_rank":null,"node_id":"tvmps_97ddc2c80b825db4e8480ea5b8eb9a6bd4f9ba172a48e6e050548c2b2b5ce4d7_d","disable_sensitive_scrub":null,"attempt_id":null}
-  env_AZUREML_CR_CS_CAPABILITY_RUNNING TRUE
-  env_AZUREML_CR_EXECUTOR_ADDRESS     /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/.grpc/executor:0
-  env_AZUREML_CR_SNAPSHOT_CAPABILITY_HOST 8b63c426cea44641b86a45b10e784791000000
-  env_AZUREML_ENVIRONMENT_IMAGE       True
-  env_AZUREML_PROCESS_NAME            main
-  env_AZUREML_ARM_SUBSCRIPTION        0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2
-  env_AZUREML_CR_SNAPSHOT_CAPABILITY_ADDRESS /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/.grpc/snapshot-capability:0
-  env_AZUREML_CR_CS_CAPABILITY_PATH   /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/cs-capability/wd
-  env_AZUREML_CR_HOSTTOOLS_CAPABILITY_HOST 8b63c426cea44641b86a45b10e784791000000
-  env_AZUREML_DATAREFERENCE_DATA_DIR  /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  env_AZUREML_CR_EXECUTION_WRAPPER_PATH /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/lifecycler/wd
-  env_AZUREML_EXPERIMENT_SCOPE        /subscriptions/0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2/resourceGroups/pbi-ft-rg/providers/Microsoft.MachineLearningServices/workspaces/pbi-ft-workspace/experiments/pbip-visual-qlora-v13
-  env_AZUREML_CR_NODE_RANK            0
-  env_AZUREML_CR_DATA_CAPABILITY_ADDRESS /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/.grpc/data-capability:0
-  env_AZUREML_SERVICE_CERT_ENDPOINT   https://eastus2.cert.api.azureml.ms
-  env_AZUREML_CR_DATA_CAPABILITY_HOST 8b63c426cea44641b86a45b10e784791000000
-  env_AZUREML_CONDA_ENVIRONMENT_PATH  /azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc
-  env_AZUREML_EXPERIMENT_ID           95293240-c4a2-4288-9b53-2980555d20c9
-  env_AZUREML_CR_EXECUTOR_CONFIG      eyJleGVjdXRpb25fd29ya2luZ19kaXIiOiIvbW50L2F6dXJlbWwvY3Ivai8xNDIwYTlhNzFkNjI0ZGU3OWM0NjBjZDk4ODhhNDkyYy9leGUvd2QiLCJleGVjdXRvcl9hZGRyZXNzIjoiL21udC9henVyZW1sL2NyL2ovMTQyMGE5YTcxZDYyNGRlNzljNDYwY2Q5ODg4YTQ5MmMvLmdycGMvZXhlY3V0b3I6MCIsImxpZmVjeWNsZXJfYWRkcmVzcyI6Ii9tbnQvYXp1cmVtbC9jci9qLzE0MjBhOWE3MWQ2MjRkZTc5YzQ2MGNkOTg4OGE0OTJjLy5ncnBjL2xpZmVjeWNsZXI6MCIsImRpc3RyaWJ1dGVkX2NvbmZpZyI6bnVsbCwidXNlX21waV9yc2hfYWdlbnQiOnRydWUsImV4ZWN1dG9yX2NvbmZpZyI6bnVsbH0=
-  env_AZUREML_DATASET_FILE_OUTPUTS    data_visual;eval_results;checkpoints;mlflow_store
-  env_AZUREML_COMPUTE_RESERVED_DISK_SPACE 2146320056
-  env_AZUREML_ARM_PROJECT_NAME        pbip-visual-qlora-v13
-  env_AZUREML_CR_GRPC_ADDRESS_BASE    /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/.grpc
-  env_AZUREML_CR_HT_CAP_user_logs_PATH /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/exe/wd/user_logs
-  env_AZUREML_CR_GRPC_ADDRESS_SPEC    {"Uds":{"base_address":"/mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/.grpc"}}
-  env_AZUREML_CR_HOSTTOOLS_CAPABILITY_RUNNING TRUE
-  env_AZUREML_CR_METRICS_CAPABILITY_RUNNING TRUE
-  env_AZUREML_CR_LIFECYCLER_PATH      /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/lifecycler/wd
-  env_AZUREML_CR_EXECUTION_WORKING_DIR_PATH /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/exe/wd
-  env_AZUREML_CR_HOSTTOOLS_CAPABILITY_PATH /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/hosttools-capability/wd
-  env_AZUREML_DATAREFERENCE_schema_source /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_schema_source
-  env_AZUREML_CR_HT_CAP_outputs_PATH  /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/exe/wd/outputs
-  env_AZUREML_RUN_TOKEN               eyJhbGciOiJSUzI1NiIsImtpZCI6IkZDMUQ4OUQwREFDRURFMEFDOEZFREFDODU1NTY0MkEzNzBGQ0IwNkMiLCJ0eXAiOiJKV1QifQ.eyJyb2xlIjoiQ29udHJpYnV0b3IiLCJzY29wZSI6Ii9zdWJzY3JpcHRpb25zLzA1MDRkMmZlLWE1ZTEtNGE3MS04NGM0LWViMzJlMWE5M2JmMi9yZXNvdXJjZUdyb3Vwcy9wYmktZnQtcmcvcHJvdmlkZXJzL01pY3Jvc29mdC5NYWNoaW5lTGVhcm5pbmdTZXJ2aWNlcy93b3Jrc3BhY2VzL3BiaS1mdC13b3Jrc3BhY2UiLCJhY2NvdW50aWQiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDAiLCJ3b3Jrc3BhY2VJZCI6IjhkMmJkNWYyLTVkYmUtNDAxYi1hZDg0LTU4ZjJkMjdmYjc5MyIsInByb2plY3RpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIsImRpc2NvdmVyeSI6InVyaTovL2Rpc2NvdmVyeXVyaS8iLCJ0aWQiOiJkNTBiNmE3OC1mNzJkLTRlMjQtOTllMS0wMDYzOWRkYzQwM2QiLCJvaWQiOiI3M2FhNTQ4ZC0xNTAxLTRjMmYtYTkwNi1iY2MzZGFmMGQ3ZmYiLCJwdWlkIjoiMTAwMzIwMDVBNUNCRTgwOSIsImlzcyI6ImF6dXJlbWwiLCJhcHBpZCI6InBiaW1vZGVsIiwiZXhwIjoxNzc3Mjc0NDA0LCJhdWQiOiJhenVyZW1sIn0.0NEzzJZuM5aKuK2HxxIDTreS_gMWb1yam8Yq2SOBX_-uYhxh1HMmUZUBpXXj7knyxzrPB0cQjnHRnC2A9cMBPClA6a2f7F5AQop68UHgujjjgC07FebNSBI72Sm8jWAj4Hf5VjcT0XWYLv3FPmHbLZ_EYKkh2IP11HBOJeEuCFbxsLNwwcPOKLTWRPtASuy7Zdi9uiAz5jCLQl1W1julIMJuvHmeItifWLm9Wj1hWYkMMYwkwRUQCtauOvWGUfhteds3o03dODuDLlVD20CMFbOam3bHOjXlN0AGkgfxiCEQTnZyZ8ZAxhX2u1jmCcieZ64Ez4zSGKdpHFWK9t8zRQ
-  env_AZUREML_CR_CS_CAPABILITY_HOST   8b63c426cea44641b86a45b10e784791000000
-  env_AZUREML_SERVICE_ENDPOINT        https://eastus2.api.azureml.ms
-  env_AZUREML_CR_COMPUTE_CONTEXT      {"cluster_name":"pbi-ft-a100-cluster","node_id":{"Literal":"tvmps_97ddc2c80b825db4e8480ea5b8eb9a6bd4f9ba172a48e6e050548c2b2b5ce4d7_d"},"vm_id":"8de952b6-06db-4b82-b138-3f0694261e56","run_attempt_count":1,"gpu_count":1,"vm_size":"STANDARD_NC24ADS_A100_V4","readable_cluster_name":"pbi-ft-a100-cluster","vm_priority":"Dedicated","use_vnet_or_private_link":false}
-  env_AZUREML_DISCOVERY_SERVICE_ENDPOINT https://eastus2.api.azureml.ms/discovery
-  env_AZUREML_DATAREFERENCE_AZURE_ML_INPUT_data_dir /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  env_AZUREML_DATAREFERENCE_data_dir  /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  env_AZUREML_DATAREFERENCE_AZURE_ML_INPUT_DATA_DIR /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  env_AZUREML_CR_DATA_CAPABILITY_RUNNING TRUE
-  env_AZUREML_CR_METRICS_CAPABILITY_HOST 8b63c426cea44641b86a45b10e784791000000
-  env_AZUREML_CR_HT_CAP_azureml_logs_PATH /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/exe/wd/azureml-logs
-  env_AZUREML_RUN_ID                  lucid_wheel_cscng4nfms
-  env_AZUREML_ROOT_RUN_ID             lucid_wheel_cscng4nfms
-  env_AZUREML_CR_SNAPSHOT_CAPABILITY_PATH /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/snapshot-capability/wd
-  env_AZUREML_CR_CS_CAPABILITY_ADDRESS /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/.grpc/cs-capability:0
-  env_AZUREML_CR_HOSTTOOLS_CAPABILITY_ADDRESS /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/.grpc/hosttools-capability:0
-  env_AZUREML_WORKSPACE_SCOPE         /subscriptions/0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2/resourceGroups/pbi-ft-rg/providers/Microsoft.MachineLearningServices/workspaces/pbi-ft-workspace
-  env_AZUREML_DATAREFERENCE_AZURE_ML_INPUT_SCHEMA_SOURCE /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_schema_source
-  env_AZUREML_CR_METRICS_CAPABILITY_PATH /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/metrics-capability/wd
-  env_AZUREML_CR_AZUREML_CONTEXT      {"subscription_id":"0504d2fe-a5e1-4a71-84c4-eb32e1a93bf2","resource_group":"pbi-ft-rg","workspace_name":"pbi-ft-workspace","workspace_id":"8d2bd5f2-5dbe-401b-ad84-58f2d27fb793","service_endpoint":"https://eastus2.api.azureml.ms","service_cert_endpoint":"https://eastus2.cert.api.azureml.ms","discovery_endpoint":"https://eastus2.api.azureml.ms/discovery","experiment_name":"pbip-visual-qlora-v13","experiment_id":"95293240-c4a2-4288-9b53-2980555d20c9","root_run_id":"lucid_wheel_cscng4nfms","run_id":"lucid_wheel_cscng4nfms","run_token":"eyJhbGciOiJSUzI1NiIsImtpZCI6IkZDMUQ4OUQwREFDRURFMEFDOEZFREFDODU1NTY0MkEzNzBGQ0IwNkMiLCJ0eXAiOiJKV1QifQ.eyJyb2xlIjoiQ29udHJpYnV0b3IiLCJzY29wZSI6Ii9zdWJzY3JpcHRpb25zLzA1MDRkMmZlLWE1ZTEtNGE3MS04NGM0LWViMzJlMWE5M2JmMi9yZXNvdXJjZUdyb3Vwcy9wYmktZnQtcmcvcHJvdmlkZXJzL01pY3Jvc29mdC5NYWNoaW5lTGVhcm5pbmdTZXJ2aWNlcy93b3Jrc3BhY2VzL3BiaS1mdC13b3Jrc3BhY2UiLCJhY2NvdW50aWQiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDAiLCJ3b3Jrc3BhY2VJZCI6IjhkMmJkNWYyLTVkYmUtNDAxYi1hZDg0LTU4ZjJkMjdmYjc5MyIsInByb2plY3RpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMCIsImRpc2NvdmVyeSI6InVyaTovL2Rpc2NvdmVyeXVyaS8iLCJ0aWQiOiJkNTBiNmE3OC1mNzJkLTRlMjQtOTllMS0wMDYzOWRkYzQwM2QiLCJvaWQiOiI3M2FhNTQ4ZC0xNTAxLTRjMmYtYTkwNi1iY2MzZGFmMGQ3ZmYiLCJwdWlkIjoiMTAwMzIwMDVBNUNCRTgwOSIsImlzcyI6ImF6dXJlbWwiLCJhcHBpZCI6InBiaW1vZGVsIiwiZXhwIjoxNzc3Mjc0NDA0LCJhdWQiOiJhenVyZW1sIn0.0NEzzJZuM5aKuK2HxxIDTreS_gMWb1yam8Yq2SOBX_-uYhxh1HMmUZUBpXXj7knyxzrPB0cQjnHRnC2A9cMBPClA6a2f7F5AQop68UHgujjjgC07FebNSBI72Sm8jWAj4Hf5VjcT0XWYLv3FPmHbLZ_EYKkh2IP11HBOJeEuCFbxsLNwwcPOKLTWRPtASuy7Zdi9uiAz5jCLQl1W1julIMJuvHmeItifWLm9Wj1hWYkMMYwkwRUQCtauOvWGUfhteds3o03dODuDLlVD20CMFbOam3bHOjXlN0AGkgfxiCEQTnZyZ8ZAxhX2u1jmCcieZ64Ez4zSGKdpHFWK9t8zRQ","run_history_service_endpoint":"https://eastus2.api.azureml.ms","data_container_id":"dcid.lucid_wheel_cscng4nfms","run_uuid":"1420a9a7-1d62-4de7-9c46-0cd9888a492c","compute_type":null}
-  env_AZUREML_WORKSPACE_ID            8d2bd5f2-5dbe-401b-ad84-58f2d27fb793
-  env_AZUREML_DATAREFERENCE_AZURE_ML_INPUT_schema_source /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_schema_source
-  env_AZUREML_CR_METRICS_CAPABILITY_ADDRESS /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/.grpc/metrics-capability:0
-  env_AZUREML_CR_HT_CAP_logs_PATH     /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/exe/wd/logs
-  env_AZUREML_CR_DATA_CAPABILITY_PATH /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd
-  env_AZUREML_CR_CORRELATION_ID       lucid_wheel_cscng4nfms
-  env_AZUREML_ARM_RESOURCEGROUP       pbi-ft-rg
-  env_AZUREML_DATAREFERENCE_SCHEMA_SOURCE /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_schema_source
-  env_AZUREML_DATASET_ENVIRONMENT_VARS data_dir:download,schema_source:download
-  env_AZUREML_CR_COMPUTE_TYPE         amlcompute
-  env_AZUREML_RUN_HISTORY_SERVICE_ENDPOINT https://eastus2.api.azureml.ms
-  env_AZUREML_CR_SNAPSHOT_CAPABILITY_RUNNING TRUE
-  run_id                              run_20260406_053113
-  data_dir                            /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  schema_source                       /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_schema_source
-  data_mode                           visual
-  azure_vm_sku                        Standard_NC24ads_A100_v4
-  finetuned_baseline                  
-  [!!]  MLflow system info log failed (non-fatal): INVALID_PARAMETER_VALUE: Response: {'Error': {'Code': 'ValidationError', 'Severity': None, 'Message': 'No more than 500 characters per params Value. Request contains 3 of greater length.', 'MessageFormat': None, 'MessageParameters': None, 'ReferenceCode': None, 'DetailsUri': None, 'Target': None, 'Details': [], 'InnerError': None, 'DebugInfo': None, 'AdditionalInfo': None}, 'Correlation': {'operation': 'c9f2b9fabe59b7f37d7448cc1dc752c8', 'request': '37cfe418127f23f2'}, 'Environment': 'eastus2', 'Location': 'eastus2', 'Time': '2026-04-06T05:31:16.5624545+00:00', 'ComponentName': 'mlflow', 'statusCode': 400, 'error_code': 'INVALID_PARAMETER_VALUE'}
-
-  +-- PHASE 1/11 --------------------------------------------------
-  |  Load schema bundle
-  +----------------------------------------------------------
-  [..]  Schema files discovered  : 73
-  [..]  Visual container schema  : /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_schema_source/fabric/item/report/definition/visualContainer/2.5.0/schema.json
-  [..]  Visual config schema     : /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_schema_source/fabric/item/report/definition/visualConfiguration/2.2.0/schema-embedded.json
-  [OK]  Schema bundle loaded from: /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_schema_source
-
-  +-- PHASE 2/11 --------------------------------------------------
-  |  Model loading
-  +----------------------------------------------------------
-
-  +-- PHASE 3/10 --------------------------------------------------
-  |  Load model  Qwen/Qwen2.5-Coder-7B-Instruct  (4-bit NF4 QLoRA)
-  +----------------------------------------------------------
-  [OK]  Tokenizer loaded.
-  [..]  Loading 4-bit NF4 quantised model…
-Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  25%|██▌       | 1/4 [01:24<04:14, 84.93s/it]Fetching 4 files:  50%|█████     | 2/4 [01:30<01:16, 38.15s/it]Fetching 4 files: 100%|██████████| 4/4 [01:30<00:00, 22.58s/it]
-Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:213: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
-  torch._check_is_size(blocksize)
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:04,  1.50s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.61s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:04<00:01,  1.55s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:04<00:00,  1.00s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:04<00:00,  1.21s/it]
-  [OK]  Base model loaded in 97.6s.
-
-  +-- PHASE 3/11 --------------------------------------------------
-  |  Data preparation
-  +----------------------------------------------------------
-
-  +-- PHASE 2/10 --------------------------------------------------
-  |  PBIP visual data prep  <-  /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  +----------------------------------------------------------
-  [..]  Single dataset file detected (visual mode): /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [OK]  Loaded 1886 records from single file (visual mode)
-  [!!]  Oversized PBIP sample compacted (103,220 → 103,220 bytes): plotlyJSVisualEEDDFAAB4619388784AE7972BC162ECDFAAB46196 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (483,829 → 483,829 bytes): plotlyJSVisualEEDDFAAB4619388784AE7972BC162ECDFAAB46196 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (963,907 → 963,907 bytes): plotlyJSVisualEEDDFAAB4619388784AE7972BC162ECDFAAB46196 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (483,610 → 483,610 bytes): plotlyJSVisualEEDDFAAB4619388784AE7972BC162ECDFAAB46196 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (964,039 → 964,039 bytes): plotlyJSVisualEEDDFAAB4619388784AE7972BC162ECDFAAB46196 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (139,163 → 139,163 bytes): powerKPIMatrixEB2381CC88A8425FBEB1B07FF57784E6 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (177,281 → 177,281 bytes): powerKPIMatrixEB2381CC88A8425FBEB1B07FF57784E6 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (561,756 → 561,756 bytes): heatmapF244EA9EE1F34E828A80CF19B41976F8 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (132,205 → 132,205 bytes): PBI_CV_815282F9_27F5_4950_9430_E910E0A8DB6A / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (275,312 → 275,312 bytes): scatterChartByAkvelon6CFB0DAB29E746BE850B6DFD1E2789FD / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (259,037 → 259,037 bytes): SVGReader1234567890ABCDEF / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (306,503 → 306,503 bytes): SVGReader1234567890ABCDEF / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (309,396 → 309,396 bytes): SVGReader1234567890ABCDEF / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (258,974 → 258,974 bytes): SVGReader1234567890ABCDEF / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (178,567 → 178,567 bytes): timelineByQueryon2DD9A171C1CB4B148AA3DD23CEF5B2F9 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (3,334,939 → 3,334,939 bytes): tMap8E0FD0EA52A241AAB7312149B2333625 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (138,656 → 138,656 bytes): trueChart4PBI530397A454264B59BCC98231C7453345 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (51,313,973 → 51,313,973 bytes): enhancedVideoViewerF1A2B3C4D5E6F7G8H9I0J1K2 / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (10,794,251 → 10,794,251 bytes): ImageGalleryPBICraft / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-  [!!]  Oversized PBIP sample compacted (11,744,081 → 11,744,081 bytes): ImageGalleryPBICraft / /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/INPUT_data_dir/visual_json_qwen_messages_nl_.jsonl
-
-  ── DATASET QUALITY ──────────────────────────────────
-  Total raw rows                         1886
-  Valid (after strict filter)            1886
-  Skipped (no extractable target)        0
-  Rejected (JSON extraction error)       0
-  Rejected (soft validation failed)      0
-  Rejected (schema invalid)              0
-  Compacted (oversized, kept)            20
-  Rich samples (queryState present)      1748
-  Skeleton samples                       15
-  Skeleton ratio                         0.8%
-  Legacy-converted samples               0 (0.0%)
-  [!!]  visual-data: dropped 59 samples exceeding 2×2048 tokens (avg over-length: 4160 tokens)
-  [OK]  visual-data: truncated 60 samples (rescued from drop)
-  [OK]  visual-data: 1827 samples kept  [kept=1767  truncated=60  dropped=59  max_tokens_seen=4160  limit=2048]
-  [OK]  Written   1635 samples -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/data_visual/train_visual.jsonl
-  [OK]  Written    192 samples -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/data_visual/val_visual.jsonl
-
-  Metric                           Value
-  --------------------------------------------------
-  Total samples                    1827
-  Train                            1635
-  Val                              192
-  Unique visual types              283
-    [single_file]                  1827
-
-  Visual type                                    Count  Bar
-  -------------------------------------------------------
-  tabulatorCustomVisual9E23E5BE3C3F45178EF73EA2FDFCDE97     15  XXXXXXXXXXXXXXX
-  waterfall2B5BF088815E42539E2C8CDAD646DB43         15  XXXXXXXXXXXXXXX
-  shapeMap                                          15  XXXXXXXXXXXXXXX
-  waterfallChart                                    15  XXXXXXXXXXXXXXX
-  slicer                                            15  XXXXXXXXXXXXXXX
-  treemap                                           15  XXXXXXXXXXXXXXX
-  pivotTable                                        15  XXXXXXXXXXXXXXX
-  actionButton                                      15  XXXXXXXXXXXXXXX
-  timeline067F12826E684F83B734273E464AE6A3          15  XXXXXXXXXXXXXXX
-  hundredPercentStackedAreaChart                    15  XXXXXXXXXXXXXXX
-  ChicletSlicer1448559807354                        15  XXXXXXXXXXXXXXX
-  keyDriversVisual                                  15  XXXXXXXXXXXXXXX
-  textbox                                           15  XXXXXXXXXXXXXXX
-  simpleImageEBC4593F96F1425FB3D84C5BF02B5075       15  XXXXXXXXXXXXXXX
-  PBI_CV_7B952816_A48F_49B4_9E13_15E3BB2C0337       15  XXXXXXXXXXXXXXX
-  pageNavigator                                     15  XXXXXXXXXXXXXXX
-  hundredPercentStackedBarChart                     15  XXXXXXXXXXXXXXX
-  pieChart                                          15  XXXXXXXXXXXXXXX
-  decompositionTreeVisual                           15  XXXXXXXXXXXXXXX
-  ratingsvisual001                                  15  XXXXXXXXXXXXXXX
-  violinPlot4D46EB9EB3A141D9BA2289793175D971        15  XXXXXXXXXXXXXXX
-  TornadoChart1452517688218                         15  XXXXXXXXXXXXXXX
-  kpi                                               15  XXXXXXXXXXXXXXX
-  tableEx                                           15  XXXXXXXXXXXXXXX
-  PBI_CV_25997FEB_F466_44FA_B562_AC4063283C4C       15  XXXXXXXXXXXXXXX
-  map                                               15  XXXXXXXXXXXXXXX
-  advancedSlicerVisual                              15  XXXXXXXXXXXXXXX
-  ZoomChartsDrillDownComboBarProE77E4ED357DC402ABA005987437CF800     15  XXXXXXXXXXXXXXX
-  filledMap                                         15  XXXXXXXXXXXXXXX
-  advanceCardE03760C5AB684758B56AA29F9E6C257B       15  XXXXXXXXXXXXXXX
-  [..]    ... and 253 more visual types
-  [!!]  MLflow dataset quality log failed (non-fatal): INVALID_PARAMETER_VALUE: Response: {'Error': {'Code': 'ValidationError', 'Severity': None, 'Message': 'A field of the entity is over the size limit. FieldName=Parameters, Limit=200, Size=221. See https://aka.ms/azure-machine-learning-limits for service limits documentation.', 'MessageFormat': None, 'MessageParameters': None, 'ReferenceCode': None, 'DetailsUri': None, 'Target': None, 'Details': [], 'InnerError': None, 'DebugInfo': None, 'AdditionalInfo': None}, 'Correlation': {'operation': '9e52b859a7b57241c1511236b503e7e5', 'request': 'd128c4f8be195b65'}, 'Environment': 'eastus2', 'Location': 'eastus2', 'Time': '2026-04-06T05:34:23.1927372+00:00', 'ComponentName': 'mlflow', 'statusCode': 400, 'error_code': 'INVALID_PARAMETER_VALUE'}
-
-  +-- PHASE 4/11 --------------------------------------------------
-  |  Token statistics
-  +----------------------------------------------------------
-
-  ── Token stats  [train_visual]  ────────────────────────────────────
-  Samples                               1,635
-  Min tokens                              212
-  p25                                     538
-  Median (p50)                            719
-  Mean                                    844
-  p75                                   1,009
-  p95                                   1,775
-  Max tokens                            4,059
-  Total tokens                      1,380,727
-  max_seq_len                           2,048
-  Truncated (> max_seq_len)                53  (3.2%)
-
-  ── Token stats  [val_visual]  ────────────────────────────────────
-  Samples                                 192
-  Min tokens                              271
-  p25                                     554
-  Median (p50)                            700
-  Mean                                    860
-  p75                                   1,008
-  p95                                   1,602
-  Max tokens                            3,869
-  Total tokens                        165,173
-  max_seq_len                           2,048
-  Truncated (> max_seq_len)                 7  (3.6%)
-
-  +-- PHASE 5/11 --------------------------------------------------
-  |  Build evaluation samples
-  +----------------------------------------------------------
-  [OK]  Eval samples ready: 20
-  [..]  Eval task distribution: {'visual': 20}
-
-  +-- PHASE 6/11 --------------------------------------------------
-  |  Baseline eval — PRE-FINETUNING (epoch 0)
-  +----------------------------------------------------------
-
-  +-- PHASE 3/10 --------------------------------------------------
-  |  Load model  Qwen/Qwen2.5-Coder-7B-Instruct  (4-bit NF4 QLoRA)
-  +----------------------------------------------------------
-  [OK]  Tokenizer loaded.
-  [..]  Loading 4-bit NF4 quantised model…
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:05,  1.71s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.84s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:05<00:01,  1.78s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:05<00:00,  1.16s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:05<00:00,  1.39s/it]
-/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:468: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
-  torch._check_is_size(blocksize)
-  [OK]  Base model loaded in 6.2s.
-
-========================================================================
-  EVAL  |  stage=baseline_pre_ft  |  epoch=0  |  2026-04-06 05:34:31
-  Samples=20
-  Tasks: {'visual': 20}
-========================================================================
-
-  [ 1/20]  eval_001  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2231  keys=0.2308  fail=wrong_visual_type  (58313.5ms)
-
-  [ 2/20]  eval_002  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.5071  keys=0.1957  fail=invalid_schema  (58315.5ms)
-
-  [ 3/20]  eval_003  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2429  keys=0.4286  fail=wrong_visual_type  (58091.6ms)
-
-  [ 4/20]  eval_004  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2409  keys=0.4091  fail=wrong_visual_type  (58164.9ms)
-
-  [ 5/20]  eval_005  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (58433.7ms)
-
-  [ 6/20]  eval_006  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2938  keys=0.5625  fail=wrong_visual_type  (58133.5ms)
-
-  [ 7/20]  eval_007  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2584  keys=0.2093  fail=wrong_visual_type  (58584.5ms)
-
-  [ 8/20]  eval_008  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2225  keys=0.225  fail=wrong_visual_type  (58158.3ms)
-
-  [ 9/20]  eval_009  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2375  keys=0.375  fail=wrong_visual_type  (58813.0ms)
-
-  [10/20]  eval_010  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2333  keys=0.3333  fail=wrong_visual_type  (58439.0ms)
-
-  [11/20]  eval_011  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.264  keys=0.2647  fail=wrong_visual_type  (58603.4ms)
-
-  [12/20]  eval_012  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2214  keys=0.2143  fail=wrong_visual_type  (58530.8ms)
-
-  [13/20]  eval_013  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2173  keys=0.1731  fail=wrong_visual_type  (58984.5ms)
-
-  [14/20]  eval_014  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.222  keys=0.2195  fail=wrong_visual_type  (58567.5ms)
-
-  [15/20]  eval_015  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.22  keys=0.2  fail=wrong_visual_type  (57883.5ms)
-
-  [16/20]  eval_016  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2273  keys=0.2727  fail=wrong_visual_type  (57988.8ms)
-
-  [17/20]  eval_017  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2735  keys=0.36  fail=wrong_visual_type  (57669.5ms)
-
-  [18/20]  eval_018  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.311  keys=0.36  fail=wrong_visual_type  (58314.1ms)
-
-  [19/20]  eval_019  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2214  keys=0.2143  fail=wrong_visual_type  (57578.2ms)
-
-  [20/20]  eval_020  task=visual  -> target_type=json
-         preview  : {   "$schema": "https://developer.microsoft.com/en-us/json-schemas/powerbi/visuals/v1.0/visual-container.schema.json",  …
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.2429  keys=0.4286  fail=wrong_visual_type  (57797.2ms)
-
-  Metric                       Value
-  ------------------------------------------
-  Exact Match Rate             0.0
-  Valid JSON Rate              0.95
-  Schema Valid Rate            0.0
-  Syntax Score Mean            0.0
-  Key Path Overlap             0.2838
-  Partial Score Mean           0.244
-  Invalid Output Rate          1.0
-  [!!]  ⚠️  Invalid output rate 100.0% exceeds threshold 40.0% — model outputs are mostly malformed. Consider more training epochs, a higher LoRA rank, or more data.
-
-  Failure breakdown:
-    invalid_json                 1  (5.0%)
-    invalid_schema               1  (5.0%)
-    wrong_visual_type            18  (90.0%)
-  [OK]  JSON   -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/baseline_pre_ft/baseline_pre_ft_predictions.json
-  [OK]  JSON   -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/baseline_pre_ft/baseline_pre_ft_summary.json
-  [OK]  TXT    -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/baseline_pre_ft/baseline_pre_ft_report.txt
-  [OK]  CSV    -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/all_epochs_metrics.csv  (row appended)
-
-  stage=baseline_pre_ft  exact=0.0  syntax=0.0  partial=0.244
-========================================================================
-
-  [OK]  Pre-FT baseline  syntax=0.0  partial=0.244
-
-  +-- PHASE 7/11 --------------------------------------------------
-  |  Apply LoRA adapter
-  +----------------------------------------------------------
-
-  +-- PHASE 3/10 --------------------------------------------------
-  |  Load model  Qwen/Qwen2.5-Coder-7B-Instruct  (4-bit NF4 QLoRA)
-  +----------------------------------------------------------
-  [OK]  Tokenizer loaded.
-  [..]  Loading 4-bit NF4 quantised model…
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:04,  1.46s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.59s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:04<00:01,  1.54s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:04<00:00,  1.01it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:04<00:00,  1.19s/it]
-  [OK]  Base model loaded in 5.3s.
-  [..]  LoRA auto-config  dataset_size=1635  r=16  alpha=32  dropout=0.1
-trainable params: 40,370,176 || all params: 7,653,133,824 || trainable%: 0.5275
-  [OK]  LoRA applied  r=16  alpha=32  dropout=0.1.
-  [OK]  Loading training data from /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/data_visual/train_visual.jsonl ...
-  [OK]  Loading validation data from /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/data_visual/val_visual.jsonl ...
-  [OK]    train=1,635 rows  val=192 rows
-Tokenising train (label masking):   0%|          | 0/1635 [00:00<?, ? examples/s]Tokenising train (label masking):   4%|▍         | 65/1635 [00:00<00:02, 634.89 examples/s]Tokenising train (label masking):   8%|▊         | 130/1635 [00:00<00:02, 639.64 examples/s]Tokenising train (label masking):  12%|█▏        | 200/1635 [00:00<00:02, 655.06 examples/s]Tokenising train (label masking):  17%|█▋        | 273/1635 [00:00<00:02, 678.78 examples/s]Tokenising train (label masking):  22%|██▏       | 367/1635 [00:00<00:01, 646.93 examples/s]Tokenising train (label masking):  27%|██▋       | 439/1635 [00:00<00:01, 666.46 examples/s]Tokenising train (label masking):  31%|███▏      | 512/1635 [00:00<00:01, 681.19 examples/s]Tokenising train (label masking):  36%|███▌      | 582/1635 [00:00<00:01, 679.21 examples/s]Tokenising train (label masking):  42%|████▏     | 685/1635 [00:01<00:01, 674.44 examples/s]Tokenising train (label masking):  46%|████▌     | 753/1635 [00:01<00:01, 668.35 examples/s]Tokenising train (label masking):  52%|█████▏    | 854/1635 [00:01<00:01, 667.04 examples/s]Tokenising train (label masking):  58%|█████▊    | 955/1635 [00:01<00:01, 663.15 examples/s]Tokenising train (label masking):  63%|██████▎   | 1035/1635 [00:01<00:01, 353.85 examples/s]Tokenising train (label masking):  68%|██████▊   | 1105/1635 [00:02<00:01, 404.30 examples/s]Tokenising train (label masking):  72%|███████▏  | 1179/1635 [00:02<00:00, 461.66 examples/s]Tokenising train (label masking):  77%|███████▋  | 1251/1635 [00:02<00:00, 511.48 examples/s]Tokenising train (label masking):  81%|████████  | 1322/1635 [00:02<00:00, 553.06 examples/s]Tokenising train (label masking):  85%|████████▌ | 1395/1635 [00:02<00:00, 594.01 examples/s]Tokenising train (label masking):  89%|████████▉ | 1463/1635 [00:02<00:00, 614.47 examples/s]Tokenising train (label masking):  96%|█████████▌| 1566/1635 [00:02<00:00, 637.71 examples/s]Tokenising train (label masking): 100%|██████████| 1635/1635 [00:02<00:00, 566.81 examples/s]Tokenising train (label masking): 100%|██████████| 1635/1635 [00:02<00:00, 572.40 examples/s]
-Tokenising val (label masking):   0%|          | 0/192 [00:00<?, ? examples/s]Tokenising val (label masking):  36%|███▋      | 70/192 [00:00<00:00, 693.51 examples/s]Tokenising val (label masking):  75%|███████▌  | 144/192 [00:00<00:00, 696.04 examples/s]Tokenising val (label masking): 100%|██████████| 192/192 [00:00<00:00, 544.92 examples/s]
-Truncating train dataset:   0%|          | 0/1635 [00:00<?, ? examples/s]Truncating train dataset: 100%|██████████| 1635/1635 [00:00<00:00, 134345.91 examples/s]
-Truncating eval dataset:   0%|          | 0/192 [00:00<?, ? examples/s]Truncating eval dataset: 100%|██████████| 192/192 [00:00<00:00, 79371.81 examples/s]
-  [OK]  Starting SFTTrainer.train()  (3 epoch(s)) ...
-  0%|          | 0/612 [00:00<?, ?it/s]/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py:1263: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
-  return fn(*args, **kwargs)
-  0%|          | 1/612 [00:07<1:14:54,  7.36s/it]  0%|          | 2/612 [00:14<1:15:59,  7.47s/it]  0%|          | 3/612 [00:21<1:12:14,  7.12s/it]  1%|          | 4/612 [00:27<1:08:01,  6.71s/it]  1%|          | 5/612 [00:33<1:03:15,  6.25s/it]  1%|          | 6/612 [00:38<59:10,  5.86s/it]    1%|          | 7/612 [00:43<55:39,  5.52s/it]  1%|▏         | 8/612 [00:47<53:08,  5.28s/it]  1%|▏         | 9/612 [00:52<50:58,  5.07s/it]  2%|▏         | 10/612 [00:56<49:09,  4.90s/it]                                                  2%|▏         | 10/612 [00:57<49:09,  4.90s/it]  2%|▏         | 11/612 [01:01<48:53,  4.88s/it]  2%|▏         | 12/612 [01:06<46:49,  4.68s/it]  2%|▏         | 13/612 [01:10<45:30,  4.56s/it]  2%|▏         | 14/612 [01:14<44:16,  4.44s/it]  2%|▏         | 15/612 [01:18<43:02,  4.33s/it]  3%|▎         | 16/612 [01:22<41:48,  4.21s/it]  3%|▎         | 17/612 [01:26<40:32,  4.09s/it]  3%|▎         | 18/612 [01:29<39:25,  3.98s/it]  3%|▎         | 19/612 [01:33<38:27,  3.89s/it]  3%|▎         | 20/612 [01:37<37:15,  3.78s/it]                                                  3%|▎         | 20/612 [01:37<37:15,  3.78s/it]  3%|▎         | 21/612 [01:40<37:08,  3.77s/it]  4%|▎         | 22/612 [01:44<36:14,  3.69s/it]  4%|▍         | 23/612 [01:47<35:14,  3.59s/it]  4%|▍         | 24/612 [01:51<34:25,  3.51s/it]  4%|▍         | 25/612 [01:54<33:26,  3.42s/it]  4%|▍         | 26/612 [01:57<32:33,  3.33s/it]  4%|▍         | 27/612 [02:00<31:40,  3.25s/it]  5%|▍         | 28/612 [02:03<31:06,  3.20s/it]  5%|▍         | 29/612 [02:06<30:18,  3.12s/it]  5%|▍         | 30/612 [02:09<29:27,  3.04s/it]                                                  5%|▍         | 30/612 [02:09<29:27,  3.04s/it]  5%|▌         | 31/612 [02:12<29:42,  3.07s/it]  5%|▌         | 32/612 [02:15<29:00,  3.00s/it]  5%|▌         | 33/612 [02:18<28:20,  2.94s/it]  6%|▌         | 34/612 [02:20<27:49,  2.89s/it]  6%|▌         | 35/612 [02:23<27:21,  2.85s/it]  6%|▌         | 36/612 [02:26<26:52,  2.80s/it]  6%|▌         | 37/612 [02:29<26:29,  2.76s/it]  6%|▌         | 38/612 [02:31<26:03,  2.72s/it]  6%|▋         | 39/612 [02:34<25:31,  2.67s/it]  7%|▋         | 40/612 [02:36<24:59,  2.62s/it]                                                  7%|▋         | 40/612 [02:37<24:59,  2.62s/it]  7%|▋         | 41/612 [02:39<25:20,  2.66s/it]  7%|▋         | 42/612 [02:41<24:41,  2.60s/it]  7%|▋         | 43/612 [02:44<24:10,  2.55s/it]  7%|▋         | 44/612 [02:46<23:39,  2.50s/it]  7%|▋         | 45/612 [02:48<22:47,  2.41s/it]  8%|▊         | 46/612 [02:51<22:10,  2.35s/it]  8%|▊         | 47/612 [02:53<21:34,  2.29s/it]  8%|▊         | 48/612 [02:55<20:55,  2.23s/it]  8%|▊         | 49/612 [02:57<20:13,  2.16s/it]  8%|▊         | 50/612 [02:59<19:17,  2.06s/it]                                                  8%|▊         | 50/612 [02:59<19:17,  2.06s/it]  8%|▊         | 51/612 [03:06<35:16,  3.77s/it]  8%|▊         | 52/612 [03:14<46:40,  5.00s/it]  9%|▊         | 53/612 [03:21<51:00,  5.48s/it]  9%|▉         | 54/612 [03:27<51:25,  5.53s/it]  9%|▉         | 55/612 [03:32<51:00,  5.50s/it]  9%|▉         | 56/612 [03:37<49:54,  5.39s/it]  9%|▉         | 57/612 [03:42<48:30,  5.24s/it]  9%|▉         | 58/612 [03:47<47:06,  5.10s/it] 10%|▉         | 59/612 [03:51<45:43,  4.96s/it] 10%|▉         | 60/612 [03:56<44:46,  4.87s/it]                                                 10%|▉         | 60/612 [03:58<44:46,  4.87s/it] 10%|▉         | 61/612 [04:02<47:47,  5.20s/it] 10%|█         | 62/612 [04:06<45:07,  4.92s/it] 10%|█         | 63/612 [04:11<43:17,  4.73s/it] 10%|█         | 64/612 [04:15<41:36,  4.56s/it] 11%|█         | 65/612 [04:19<40:03,  4.39s/it] 11%|█         | 66/612 [04:23<38:42,  4.25s/it] 11%|█         | 67/612 [04:27<37:35,  4.14s/it] 11%|█         | 68/612 [04:30<36:27,  4.02s/it] 11%|█▏        | 69/612 [04:34<35:36,  3.93s/it] 11%|█▏        | 70/612 [04:38<34:42,  3.84s/it]                                                 11%|█▏        | 70/612 [04:38<34:42,  3.84s/it] 12%|█▏        | 71/612 [04:42<34:39,  3.84s/it] 12%|█▏        | 72/612 [04:45<33:44,  3.75s/it] 12%|█▏        | 73/612 [04:49<32:57,  3.67s/it] 12%|█▏        | 74/612 [04:52<32:09,  3.59s/it] 12%|█▏        | 75/612 [04:55<31:31,  3.52s/it] 12%|█▏        | 76/612 [04:59<30:54,  3.46s/it] 13%|█▎        | 77/612 [05:02<29:59,  3.36s/it] 13%|█▎        | 78/612 [05:05<29:16,  3.29s/it] 13%|█▎        | 79/612 [05:08<28:44,  3.23s/it] 13%|█▎        | 80/612 [05:11<28:11,  3.18s/it]                                                 13%|█▎        | 80/612 [05:11<28:11,  3.18s/it] 13%|█▎        | 81/612 [05:14<28:19,  3.20s/it] 13%|█▎        | 82/612 [05:17<27:21,  3.10s/it] 14%|█▎        | 83/612 [05:20<26:33,  3.01s/it] 14%|█▎        | 84/612 [05:23<25:58,  2.95s/it] 14%|█▍        | 85/612 [05:26<25:26,  2.90s/it] 14%|█▍        | 86/612 [05:28<24:56,  2.85s/it] 14%|█▍        | 87/612 [05:31<24:28,  2.80s/it] 14%|█▍        | 88/612 [05:34<24:01,  2.75s/it] 15%|█▍        | 89/612 [05:36<23:43,  2.72s/it] 15%|█▍        | 90/612 [05:39<23:10,  2.66s/it]                                                 15%|█▍        | 90/612 [05:39<23:10,  2.66s/it] 15%|█▍        | 91/612 [05:42<23:50,  2.74s/it] 15%|█▌        | 92/612 [05:44<23:03,  2.66s/it] 15%|█▌        | 93/612 [05:47<22:24,  2.59s/it] 15%|█▌        | 94/612 [05:49<21:27,  2.48s/it] 16%|█▌        | 95/612 [05:51<20:37,  2.39s/it] 16%|█▌        | 96/612 [05:53<19:59,  2.33s/it] 16%|█▌        | 97/612 [05:55<19:23,  2.26s/it] 16%|█▌        | 98/612 [05:57<18:44,  2.19s/it] 16%|█▌        | 99/612 [05:59<18:00,  2.11s/it] 16%|█▋        | 100/612 [06:01<17:11,  2.01s/it]                                                  16%|█▋        | 100/612 [06:02<17:11,  2.01s/it] 17%|█▋        | 101/612 [06:09<32:29,  3.81s/it] 17%|█▋        | 102/612 [06:17<42:13,  4.97s/it] 17%|█▋        | 103/612 [06:25<49:50,  5.87s/it] 17%|█▋        | 104/612 [06:31<52:04,  6.15s/it] 17%|█▋        | 105/612 [06:38<51:51,  6.14s/it] 17%|█▋        | 106/612 [06:43<50:05,  5.94s/it] 17%|█▋        | 107/612 [06:48<48:09,  5.72s/it] 18%|█▊        | 108/612 [06:53<45:59,  5.48s/it] 18%|█▊        | 109/612 [06:58<43:41,  5.21s/it] 18%|█▊        | 110/612 [07:02<41:57,  5.02s/it]                                                  18%|█▊        | 110/612 [07:03<41:57,  5.02s/it] 18%|█▊        | 111/612 [07:07<41:21,  4.95s/it] 18%|█▊        | 112/612 [07:12<40:03,  4.81s/it] 18%|█▊        | 113/612 [07:16<38:37,  4.64s/it] 19%|█▊        | 114/612 [07:20<37:26,  4.51s/it] 19%|█▉        | 115/612 [07:24<35:58,  4.34s/it] 19%|█▉        | 116/612 [07:28<35:00,  4.24s/it] 19%|█▉        | 117/612 [07:32<34:07,  4.14s/it] 19%|█▉        | 118/612 [07:36<33:05,  4.02s/it] 19%|█▉        | 119/612 [07:39<32:18,  3.93s/it] 20%|█▉        | 120/612 [07:43<31:26,  3.83s/it]                                                  20%|█▉        | 120/612 [07:43<31:26,  3.83s/it] 20%|█▉        | 121/612 [07:47<31:16,  3.82s/it] 20%|█▉        | 122/612 [07:50<30:30,  3.74s/it] 20%|██        | 123/612 [07:54<29:35,  3.63s/it] 20%|██        | 124/612 [07:57<28:54,  3.56s/it] 20%|██        | 125/612 [08:00<28:21,  3.49s/it] 21%|██        | 126/612 [08:04<27:56,  3.45s/it] 21%|██        | 127/612 [08:07<27:25,  3.39s/it] 21%|██        | 128/612 [08:10<26:44,  3.31s/it] 21%|██        | 129/612 [08:13<26:14,  3.26s/it] 21%|██        | 130/612 [08:16<25:49,  3.21s/it]                                                  21%|██        | 130/612 [08:17<25:49,  3.21s/it] 21%|██▏       | 131/612 [08:20<26:01,  3.25s/it] 22%|██▏       | 132/612 [08:23<25:19,  3.16s/it] 22%|██▏       | 133/612 [08:26<24:34,  3.08s/it] 22%|██▏       | 134/612 [08:28<23:56,  3.00s/it] 22%|██▏       | 135/612 [08:31<23:24,  2.94s/it] 22%|██▏       | 136/612 [08:34<22:53,  2.89s/it] 22%|██▏       | 137/612 [08:37<22:27,  2.84s/it] 23%|██▎       | 138/612 [08:39<22:01,  2.79s/it] 23%|██▎       | 139/612 [08:42<21:39,  2.75s/it] 23%|██▎       | 140/612 [08:45<21:23,  2.72s/it]                                                  23%|██▎       | 140/612 [08:45<21:23,  2.72s/it] 23%|██▎       | 141/612 [08:48<21:35,  2.75s/it] 23%|██▎       | 142/612 [08:50<20:58,  2.68s/it] 23%|██▎       | 143/612 [08:52<20:23,  2.61s/it] 24%|██▎       | 144/612 [08:55<19:48,  2.54s/it] 24%|██▎       | 145/612 [08:57<18:59,  2.44s/it] 24%|██▍       | 146/612 [08:59<18:19,  2.36s/it] 24%|██▍       | 147/612 [09:01<17:39,  2.28s/it] 24%|██▍       | 148/612 [09:03<17:01,  2.20s/it] 24%|██▍       | 149/612 [09:05<16:32,  2.14s/it] 25%|██▍       | 150/612 [09:07<15:50,  2.06s/it]                                                  25%|██▍       | 150/612 [09:07<15:50,  2.06s/it] 25%|██▍       | 151/612 [09:15<28:57,  3.77s/it] 25%|██▍       | 152/612 [09:22<37:27,  4.89s/it] 25%|██▌       | 153/612 [09:30<44:09,  5.77s/it] 25%|██▌       | 154/612 [09:37<45:51,  6.01s/it] 25%|██▌       | 155/612 [09:43<45:47,  6.01s/it] 25%|██▌       | 156/612 [09:48<44:22,  5.84s/it] 26%|██▌       | 157/612 [09:54<42:53,  5.66s/it] 26%|██▌       | 158/612 [09:58<41:06,  5.43s/it] 26%|██▌       | 159/612 [10:03<39:23,  5.22s/it] 26%|██▌       | 160/612 [10:08<38:04,  5.05s/it]                                                  26%|██▌       | 160/612 [10:08<38:04,  5.05s/it] 26%|██▋       | 161/612 [10:13<37:28,  4.99s/it] 26%|██▋       | 162/612 [10:17<36:11,  4.82s/it] 27%|██▋       | 163/612 [10:22<35:07,  4.69s/it] 27%|██▋       | 164/612 [10:26<34:10,  4.58s/it] 27%|██▋       | 165/612 [10:30<33:23,  4.48s/it] 27%|██▋       | 166/612 [10:34<32:16,  4.34s/it] 27%|██▋       | 167/612 [10:38<31:21,  4.23s/it] 27%|██▋       | 168/612 [10:42<30:21,  4.10s/it] 28%|██▊       | 169/612 [10:46<29:30,  4.00s/it] 28%|██▊       | 170/612 [10:49<28:46,  3.91s/it]                                                  28%|██▊       | 170/612 [10:51<28:46,  3.91s/it] 28%|██▊       | 171/612 [10:55<31:40,  4.31s/it] 28%|██▊       | 172/612 [10:58<29:59,  4.09s/it] 28%|██▊       | 173/612 [11:02<28:35,  3.91s/it] 28%|██▊       | 174/612 [11:05<27:32,  3.77s/it] 29%|██▊       | 175/612 [11:08<26:40,  3.66s/it] 29%|██▉       | 176/612 [11:12<25:50,  3.56s/it] 29%|██▉       | 177/612 [11:15<24:50,  3.43s/it] 29%|██▉       | 178/612 [11:18<24:07,  3.34s/it] 29%|██▉       | 179/612 [11:21<23:30,  3.26s/it] 29%|██▉       | 180/612 [11:24<23:03,  3.20s/it]                                                  29%|██▉       | 180/612 [11:25<23:03,  3.20s/it] 30%|██▉       | 181/612 [11:28<23:29,  3.27s/it] 30%|██▉       | 182/612 [11:31<22:45,  3.18s/it] 30%|██▉       | 183/612 [11:33<22:06,  3.09s/it] 30%|███       | 184/612 [11:36<21:33,  3.02s/it] 30%|███       | 185/612 [11:39<21:03,  2.96s/it] 30%|███       | 186/612 [11:42<20:33,  2.90s/it] 31%|███       | 187/612 [11:45<20:10,  2.85s/it] 31%|███       | 188/612 [11:47<19:45,  2.80s/it] 31%|███       | 189/612 [11:50<19:26,  2.76s/it] 31%|███       | 190/612 [11:53<19:03,  2.71s/it]                                                  31%|███       | 190/612 [11:53<19:03,  2.71s/it] 31%|███       | 191/612 [11:55<19:11,  2.74s/it] 31%|███▏      | 192/612 [11:58<18:33,  2.65s/it] 32%|███▏      | 193/612 [12:00<18:01,  2.58s/it] 32%|███▏      | 194/612 [12:03<17:28,  2.51s/it] 32%|███▏      | 195/612 [12:05<16:42,  2.40s/it] 32%|███▏      | 196/612 [12:07<16:04,  2.32s/it] 32%|███▏      | 197/612 [12:09<15:24,  2.23s/it] 32%|███▏      | 198/612 [12:11<14:56,  2.16s/it] 33%|███▎      | 199/612 [12:13<14:25,  2.10s/it] 33%|███▎      | 200/612 [12:15<13:43,  2.00s/it]                                                  33%|███▎      | 200/612 [12:15<13:43,  2.00s/it] 33%|███▎      | 201/612 [12:21<23:41,  3.46s/it] 33%|███▎      | 202/612 [12:26<24:53,  3.64s/it] 33%|███▎      | 203/612 [12:29<23:29,  3.45s/it] 33%|███▎      | 204/612 [12:31<21:43,  3.20s/it] 33%|███▎      | 205/612 [12:32<16:56,  2.50s/it]/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:468: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
-  torch._check_is_size(blocksize)
-{'loss': 10.2535, 'grad_norm': 1.8071651458740234, 'learning_rate': 3.529411764705883e-06, 'num_tokens': 113582.0, 'epoch': 0.05}
-{'loss': 11.2318, 'grad_norm': 2.020441770553589, 'learning_rate': 7.450980392156863e-06, 'num_tokens': 188521.0, 'epoch': 0.1}
-{'loss': 11.8452, 'grad_norm': 2.4505834579467773, 'learning_rate': 1.1372549019607844e-05, 'num_tokens': 244829.0, 'epoch': 0.15}
-{'loss': 11.7989, 'grad_norm': 2.682935953140259, 'learning_rate': 1.5294117647058822e-05, 'num_tokens': 289448.0, 'epoch': 0.2}
-{'loss': 11.6769, 'grad_norm': 3.5370140075683594, 'learning_rate': 1.9215686274509807e-05, 'num_tokens': 322569.0, 'epoch': 0.24}
-{'loss': 8.5189, 'grad_norm': 1.974112868309021, 'learning_rate': 2.3137254901960788e-05, 'num_tokens': 435512.0, 'epoch': 0.29}
-{'loss': 8.085, 'grad_norm': 2.1761603355407715, 'learning_rate': 2.705882352941177e-05, 'num_tokens': 510257.0, 'epoch': 0.34}
-{'loss': 7.2632, 'grad_norm': 1.9126447439193726, 'learning_rate': 3.098039215686275e-05, 'num_tokens': 568846.0, 'epoch': 0.39}
-{'loss': 6.6764, 'grad_norm': 1.645016074180603, 'learning_rate': 3.490196078431373e-05, 'num_tokens': 614301.0, 'epoch': 0.44}
-{'loss': 6.6288, 'grad_norm': 2.3610143661499023, 'learning_rate': 3.882352941176471e-05, 'num_tokens': 646389.0, 'epoch': 0.49}
-{'loss': 6.0541, 'grad_norm': 1.203721284866333, 'learning_rate': 4.274509803921569e-05, 'num_tokens': 767530.0, 'epoch': 0.54}
-{'loss': 6.0859, 'grad_norm': 1.7481929063796997, 'learning_rate': 4.666666666666667e-05, 'num_tokens': 842990.0, 'epoch': 0.59}
-{'loss': 5.8988, 'grad_norm': 1.358125925064087, 'learning_rate': 5.058823529411765e-05, 'num_tokens': 901728.0, 'epoch': 0.64}
-{'loss': 5.9105, 'grad_norm': 1.6390321254730225, 'learning_rate': 5.4509803921568634e-05, 'num_tokens': 948318.0, 'epoch': 0.68}
-{'loss': 5.92, 'grad_norm': 2.0351855754852295, 'learning_rate': 5.843137254901961e-05, 'num_tokens': 981449.0, 'epoch': 0.73}
-{'loss': 5.8664, 'grad_norm': 1.1495871543884277, 'learning_rate': 6.23529411764706e-05, 'num_tokens': 1102051.0, 'epoch': 0.78}
-{'loss': 5.688, 'grad_norm': 2.685600519180298, 'learning_rate': 6.627450980392158e-05, 'num_tokens': 1179009.0, 'epoch': 0.83}
-{'loss': 5.6941, 'grad_norm': 1.277996301651001, 'learning_rate': 7.019607843137255e-05, 'num_tokens': 1238406.0, 'epoch': 0.88}
-{'loss': 5.6172, 'grad_norm': 1.4803199768066406, 'learning_rate': 7.411764705882354e-05, 'num_tokens': 1285170.0, 'epoch': 0.93}
-{'loss': 5.761, 'grad_norm': 2.378138780593872, 'learning_rate': 7.803921568627452e-05, 'num_tokens': 1316962.0, 'epoch': 0.98}
-
-------------------------------------------------------------------------
-  EPOCH 1 DONE  train_loss=5.761  eval_loss=-1.0
-------------------------------------------------------------------------
-
-========================================================================
-  EVAL  |  stage=main_epoch_1  |  epoch=1  |  2026-04-06 06:06:56
-  Samples=20
-  Tasks: {'visual': 20}
-========================================================================
-
-  [ 1/20]  eval_001  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91727.1ms)
-
-  [ 2/20]  eval_002  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91472.4ms)
-
-  [ 3/20]  eval_003  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91872.9ms)
-
-  [ 4/20]  eval_004  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91522.7ms)
-
-  [ 5/20]  eval_005  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92022.6ms)
-
-  [ 6/20]  eval_006  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92178.6ms)
-
-  [ 7/20]  eval_007  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91969.3ms)
-
-  [ 8/20]  eval_008  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91941.2ms)
-
-  [ 9/20]  eval_009  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91785.7ms)
-
-  [10/20]  eval_010  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (91811.9ms)
-
-  [11/20]  eval_011  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92466.6ms)
-
-  [12/20]  eval_012  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (93199.9ms)
-
-  [13/20]  eval_013  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (93160.2ms)
-
-  [14/20]  eval_014  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (93133.2ms)
-
-  [15/20]  eval_015  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92424.4ms)
-
-  [16/20]  eval_016  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92921.2ms)
-
-  [17/20]  eval_017  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (93626.0ms)
-
-  [18/20]  eval_018  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92925.6ms)
-
-  [19/20]  eval_019  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (92474.3ms)
-
-  [20/20]  eval_020  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.1.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (93039.1ms)
-
-  Metric                       Value
-  ------------------------------------------
-  Exact Match Rate             0.0
-  Valid JSON Rate              0.0
-  Schema Valid Rate            0.0
-  Syntax Score Mean            0.0
-  Key Path Overlap             0.0
-  Partial Score Mean           0.0
-  Invalid Output Rate          1.0
-  [!!]  ⚠️  Invalid output rate 100.0% exceeds threshold 40.0% — model outputs are mostly malformed. Consider more training epochs, a higher LoRA rank, or more data.
-
-  Failure breakdown:
-    invalid_json                 20  (100.0%)
-  [OK]  JSON   -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/main_epoch_1/main_epoch_1_predictions.json
-  [OK]  JSON   -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/main_epoch_1/main_epoch_1_summary.json
-  [OK]  TXT    -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/main_epoch_1/main_epoch_1_report.txt
-  [OK]  CSV    -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/all_epochs_metrics.csv  (row appended)
-
-  stage=main_epoch_1  exact=0.0  syntax=0.0  partial=0.0
-========================================================================
-
-  [OK]  [EarlyStopping/partial] New best partial_score=0.0000. Counter reset.
-
-  0%|          | 0/24 [00:00<?, ?it/s][A
-  8%|▊         | 2/24 [00:01<00:16,  1.34it/s][A
- 12%|█▎        | 3/24 [00:02<00:18,  1.13it/s][A
- 17%|█▋        | 4/24 [00:03<00:17,  1.16it/s][A
- 21%|██        | 5/24 [00:04<00:15,  1.25it/s][A
- 25%|██▌       | 6/24 [00:04<00:13,  1.37it/s][A
- 29%|██▉       | 7/24 [00:05<00:15,  1.11it/s][A
- 33%|███▎      | 8/24 [00:07<00:16,  1.02s/it][A
- 38%|███▊      | 9/24 [00:08<00:14,  1.00it/s][A
- 42%|████▏     | 10/24 [00:08<00:13,  1.07it/s][A
- 46%|████▌     | 11/24 [00:09<00:11,  1.17it/s][A
- 50%|█████     | 12/24 [00:10<00:09,  1.28it/s][A
- 54%|█████▍    | 13/24 [00:11<00:11,  1.05s/it][A
- 58%|█████▊    | 14/24 [00:13<00:11,  1.16s/it][A
- 62%|██████▎   | 15/24 [00:14<00:09,  1.09s/it][A
- 67%|██████▋   | 16/24 [00:15<00:08,  1.00s/it][A
- 71%|███████   | 17/24 [00:15<00:06,  1.10it/s][A
- 75%|███████▌  | 18/24 [00:16<00:04,  1.23it/s][A
- 79%|███████▉  | 19/24 [00:17<00:05,  1.06s/it][A
- 83%|████████▎ | 20/24 [00:19<00:04,  1.22s/it][A
- 88%|████████▊ | 21/24 [00:20<00:03,  1.18s/it][A
- 92%|█████████▏| 22/24 [00:21<00:02,  1.07s/it][A
- 96%|█████████▌| 23/24 [00:22<00:00,  1.05it/s][A
-100%|██████████| 24/24 [00:22<00:00,  1.21it/s][A
-                                               [A                                                 
-100%|██████████| 24/24 [00:23<00:00,  1.21it/s][A 33%|███▎      | 205/612 [43:57<16:56,  2.50s/it]
-                                               [A/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/peft/utils/save_and_load.py:260: UserWarning: Setting `save_embedding_layers` to `True` as the embedding layer has been resized during finetuning.
-  warnings.warn(
-/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py:1263: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
-  return fn(*args, **kwargs)
- 34%|███▎      | 206/612 [44:35<65:15:58, 578.71s/it] 34%|███▍      | 207/612 [44:43<45:49:44, 407.37s/it] 34%|███▍      | 208/612 [44:49<32:13:34, 287.16s/it] 34%|███▍      | 209/612 [44:56<22:42:36, 202.87s/it] 34%|███▍      | 210/612 [45:01<16:02:43, 143.69s/it]                                                      34%|███▍      | 210/612 [45:02<16:02:43, 143.69s/it] 34%|███▍      | 211/612 [45:07<11:23:27, 102.26s/it] 35%|███▍      | 212/612 [45:12<8:07:16, 73.09s/it]   35%|███▍      | 213/612 [45:17<5:49:57, 52.63s/it] 35%|███▍      | 214/612 [45:21<4:13:34, 38.23s/it] 35%|███▌      | 215/612 [45:26<3:05:57, 28.11s/it] 35%|███▌      | 216/612 [45:30<2:18:34, 21.00s/it] 35%|███▌      | 217/612 [45:35<1:45:10, 15.98s/it] 36%|███▌      | 218/612 [45:39<1:21:45, 12.45s/it] 36%|███▌      | 219/612 [45:43<1:04:56,  9.91s/it] 36%|███▌      | 220/612 [45:47<53:01,  8.12s/it]                                                    36%|███▌      | 220/612 [45:48<53:01,  8.12s/it] 36%|███▌      | 221/612 [45:52<47:50,  7.34s/it] 36%|███▋      | 222/612 [45:56<40:56,  6.30s/it] 36%|███▋      | 223/612 [46:00<35:51,  5.53s/it] 37%|███▋      | 224/612 [46:04<32:12,  4.98s/it] 37%|███▋      | 225/612 [46:07<29:30,  4.57s/it] 37%|███▋      | 226/612 [46:11<27:28,  4.27s/it] 37%|███▋      | 227/612 [46:14<25:58,  4.05s/it] 37%|███▋      | 228/612 [46:18<24:49,  3.88s/it] 37%|███▋      | 229/612 [46:21<23:50,  3.73s/it] 38%|███▊      | 230/612 [46:24<22:59,  3.61s/it]                                                  38%|███▊      | 230/612 [46:25<22:59,  3.61s/it] 38%|███▊      | 231/612 [46:28<22:51,  3.60s/it] 38%|███▊      | 232/612 [46:31<21:56,  3.47s/it] 38%|███▊      | 233/612 [46:34<21:08,  3.35s/it] 38%|███▊      | 234/612 [46:37<20:33,  3.26s/it] 38%|███▊      | 235/612 [46:40<20:05,  3.20s/it] 39%|███▊      | 236/612 [46:43<19:44,  3.15s/it] 39%|███▊      | 237/612 [46:46<19:13,  3.08s/it] 39%|███▉      | 238/612 [46:49<18:45,  3.01s/it] 39%|███▉      | 239/612 [46:52<18:22,  2.96s/it] 39%|███▉      | 240/612 [46:55<18:02,  2.91s/it]                                                  39%|███▉      | 240/612 [46:55<18:02,  2.91s/it] 39%|███▉      | 241/612 [46:58<18:09,  2.94s/it] 40%|███▉      | 242/612 [47:00<17:37,  2.86s/it] 40%|███▉      | 243/612 [47:03<17:15,  2.81s/it] 40%|███▉      | 244/612 [47:06<16:54,  2.76s/it] 40%|████      | 245/612 [47:08<16:36,  2.72s/it] 40%|████      | 246/612 [47:11<16:11,  2.66s/it] 40%|████      | 247/612 [47:13<15:51,  2.61s/it] 41%|████      | 248/612 [47:16<15:32,  2.56s/it] 41%|████      | 249/612 [47:18<15:14,  2.52s/it] 41%|████      | 250/612 [47:21<15:00,  2.49s/it]                                                  41%|████      | 250/612 [47:21<15:00,  2.49s/it] 41%|████      | 251/612 [47:23<15:09,  2.52s/it] 41%|████      | 252/612 [47:25<14:28,  2.41s/it] 41%|████▏     | 253/612 [47:28<13:51,  2.32s/it] 42%|████▏     | 254/612 [47:30<13:14,  2.22s/it] 42%|████▏     | 255/612 [47:31<12:26,  2.09s/it] 42%|████▏     | 256/612 [47:39<21:58,  3.70s/it] 42%|████▏     | 257/612 [47:47<29:32,  4.99s/it] 42%|████▏     | 258/612 [47:54<33:01,  5.60s/it] 42%|████▏     | 259/612 [48:00<33:50,  5.75s/it] 42%|████▏     | 260/612 [48:05<33:22,  5.69s/it]                                                  42%|████▏     | 260/612 [48:06<33:22,  5.69s/it] 43%|████▎     | 261/612 [48:11<33:08,  5.66s/it] 43%|████▎     | 262/612 [48:16<32:09,  5.51s/it] 43%|████▎     | 263/612 [48:21<30:48,  5.30s/it] 43%|████▎     | 264/612 [48:26<29:36,  5.10s/it] 43%|████▎     | 265/612 [48:30<28:47,  4.98s/it] 43%|████▎     | 266/612 [48:35<28:07,  4.88s/it] 44%|████▎     | 267/612 [48:39<27:21,  4.76s/it] 44%|████▍     | 268/612 [48:44<26:47,  4.67s/it] 44%|████▍     | 269/612 [48:48<26:08,  4.57s/it] 44%|████▍     | 270/612 [48:53<25:33,  4.48s/it]                                                  44%|████▍     | 270/612 [48:53<25:33,  4.48s/it] 44%|████▍     | 271/612 [48:57<25:25,  4.47s/it] 44%|████▍     | 272/612 [49:01<24:25,  4.31s/it] 45%|████▍     | 273/612 [49:05<23:30,  4.16s/it] 45%|████▍     | 274/612 [49:08<22:42,  4.03s/it] 45%|████▍     | 275/612 [49:12<22:06,  3.94s/it] 45%|████▌     | 276/612 [49:16<21:22,  3.82s/it] 45%|████▌     | 277/612 [49:19<20:53,  3.74s/it] 45%|████▌     | 278/612 [49:23<20:29,  3.68s/it] 46%|████▌     | 279/612 [49:26<20:05,  3.62s/it] 46%|████▌     | 280/612 [49:30<19:38,  3.55s/it]                                                  46%|████▌     | 280/612 [49:30<19:38,  3.55s/it] 46%|████▌     | 281/612 [49:33<19:40,  3.57s/it] 46%|████▌     | 282/612 [49:37<19:08,  3.48s/it] 46%|████▌     | 283/612 [49:40<18:28,  3.37s/it] 46%|████▋     | 284/612 [49:43<17:57,  3.28s/it] 47%|████▋     | 285/612 [49:46<17:35,  3.23s/it] 47%|████▋     | 286/612 [49:49<17:15,  3.18s/it] 47%|████▋     | 287/612 [49:52<16:50,  3.11s/it] 47%|████▋     | 288/612 [49:55<16:26,  3.05s/it] 47%|████▋     | 289/612 [49:58<16:06,  2.99s/it] 47%|████▋     | 290/612 [50:00<15:48,  2.95s/it]                                                  47%|████▋     | 290/612 [50:01<15:48,  2.95s/it] 48%|████▊     | 291/612 [50:04<15:58,  2.99s/it] 48%|████▊     | 292/612 [50:06<15:30,  2.91s/it] 48%|████▊     | 293/612 [50:09<15:07,  2.84s/it] 48%|████▊     | 294/612 [50:12<14:46,  2.79s/it] 48%|████▊     | 295/612 [50:14<14:28,  2.74s/it] 48%|████▊     | 296/612 [50:17<14:06,  2.68s/it] 49%|████▊     | 297/612 [50:19<13:44,  2.62s/it] 49%|████▊     | 298/612 [50:22<13:25,  2.57s/it] 49%|████▉     | 299/612 [50:24<12:50,  2.46s/it] 49%|████▉     | 300/612 [50:26<12:21,  2.38s/it]                                                  49%|████▉     | 300/612 [50:26<12:21,  2.38s/it] 49%|████▉     | 301/612 [50:28<12:16,  2.37s/it] 49%|████▉     | 302/612 [50:31<11:42,  2.27s/it] 50%|████▉     | 303/612 [50:33<11:15,  2.19s/it] 50%|████▉     | 304/612 [50:34<10:46,  2.10s/it] 50%|████▉     | 305/612 [50:36<10:14,  2.00s/it] 50%|█████     | 306/612 [50:44<18:35,  3.65s/it] 50%|█████     | 307/612 [50:51<24:22,  4.80s/it] 50%|█████     | 308/612 [50:59<29:23,  5.80s/it] 50%|█████     | 309/612 [51:06<31:17,  6.20s/it] 51%|█████     | 310/612 [51:13<31:34,  6.27s/it]                                                  51%|█████     | 310/612 [51:13<31:34,  6.27s/it] 51%|█████     | 311/612 [51:19<30:52,  6.16s/it] 51%|█████     | 312/612 [51:24<29:24,  5.88s/it] 51%|█████     | 313/612 [51:29<27:38,  5.55s/it] 51%|█████▏    | 314/612 [51:33<26:16,  5.29s/it] 51%|█████▏    | 315/612 [51:38<25:09,  5.08s/it] 52%|█████▏    | 316/612 [51:43<24:14,  4.91s/it] 52%|█████▏    | 317/612 [51:47<23:16,  4.73s/it] 52%|█████▏    | 318/612 [51:51<22:28,  4.59s/it] 52%|█████▏    | 319/612 [51:55<21:49,  4.47s/it] 52%|█████▏    | 320/612 [51:59<21:06,  4.34s/it]                                                  52%|█████▏    | 320/612 [52:00<21:06,  4.34s/it] 52%|█████▏    | 321/612 [52:04<20:48,  4.29s/it] 53%|█████▎    | 322/612 [52:07<20:10,  4.17s/it] 53%|█████▎    | 323/612 [52:11<19:36,  4.07s/it] 53%|█████▎    | 324/612 [52:15<19:05,  3.98s/it] 53%|█████▎    | 325/612 [52:19<18:35,  3.89s/it] 53%|█████▎    | 326/612 [52:22<18:03,  3.79s/it] 53%|█████▎    | 327/612 [52:26<17:38,  3.71s/it] 54%|█████▎    | 328/612 [52:29<17:09,  3.62s/it] 54%|█████▍    | 329/612 [52:33<16:45,  3.55s/it] 54%|█████▍    | 330/612 [52:36<16:22,  3.48s/it]                                                  54%|█████▍    | 330/612 [52:37<16:22,  3.48s/it] 54%|█████▍    | 331/612 [52:40<16:47,  3.59s/it] 54%|█████▍    | 332/612 [52:43<16:03,  3.44s/it] 54%|█████▍    | 333/612 [52:46<15:31,  3.34s/it] 55%|█████▍    | 334/612 [52:49<15:04,  3.26s/it] 55%|█████▍    | 335/612 [52:52<14:39,  3.17s/it] 55%|█████▍    | 336/612 [52:55<14:09,  3.08s/it] 55%|█████▌    | 337/612 [52:58<13:46,  3.00s/it] 55%|█████▌    | 338/612 [53:01<13:29,  2.95s/it] 55%|█████▌    | 339/612 [53:03<13:12,  2.90s/it] 56%|█████▌    | 340/612 [53:06<12:56,  2.85s/it]                                                  56%|█████▌    | 340/612 [53:06<12:56,  2.85s/it] 56%|█████▌    | 341/612 [53:09<13:20,  2.95s/it] 56%|█████▌    | 342/612 [53:12<12:55,  2.87s/it] 56%|█████▌    | 343/612 [53:15<12:33,  2.80s/it] 56%|█████▌    | 344/612 [53:17<12:09,  2.72s/it] 56%|█████▋    | 345/612 [53:20<11:47,  2.65s/it] 57%|█████▋    | 346/612 [53:22<11:30,  2.59s/it] 57%|█████▋    | 347/612 [53:24<11:15,  2.55s/it] 57%|█████▋    | 348/612 [53:27<10:54,  2.48s/it] 57%|█████▋    | 349/612 [53:29<10:29,  2.39s/it] 57%|█████▋    | 350/612 [53:31<10:06,  2.31s/it]                                                  57%|█████▋    | 350/612 [53:31<10:06,  2.31s/it] 57%|█████▋    | 351/612 [53:34<10:11,  2.34s/it] 58%|█████▊    | 352/612 [53:36<09:44,  2.25s/it] 58%|█████▊    | 353/612 [53:38<09:23,  2.18s/it] 58%|█████▊    | 354/612 [53:39<09:02,  2.10s/it] 58%|█████▊    | 355/612 [53:41<08:36,  2.01s/it] 58%|█████▊    | 356/612 [53:49<15:34,  3.65s/it] 58%|█████▊    | 357/612 [53:56<20:37,  4.85s/it] 58%|█████▊    | 358/612 [54:03<23:15,  5.49s/it] 59%|█████▊    | 359/612 [54:10<24:05,  5.71s/it] 59%|█████▉    | 360/612 [54:15<23:48,  5.67s/it]                                                  59%|█████▉    | 360/612 [54:16<23:48,  5.67s/it] 59%|█████▉    | 361/612 [54:21<23:39,  5.66s/it] 59%|█████▉    | 362/612 [54:26<22:41,  5.44s/it] 59%|█████▉    | 363/612 [54:30<21:41,  5.23s/it] 59%|█████▉    | 364/612 [54:35<20:55,  5.06s/it] 60%|█████▉    | 365/612 [54:40<20:17,  4.93s/it] 60%|█████▉    | 366/612 [54:44<19:37,  4.78s/it] 60%|█████▉    | 367/612 [54:49<19:04,  4.67s/it] 60%|██████    | 368/612 [54:53<18:33,  4.56s/it] 60%|██████    | 369/612 [54:57<18:04,  4.46s/it] 60%|██████    | 370/612 [55:01<17:31,  4.35s/it]                                                  60%|██████    | 370/612 [55:02<17:31,  4.35s/it] 61%|██████    | 371/612 [55:06<17:23,  4.33s/it] 61%|██████    | 372/612 [55:09<16:44,  4.19s/it] 61%|██████    | 373/612 [55:13<16:08,  4.05s/it] 61%|██████    | 374/612 [55:17<15:36,  3.94s/it] 61%|██████▏   | 375/612 [55:20<15:06,  3.83s/it] 61%|██████▏   | 376/612 [55:24<14:40,  3.73s/it] 62%|██████▏   | 377/612 [55:27<14:18,  3.65s/it] 62%|██████▏   | 378/612 [55:31<13:56,  3.57s/it] 62%|██████▏   | 379/612 [55:34<13:37,  3.51s/it] 62%|██████▏   | 380/612 [55:37<13:17,  3.44s/it]                                                  62%|██████▏   | 380/612 [55:38<13:17,  3.44s/it] 62%|██████▏   | 381/612 [55:41<13:20,  3.47s/it] 62%|██████▏   | 382/612 [55:44<12:53,  3.36s/it] 63%|██████▎   | 383/612 [55:47<12:31,  3.28s/it] 63%|██████▎   | 384/612 [55:50<12:12,  3.21s/it] 63%|██████▎   | 385/612 [55:53<11:51,  3.14s/it] 63%|██████▎   | 386/612 [55:56<11:31,  3.06s/it] 63%|██████▎   | 387/612 [55:59<11:13,  2.99s/it] 63%|██████▎   | 388/612 [56:02<10:58,  2.94s/it] 64%|██████▎   | 389/612 [56:04<10:46,  2.90s/it] 64%|██████▎   | 390/612 [56:07<10:35,  2.86s/it]                                                  64%|██████▎   | 390/612 [56:08<10:35,  2.86s/it] 64%|██████▍   | 391/612 [56:10<10:45,  2.92s/it] 64%|██████▍   | 392/612 [56:13<10:28,  2.86s/it] 64%|██████▍   | 393/612 [56:16<10:15,  2.81s/it] 64%|██████▍   | 394/612 [56:18<10:02,  2.76s/it] 65%|██████▍   | 395/612 [56:21<09:49,  2.72s/it] 65%|██████▍   | 396/612 [56:23<09:34,  2.66s/it] 65%|██████▍   | 397/612 [56:26<09:19,  2.60s/it] 65%|██████▌   | 398/612 [56:28<09:07,  2.56s/it] 65%|██████▌   | 399/612 [56:31<08:53,  2.51s/it] 65%|██████▌   | 400/612 [56:33<08:32,  2.42s/it]                                                  65%|██████▌   | 400/612 [56:33<08:32,  2.42s/it] 66%|██████▌   | 401/612 [56:35<08:33,  2.44s/it] 66%|██████▌   | 402/612 [56:38<08:11,  2.34s/it] 66%|██████▌   | 403/612 [56:40<07:48,  2.24s/it] 66%|██████▌   | 404/612 [56:42<07:30,  2.17s/it] 66%|██████▌   | 405/612 [56:43<07:06,  2.06s/it] 66%|██████▋   | 406/612 [56:49<10:40,  3.11s/it] 67%|██████▋   | 407/612 [56:53<11:14,  3.29s/it] 67%|██████▋   | 408/612 [56:56<10:48,  3.18s/it] 67%|██████▋   | 409/612 [56:58<09:55,  2.93s/it] 67%|██████▋   | 410/612 [56:59<07:51,  2.34s/it]                                                  67%|██████▋   | 410/612 [56:59<07:51,  2.34s/it]/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:468: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
-  torch._check_is_size(blocksize)
-{'eval_loss': 1.4396008253097534, 'eval_runtime': 24.3346, 'eval_samples_per_second': 7.89, 'eval_steps_per_second': 0.986, 'eval_num_tokens': 1347077.0, 'epoch': 1.0}
-  [OK]  [EarlyStopping/loss] New best eval_loss=1.439601 (delta>0.001). Counter reset.
-{'loss': 5.3906, 'grad_norm': 1.0366929769515991, 'learning_rate': 7.997035880020527e-05, 'num_tokens': 1415579.0, 'epoch': 1.02}
-{'loss': 5.5656, 'grad_norm': 1.20468008518219, 'learning_rate': 7.9733492716958e-05, 'num_tokens': 1502185.0, 'epoch': 1.07}
-{'loss': 5.3852, 'grad_norm': 1.182201862335205, 'learning_rate': 7.926116422916633e-05, 'num_tokens': 1568316.0, 'epoch': 1.12}
-{'loss': 5.5332, 'grad_norm': 1.6233012676239014, 'learning_rate': 7.855617237597492e-05, 'num_tokens': 1620299.0, 'epoch': 1.17}
-{'loss': 5.5823, 'grad_norm': 1.5683296918869019, 'learning_rate': 7.762269496974271e-05, 'num_tokens': 1661041.0, 'epoch': 1.22}
-{'loss': 5.4983, 'grad_norm': 1.4271835088729858, 'learning_rate': 7.646626383814531e-05, 'num_tokens': 1744841.0, 'epoch': 1.27}
-{'loss': 5.3001, 'grad_norm': 1.3736499547958374, 'learning_rate': 7.509373204232374e-05, 'num_tokens': 1834348.0, 'epoch': 1.32}
-{'loss': 5.2747, 'grad_norm': 1.4979380369186401, 'learning_rate': 7.351323326534634e-05, 'num_tokens': 1902022.0, 'epoch': 1.37}
-{'loss': 5.4388, 'grad_norm': 1.6442909240722656, 'learning_rate': 7.173413361164941e-05, 'num_tokens': 1955235.0, 'epoch': 1.42}
-{'loss': 5.4446, 'grad_norm': 2.263308048248291, 'learning_rate': 6.976697610309535e-05, 'num_tokens': 1995671.0, 'epoch': 1.46}
-{'loss': 5.3656, 'grad_norm': 1.4470880031585693, 'learning_rate': 6.762341820056687e-05, 'num_tokens': 2084608.0, 'epoch': 1.51}
-{'loss': 5.4605, 'grad_norm': 1.4400731325149536, 'learning_rate': 6.531616272134723e-05, 'num_tokens': 2172441.0, 'epoch': 1.56}
-{'loss': 5.3234, 'grad_norm': 1.643442988395691, 'learning_rate': 6.285888256167301e-05, 'num_tokens': 2238532.0, 'epoch': 1.61}
-{'loss': 5.2823, 'grad_norm': 1.8977906703948975, 'learning_rate': 6.026613967055678e-05, 'num_tokens': 2289221.0, 'epoch': 1.66}
-{'loss': 5.4067, 'grad_norm': 3.085415840148926, 'learning_rate': 5.755329875504449e-05, 'num_tokens': 2327871.0, 'epoch': 1.71}
-{'loss': 5.4816, 'grad_norm': 1.8922268152236938, 'learning_rate': 5.4736436228293735e-05, 'num_tokens': 2410611.0, 'epoch': 1.76}
-{'loss': 5.1782, 'grad_norm': 1.5295522212982178, 'learning_rate': 5.183224494005083e-05, 'num_tokens': 2497299.0, 'epoch': 1.81}
-{'loss': 5.1424, 'grad_norm': 1.6847981214523315, 'learning_rate': 4.8857935254097715e-05, 'num_tokens': 2562255.0, 'epoch': 1.86}
-{'loss': 5.1981, 'grad_norm': 1.6259149312973022, 'learning_rate': 4.5831133058888345e-05, 'num_tokens': 2613214.0, 'epoch': 1.9}
-{'loss': 5.2237, 'grad_norm': 3.182194232940674, 'learning_rate': 4.276977531576767e-05, 'num_tokens': 2653827.0, 'epoch': 1.95}
-{'loss': 4.9662, 'grad_norm': 2.71012544631958, 'learning_rate': 3.969200376375926e-05, 'num_tokens': 2694154.0, 'epoch': 2.0}
-
-------------------------------------------------------------------------
-  EPOCH 2 DONE  train_loss=4.9662  eval_loss=1.439601
-------------------------------------------------------------------------
-
-========================================================================
-  EVAL  |  stage=main_epoch_2  |  epoch=2  |  2026-04-06 06:51:23
-  Samples=20
-  Tasks: {'visual': 20}
-========================================================================
-
-  [ 1/20]  eval_001  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (90308.3ms)
-
-  [ 2/20]  eval_002  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (90339.7ms)
-
-  [ 3/20]  eval_003  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (89897.7ms)
-
-  [ 4/20]  eval_004  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (88262.5ms)
-
-  [ 5/20]  eval_005  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (87681.1ms)
-
-  [ 6/20]  eval_006  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86409.3ms)
-
-  [ 7/20]  eval_007  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86743.2ms)
-
-  [ 8/20]  eval_008  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (85848.9ms)
-
-  [ 9/20]  eval_009  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (85768.0ms)
-
-  [10/20]  eval_010  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86410.1ms)
-
-  [11/20]  eval_011  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86450.1ms)
-
-  [12/20]  eval_012  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86533.5ms)
-
-  [13/20]  eval_013  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86020.2ms)
-
-  [14/20]  eval_014  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86038.9ms)
-
-  [15/20]  eval_015  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (85800.3ms)
-
-  [16/20]  eval_016  task=visual  -> target_type=json
-/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/peft/utils/save_and_load.py:260: UserWarning: Setting `save_embedding_layers` to `True` as the embedding layer has been resized during finetuning.
-  warnings.warn(
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (85987.7ms)
-
-  [17/20]  eval_017  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86715.8ms)
-
-  [18/20]  eval_018  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (86380.5ms)
-
-  [19/20]  eval_019  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=0.0  schema=FAIL  partial=0.0  keys=0.0  fail=invalid_json  (85780.9ms)
-
-  [20/20]  eval_020  task=visual  -> target_type=json
-         preview  : {"$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.6.0/schema.json…
-         exact=MISS  syntax=1.0  schema=OK  partial=0.5714  keys=0.7143  fail=wrong_visual_type  (86386.0ms)
-
-  Metric                       Value
-  ------------------------------------------
-  Exact Match Rate             0.0
-  Valid JSON Rate              0.05
-  Schema Valid Rate            0.05
-  Syntax Score Mean            0.05
-  Key Path Overlap             0.0357
-  Partial Score Mean           0.0286
-  Invalid Output Rate          1.0
-  [!!]  ⚠️  Invalid output rate 100.0% exceeds threshold 40.0% — model outputs are mostly malformed. Consider more training epochs, a higher LoRA rank, or more data.
-
-  Failure breakdown:
-    invalid_json                 19  (95.0%)
-    wrong_visual_type            1  (5.0%)
-  [OK]  JSON   -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/main_epoch_2/main_epoch_2_predictions.json
-  [OK]  JSON   -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/main_epoch_2/main_epoch_2_summary.json
-  [OK]  TXT    -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/main_epoch_2/main_epoch_2_report.txt
-  [OK]  CSV    -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/all_epochs_metrics.csv  (row appended)
-
-  stage=main_epoch_2  exact=0.0  syntax=0.05  partial=0.0286
-========================================================================
-
-  [OK]  New best partial score 0.0286 @ epoch 2 -> /mnt/azureml/cr/j/1420a9a71d624de79c460cd9888a492c/cap/data-capability/wd/eval_results/run_20260406_053113/best_partial_main
-  [OK]  [EarlyStopping/partial] New best partial_score=0.0286. Counter reset.
-
-  0%|          | 0/24 [00:00<?, ?it/s][A
-  8%|▊         | 2/24 [00:01<00:16,  1.34it/s][A
- 12%|█▎        | 3/24 [00:02<00:17,  1.21it/s][A
- 17%|█▋        | 4/24 [00:03<00:16,  1.24it/s][A
- 21%|██        | 5/24 [00:03<00:14,  1.33it/s][A
- 25%|██▌       | 6/24 [00:04<00:12,  1.45it/s][A
- 29%|██▉       | 7/24 [00:06<00:16,  1.00it/s][A
- 33%|███▎      | 8/24 [00:07<00:18,  1.14s/it][A
- 38%|███▊      | 9/24 [00:08<00:16,  1.10s/it][A
- 42%|████▏     | 10/24 [00:09<00:14,  1.04s/it][A
- 46%|████▌     | 11/24 [00:10<00:12,  1.07it/s][A
- 50%|█████     | 12/24 [00:10<00:09,  1.21it/s][A
- 54%|█████▍    | 13/24 [00:12<00:11,  1.07s/it][A
- 58%|█████▊    | 14/24 [00:13<00:12,  1.23s/it][A
- 62%|██████▎   | 15/24 [00:14<00:10,  1.16s/it][A
- 67%|██████▋   | 16/24 [00:15<00:08,  1.05s/it][A
- 71%|███████   | 17/24 [00:16<00:06,  1.06it/s][A
- 75%|███████▌  | 18/24 [00:17<00:05,  1.18it/s][A
- 79%|███████▉  | 19/24 [00:18<00:05,  1.09s/it][A
- 83%|████████▎ | 20/24 [00:20<00:04,  1.19s/it][A
- 88%|████████▊ | 21/24 [00:21<00:03,  1.13s/it][A
- 92%|█████████▏| 22/24 [00:21<00:02,  1.04s/it][A
- 96%|█████████▌| 23/24 [00:22<00:00,  1.06it/s][A
-100%|██████████| 24/24 [00:23<00:00,  1.20it/s][A
-                                               [A                                                 
-100%|██████████| 24/24 [00:25<00:00,  1.20it/s][A 67%|██████▋   | 410/612 [1:27:07<07:51,  2.34s/it]
-                                               [A/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py:1263: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
-  return fn(*args, **kwargs)
- 67%|██████▋   | 411/612 [1:27:46<31:01:29, 555.67s/it] 67%|██████▋   | 412/612 [1:27:53<21:44:15, 391.28s/it] 67%|██████▋   | 413/612 [1:28:01<15:15:34, 276.05s/it] 68%|██████▊   | 414/612 [1:28:07<10:43:51, 195.11s/it] 68%|██████▊   | 415/612 [1:28:12<7:33:49, 138.22s/it]  68%|██████▊   | 416/612 [1:28:17<5:21:08, 98.31s/it]  68%|██████▊   | 417/612 [1:28:22<3:48:27, 70.29s/it] 68%|██████▊   | 418/612 [1:28:27<2:43:42, 50.63s/it] 68%|██████▊   | 419/612 [1:28:32<1:58:29, 36.84s/it] 69%|██████▊   | 420/612 [1:28:36<1:26:49, 27.13s/it]                                                      69%|██████▊   | 420/612 [1:28:37<1:26:49, 27.13s/it] 69%|██████▉   | 421/612 [1:28:41<1:05:01, 20.43s/it] 69%|██████▉   | 422/612 [1:28:45<49:28, 15.62s/it]   69%|██████▉   | 423/612 [1:28:50<38:29, 12.22s/it] 69%|██████▉   | 424/612 [1:28:54<30:46,  9.82s/it] 69%|██████▉   | 425/612 [1:28:58<25:17,  8.12s/it] 70%|██████▉   | 426/612 [1:29:02<21:19,  6.88s/it] 70%|██████▉   | 427/612 [1:29:06<18:26,  5.98s/it] 70%|██████▉   | 428/612 [1:29:10<16:24,  5.35s/it] 70%|███████   | 429/612 [1:29:14<14:51,  4.87s/it] 70%|███████   | 430/612 [1:29:17<13:42,  4.52s/it]                                                    70%|███████   | 430/612 [1:29:18<13:42,  4.52s/it] 70%|███████   | 431/612 [1:29:21<13:03,  4.33s/it] 71%|███████   | 432/612 [1:29:25<12:17,  4.10s/it] 71%|███████   | 433/612 [1:29:28<11:44,  3.94s/it] 71%|███████   | 434/612 [1:29:32<11:20,  3.83s/it] 71%|███████   | 435/612 [1:29:35<10:59,  3.72s/it] 71%|███████   | 436/612 [1:29:39<10:38,  3.63s/it] 71%|███████▏  | 437/612 [1:29:42<10:18,  3.53s/it] 72%|███████▏  | 438/612 [1:29:45<09:59,  3.45s/it] 72%|███████▏  | 439/612 [1:29:48<09:38,  3.35s/it] 72%|███████▏  | 440/612 [1:29:52<09:21,  3.27s/it]                                                    72%|███████▏  | 440/612 [1:29:52<09:21,  3.27s/it] 72%|███████▏  | 441/612 [1:29:55<09:19,  3.27s/it] 72%|███████▏  | 442/612 [1:29:58<09:02,  3.19s/it] 72%|███████▏  | 443/612 [1:30:01<08:44,  3.10s/it] 73%|███████▎  | 444/612 [1:30:04<08:29,  3.03s/it] 73%|███████▎  | 445/612 [1:30:06<08:16,  2.98s/it] 73%|███████▎  | 446/612 [1:30:09<08:03,  2.91s/it] 73%|███████▎  | 447/612 [1:30:12<07:52,  2.86s/it] 73%|███████▎  | 448/612 [1:30:15<07:41,  2.81s/it] 73%|███████▎  | 449/612 [1:30:17<07:28,  2.75s/it] 74%|███████▎  | 450/612 [1:30:20<07:18,  2.71s/it]                                                    74%|███████▎  | 450/612 [1:30:20<07:18,  2.71s/it] 74%|███████▎  | 451/612 [1:30:23<07:22,  2.75s/it] 74%|███████▍  | 452/612 [1:30:25<07:07,  2.67s/it] 74%|███████▍  | 453/612 [1:30:28<06:54,  2.61s/it] 74%|███████▍  | 454/612 [1:30:30<06:43,  2.56s/it] 74%|███████▍  | 455/612 [1:30:32<06:32,  2.50s/it] 75%|███████▍  | 456/612 [1:30:35<06:15,  2.41s/it] 75%|███████▍  | 457/612 [1:30:37<06:00,  2.33s/it] 75%|███████▍  | 458/612 [1:30:39<05:45,  2.24s/it] 75%|███████▌  | 459/612 [1:30:41<05:32,  2.17s/it] 75%|███████▌  | 460/612 [1:30:43<05:13,  2.06s/it]                                                    75%|███████▌  | 460/612 [1:30:43<05:13,  2.06s/it] 75%|███████▌  | 461/612 [1:30:51<09:33,  3.80s/it] 75%|███████▌  | 462/612 [1:30:58<12:23,  4.96s/it] 76%|███████▌  | 463/612 [1:31:06<14:12,  5.72s/it] 76%|███████▌  | 464/612 [1:31:12<14:47,  6.00s/it] 76%|███████▌  | 465/612 [1:31:18<14:48,  6.05s/it] 76%|███████▌  | 466/612 [1:31:24<14:20,  5.90s/it] 76%|███████▋  | 467/612 [1:31:29<13:43,  5.68s/it] 76%|███████▋  | 468/612 [1:31:34<13:05,  5.46s/it] 77%|███████▋  | 469/612 [1:31:39<12:23,  5.20s/it] 77%|███████▋  | 470/612 [1:31:43<11:54,  5.03s/it]                                                    77%|███████▋  | 470/612 [1:31:44<11:54,  5.03s/it] 77%|███████▋  | 471/612 [1:31:48<11:41,  4.97s/it] 77%|███████▋  | 472/612 [1:31:53<11:08,  4.77s/it] 77%|███████▋  | 473/612 [1:31:57<10:41,  4.61s/it] 77%|███████▋  | 474/612 [1:32:01<10:17,  4.48s/it] 78%|███████▊  | 475/612 [1:32:05<09:52,  4.33s/it] 78%|███████▊  | 476/612 [1:32:09<09:34,  4.22s/it] 78%|███████▊  | 477/612 [1:32:13<09:18,  4.14s/it] 78%|███████▊  | 478/612 [1:32:17<08:59,  4.03s/it] 78%|███████▊  | 479/612 [1:32:20<08:40,  3.92s/it] 78%|███████▊  | 480/612 [1:32:24<08:25,  3.83s/it]                                                    78%|███████▊  | 480/612 [1:32:24<08:25,  3.83s/it] 79%|███████▊  | 481/612 [1:32:28<08:22,  3.84s/it] 79%|███████▉  | 482/612 [1:32:31<08:06,  3.74s/it] 79%|███████▉  | 483/612 [1:32:35<07:50,  3.65s/it] 79%|███████▉  | 484/612 [1:32:38<07:36,  3.56s/it] 79%|███████▉  | 485/612 [1:32:41<07:23,  3.49s/it] 79%|███████▉  | 486/612 [1:32:44<07:06,  3.38s/it] 80%|███████▉  | 487/612 [1:32:48<06:52,  3.30s/it] 80%|███████▉  | 488/612 [1:32:51<06:40,  3.23s/it] 80%|███████▉  | 489/612 [1:32:54<06:30,  3.17s/it] 80%|████████  | 490/612 [1:32:57<06:21,  3.13s/it]                                                    80%|████████  | 490/612 [1:32:57<06:21,  3.13s/it] 80%|████████  | 491/612 [1:33:00<06:18,  3.13s/it] 80%|████████  | 492/612 [1:33:03<06:05,  3.04s/it] 81%|████████  | 493/612 [1:33:06<05:54,  2.98s/it] 81%|████████  | 494/612 [1:33:08<05:45,  2.93s/it] 81%|████████  | 495/612 [1:33:11<05:36,  2.87s/it] 81%|████████  | 496/612 [1:33:14<05:26,  2.82s/it] 81%|████████  | 497/612 [1:33:16<05:18,  2.77s/it] 81%|████████▏ | 498/612 [1:33:19<05:12,  2.74s/it] 82%|████████▏ | 499/612 [1:33:22<05:04,  2.69s/it] 82%|████████▏ | 500/612 [1:33:24<04:55,  2.64s/it]                                                    82%|████████▏ | 500/612 [1:33:25<04:55,  2.64s/it] 82%|████████▏ | 501/612 [1:33:27<04:56,  2.67s/it] 82%|████████▏ | 502/612 [1:33:29<04:46,  2.60s/it] 82%|████████▏ | 503/612 [1:33:32<04:34,  2.52s/it] 82%|████████▏ | 504/612 [1:33:34<04:21,  2.43s/it] 83%|████████▎ | 505/612 [1:33:36<04:11,  2.35s/it] 83%|████████▎ | 506/612 [1:33:38<04:02,  2.29s/it] 83%|████████▎ | 507/612 [1:33:40<03:51,  2.21s/it] 83%|████████▎ | 508/612 [1:33:42<03:42,  2.14s/it] 83%|████████▎ | 509/612 [1:33:44<03:32,  2.07s/it] 83%|████████▎ | 510/612 [1:33:46<03:21,  1.97s/it]                                                    83%|████████▎ | 510/612 [1:33:46<03:21,  1.97s/it] 83%|████████▎ | 511/612 [1:33:54<06:14,  3.70s/it] 84%|████████▎ | 512/612 [1:34:02<08:21,  5.01s/it] 84%|████████▍ | 513/612 [1:34:09<09:13,  5.60s/it] 84%|████████▍ | 514/612 [1:34:15<09:29,  5.82s/it] 84%|████████▍ | 515/612 [1:34:21<09:21,  5.79s/it] 84%|████████▍ | 516/612 [1:34:26<09:04,  5.68s/it] 84%|████████▍ | 517/612 [1:34:31<08:46,  5.55s/it] 85%|████████▍ | 518/612 [1:34:36<08:24,  5.37s/it] 85%|████████▍ | 519/612 [1:34:41<08:03,  5.20s/it] 85%|████████▍ | 520/612 [1:34:46<07:43,  5.04s/it]                                                    85%|████████▍ | 520/612 [1:34:46<07:43,  5.04s/it] 85%|████████▌ | 521/612 [1:34:51<07:35,  5.00s/it] 85%|████████▌ | 522/612 [1:34:55<07:18,  4.88s/it] 85%|████████▌ | 523/612 [1:35:00<07:02,  4.75s/it] 86%|████████▌ | 524/612 [1:35:04<06:44,  4.60s/it] 86%|████████▌ | 525/612 [1:35:08<06:31,  4.49s/it] 86%|████████▌ | 526/612 [1:35:12<06:19,  4.42s/it] 86%|████████▌ | 527/612 [1:35:16<06:04,  4.29s/it] 86%|████████▋ | 528/612 [1:35:20<05:50,  4.17s/it] 86%|████████▋ | 529/612 [1:35:24<05:36,  4.05s/it] 87%|████████▋ | 530/612 [1:35:28<05:24,  3.95s/it]                                                    87%|████████▋ | 530/612 [1:35:28<05:24,  3.95s/it] 87%|████████▋ | 531/612 [1:35:32<05:18,  3.93s/it] 87%|████████▋ | 532/612 [1:35:35<05:05,  3.82s/it] 87%|████████▋ | 533/612 [1:35:39<04:53,  3.72s/it] 87%|████████▋ | 534/612 [1:35:42<04:43,  3.64s/it] 87%|████████▋ | 535/612 [1:35:46<04:33,  3.55s/it] 88%|████████▊ | 536/612 [1:35:49<04:24,  3.49s/it] 88%|████████▊ | 537/612 [1:35:52<04:15,  3.41s/it] 88%|████████▊ | 538/612 [1:35:55<04:06,  3.33s/it] 88%|████████▊ | 539/612 [1:35:58<03:57,  3.26s/it] 88%|████████▊ | 540/612 [1:36:01<03:50,  3.20s/it]                                                    88%|████████▊ | 540/612 [1:36:02<03:50,  3.20s/it] 88%|████████▊ | 541/612 [1:36:05<03:48,  3.22s/it] 89%|████████▊ | 542/612 [1:36:08<03:38,  3.12s/it] 89%|████████▊ | 543/612 [1:36:10<03:29,  3.03s/it] 89%|████████▉ | 544/612 [1:36:13<03:21,  2.97s/it] 89%|████████▉ | 545/612 [1:36:16<03:15,  2.92s/it] 89%|████████▉ | 546/612 [1:36:19<03:09,  2.87s/it] 89%|████████▉ | 547/612 [1:36:21<03:02,  2.81s/it] 90%|████████▉ | 548/612 [1:36:24<02:57,  2.77s/it] 90%|████████▉ | 549/612 [1:36:27<02:52,  2.73s/it] 90%|████████▉ | 550/612 [1:36:29<02:47,  2.70s/it]                                                    90%|████████▉ | 550/612 [1:36:30<02:47,  2.70s/it] 90%|█████████ | 551/612 [1:36:32<02:46,  2.72s/it] 90%|█████████ | 552/612 [1:36:35<02:38,  2.65s/it] 90%|█████████ | 553/612 [1:36:37<02:32,  2.59s/it] 91%|█████████ | 554/612 [1:36:39<02:25,  2.51s/it] 91%|█████████ | 555/612 [1:36:42<02:17,  2.41s/it] 91%|█████████ | 556/612 [1:36:44<02:10,  2.33s/it] 91%|█████████ | 557/612 [1:36:46<02:03,  2.24s/it] 91%|█████████ | 558/612 [1:36:48<01:57,  2.17s/it] 91%|█████████▏| 559/612 [1:36:50<01:50,  2.09s/it] 92%|█████████▏| 560/612 [1:36:51<01:44,  2.00s/it]                                                    92%|█████████▏| 560/612 [1:36:52<01:44,  2.00s/it] 92%|█████████▏| 561/612 [1:37:00<03:16,  3.85s/it] 92%|█████████▏| 562/612 [1:37:07<04:06,  4.94s/it] 92%|█████████▏| 563/612 [1:37:15<04:39,  5.70s/it] 92%|█████████▏| 564/612 [1:37:21<04:40,  5.84s/it] 92%|█████████▏| 565/612 [1:37:26<04:28,  5.72s/it] 92%|█████████▏| 566/612 [1:37:31<04:16,  5.58s/it] 93%|█████████▎| 567/612 [1:37:36<04:02,  5.39s/it] 93%|█████████▎| 568/612 [1:37:41<03:47,  5.16s/it] 93%|█████████▎| 569/612 [1:37:46<03:34,  4.98s/it] 93%|█████████▎| 570/612 [1:37:50<03:23,  4.84s/it]                                                    93%|█████████▎| 570/612 [1:37:50<03:23,  4.84s/it] 93%|█████████▎| 571/612 [1:37:55<03:16,  4.80s/it] 93%|█████████▎| 572/612 [1:37:59<03:06,  4.65s/it] 94%|█████████▎| 573/612 [1:38:03<02:56,  4.52s/it] 94%|█████████▍| 574/612 [1:38:07<02:45,  4.34s/it] 94%|█████████▍| 575/612 [1:38:11<02:36,  4.22s/it] 94%|█████████▍| 576/612 [1:38:15<02:26,  4.08s/it] 94%|█████████▍| 577/612 [1:38:19<02:19,  3.97s/it] 94%|█████████▍| 578/612 [1:38:22<02:11,  3.87s/it] 95%|█████████▍| 579/612 [1:38:26<02:04,  3.77s/it] 95%|█████████▍| 580/612 [1:38:29<01:58,  3.69s/it]                                                    95%|█████████▍| 580/612 [1:38:30<01:58,  3.69s/it] 95%|█████████▍| 581/612 [1:38:33<01:54,  3.70s/it] 95%|█████████▌| 582/612 [1:38:36<01:48,  3.61s/it] 95%|█████████▌| 583/612 [1:38:40<01:42,  3.54s/it] 95%|█████████▌| 584/612 [1:38:43<01:36,  3.46s/it] 96%|█████████▌| 585/612 [1:38:46<01:31,  3.39s/it] 96%|█████████▌| 586/612 [1:38:49<01:25,  3.31s/it] 96%|█████████▌| 587/612 [1:38:53<01:20,  3.24s/it] 96%|█████████▌| 588/612 [1:38:56<01:16,  3.19s/it] 96%|█████████▌| 589/612 [1:38:59<01:12,  3.14s/it] 96%|█████████▋| 590/612 [1:39:02<01:08,  3.09s/it]                                                    96%|█████████▋| 590/612 [1:39:02<01:08,  3.09s/it] 97%|█████████▋| 591/612 [1:39:05<01:05,  3.11s/it] 97%|█████████▋| 592/612 [1:39:08<01:00,  3.03s/it] 97%|█████████▋| 593/612 [1:39:10<00:56,  2.97s/it] 97%|█████████▋| 594/612 [1:39:13<00:52,  2.92s/it] 97%|█████████▋| 595/612 [1:39:16<00:48,  2.86s/it] 97%|█████████▋| 596/612 [1:39:19<00:45,  2.82s/it] 98%|█████████▊| 597/612 [1:39:21<00:41,  2.79s/it] 98%|█████████▊| 598/612 [1:39:24<00:38,  2.75s/it] 98%|█████████▊| 599/612 [1:39:27<00:35,  2.72s/it] 98%|█████████▊| 600/612 [1:39:29<00:32,  2.67s/it]                                                    98%|█████████▊| 600/612 [1:39:30<00:32,  2.67s/it] 98%|█████████▊| 601/612 [1:39:32<00:29,  2.71s/it] 98%|█████████▊| 602/612 [1:39:35<00:26,  2.64s/it] 99%|█████████▊| 603/612 [1:39:37<00:23,  2.58s/it] 99%|█████████▊| 604/612 [1:39:39<00:20,  2.51s/it] 99%|█████████▉| 605/612 [1:39:42<00:16,  2.42s/it] 99%|█████████▉| 606/612 [1:39:44<00:14,  2.35s/it] 99%|█████████▉| 607/612 [1:39:46<00:11,  2.29s/it] 99%|█████████▉| 608/612 [1:39:48<00:08,  2.21s/it]100%|█████████▉| 609/612 [1:39:50<00:06,  2.15s/it]100%|█████████▉| 610/612 [1:39:52<00:04,  2.06s/it]                                                   100%|█████████▉| 610/612 [1:39:52<00:04,  2.06s/it]100%|█████████▉| 611/612 [1:39:57<00:03,  3.12s/it]100%|██████████| 612/612 [1:40:01<00:00,  3.21s/it]/azureml-envs/azureml_b043c50e64867cae7b32edcb1ba49ffc/lib/python3.10/site-packages/bitsandbytes/backends/cuda/ops.py:468: FutureWarning: _check_is_size will be removed in a future PyTorch release along with guard_size_oblivious.     Use _check(i >= 0) instead.
-  torch._check_is_size(blocksize)
