@@ -38,7 +38,7 @@ from config import (
     MIN_REFLECTION_CONFIDENCE,
 )
 from cache.semantic_cache import semantic_cache
-from agents.decomposer import decompose_query, should_decompose
+from agents.decomposer import anchor_to_prior_answer, decompose_query, should_decompose
 from agents.state import AgentState
 from agents.root_cause import analyze_failure
 from agents.healer import apply_healing
@@ -361,11 +361,25 @@ def _run_decomposed(
     intent: str,
     force_model: Optional[str],
 ) -> Dict:
-    """Run each sub-question through its own full loop, then merge."""
+    """
+    Run each sub-question through its own full loop, then merge.
+
+    Sequential, not parallel: sub-question N is anchored to sub-question
+    N-1's answer when it contains an unresolved pronoun (see
+    agents/decomposer.py's anchor_to_prior_answer()), so a dependent chain
+    like "who manages the roadmap team, and what's THEIR vacation policy"
+    resolves "their" via the prior answer instead of retrieving for it
+    literally. The merged result's per-question header still shows the
+    ORIGINAL sub-question text, not the anchored version — the anchor is
+    an internal retrieval/generation aid, not user-facing phrasing.
+    """
     sub_results = []
+    prior_answer = ""
     for sub_query in sub_queries:
-        result = run_reflection_loop(sub_query, store, intent, force_model, _allow_decompose=False)
+        resolved_query = anchor_to_prior_answer(sub_query, prior_answer)
+        result = run_reflection_loop(resolved_query, store, intent, force_model, _allow_decompose=False)
         sub_results.append((sub_query, result))
+        prior_answer = result.get("answer", "")
     return _merge_sub_results(sub_results)
 
 

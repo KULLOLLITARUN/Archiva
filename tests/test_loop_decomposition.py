@@ -165,6 +165,67 @@ def test_run_decomposed_calls_loop_per_subquestion_and_merges(monkeypatch):
     assert merged["reflection_reason"] == "decomposed_2_subquestions"
 
 
+def test_run_decomposed_anchors_dependent_subquestion_to_prior_answer(monkeypatch):
+    calls = []
+
+    def fake_run_reflection_loop(query, store, intent, force_model, _allow_decompose=True):
+        calls.append(query)
+        if "roadmap team" in query:
+            return _result("Priya Shah leads the roadmap team.", ["c1"], confidence=0.9)
+        return _result("Team answer", ["c2"], confidence=0.9)
+
+    monkeypatch.setattr(loop, "run_reflection_loop", fake_run_reflection_loop)
+
+    loop._run_decomposed(
+        ["Who manages the roadmap team?", "What is their vacation policy?"],
+        store=None, intent="qa", force_model=None,
+    )
+
+    assert calls[0] == "Who manages the roadmap team?"
+    # Second call must be anchored to the first call's answer, since it
+    # contains "their" (a reference word) - not the literal sub-question.
+    assert calls[1] == (
+        "What is their vacation policy? "
+        "(referring to: Priya Shah leads the roadmap team.)"
+    )
+
+
+def test_run_decomposed_header_shows_original_subquestion_not_anchored_text(monkeypatch):
+    def fake_run_reflection_loop(query, store, intent, force_model, _allow_decompose=True):
+        return _result("Priya Shah leads it." if "manages" in query else "20 days.", ["c1"], confidence=0.9)
+
+    monkeypatch.setattr(loop, "run_reflection_loop", fake_run_reflection_loop)
+
+    merged = loop._run_decomposed(
+        ["Who manages the roadmap team?", "What is their vacation policy?"],
+        store=None, intent="qa", force_model=None,
+    )
+
+    # The anchor text ("(referring to: ...)") is an internal retrieval aid
+    # and must never leak into the user-facing answer headers.
+    assert "**What is their vacation policy?**" in merged["answer"]
+    assert "(referring to:" not in merged["answer"]
+
+
+def test_run_decomposed_independent_subquestions_are_not_anchored(monkeypatch):
+    calls = []
+
+    def fake_run_reflection_loop(query, store, intent, force_model, _allow_decompose=True):
+        calls.append(query)
+        return _result("some answer", ["c1"], confidence=0.9)
+
+    monkeypatch.setattr(loop, "run_reflection_loop", fake_run_reflection_loop)
+
+    loop._run_decomposed(
+        ["What is the vacation policy?", "What is planned for Q3 2026?"],
+        store=None, intent="qa", force_model=None,
+    )
+
+    # Neither sub-question contains a reference word, so both must run
+    # exactly as written - no anchoring noise added.
+    assert calls == ["What is the vacation policy?", "What is planned for Q3 2026?"]
+
+
 # ── Top-level run_reflection_loop wiring ────────────────────────────────────────
 
 def test_run_reflection_loop_routes_to_decomposition_when_split(monkeypatch):

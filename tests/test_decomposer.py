@@ -4,7 +4,7 @@ behind multi-hop query decomposition."""
 import json
 
 import agents.decomposer as decomposer
-from agents.decomposer import decompose_query, should_decompose
+from agents.decomposer import anchor_to_prior_answer, decompose_query, should_decompose
 
 
 # ── should_decompose (pure, no LLM) ────────────────────────────────────────────
@@ -115,3 +115,53 @@ def test_decompose_query_falls_back_to_original_on_llm_error(monkeypatch):
     monkeypatch.setattr(decomposer.groq_manager, "get_client", _raise)
 
     assert decompose_query("original query") == ["original query"]
+
+
+# ── anchor_to_prior_answer (sequential/dependent decomposition) ────────────────
+
+def test_anchor_appends_prior_answer_when_reference_word_present():
+    result = anchor_to_prior_answer(
+        "What is their vacation policy?",
+        "The roadmap team is led by Priya Shah.",
+    )
+    assert result == (
+        "What is their vacation policy? "
+        "(referring to: The roadmap team is led by Priya Shah.)"
+    )
+
+
+def test_anchor_is_a_noop_without_a_reference_word():
+    # No pronoun at all - genuinely independent sub-question, must not be
+    # anchored just because a prior answer happens to exist.
+    result = anchor_to_prior_answer("What is planned for Q3 2026?", "Some prior answer.")
+    assert result == "What is planned for Q3 2026?"
+
+
+def test_anchor_is_a_noop_on_the_first_subquestion_with_no_prior_answer():
+    result = anchor_to_prior_answer("What is their vacation policy?", "")
+    assert result == "What is their vacation policy?"
+
+
+def test_anchor_does_not_false_trigger_on_this_or_that():
+    # "that"/"this"/"these" are deliberately excluded - too common as
+    # relative-clause/demonstrative words to be a reliable back-reference
+    # signal ("the team THAT manages the roadmap").
+    result = anchor_to_prior_answer(
+        "What is the policy for the team that manages the roadmap?",
+        "Some prior answer.",
+    )
+    assert result == "What is the policy for the team that manages the roadmap?"
+
+
+def test_anchor_matches_whole_words_only():
+    # "it" must not match inside "wait" / "quite" / etc.
+    result = anchor_to_prior_answer("Please wait quietly at the site.", "Some prior answer.")
+    assert result == "Please wait quietly at the site."
+
+
+def test_anchor_catches_they_them_its_variants():
+    prior = "Priya Shah leads the team."
+    assert "(referring to:" in anchor_to_prior_answer("Where do they work?", prior)
+    assert "(referring to:" in anchor_to_prior_answer("How can I contact them?", prior)
+    assert "(referring to:" in anchor_to_prior_answer("What is its main goal?", prior)
+    assert "(referring to:" in anchor_to_prior_answer("What is their budget?", prior)
