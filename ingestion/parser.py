@@ -112,7 +112,6 @@ def parse_pdf(content: bytes, filename: str) -> Iterator[Dict]:
     """
     try:
         from pypdf import PdfReader
-        import io
     except ImportError as exc:
         raise ImportError(
             "pypdf is required for PDF support. Run: pip install pypdf"
@@ -177,7 +176,6 @@ def parse_docx(content: bytes, filename: str) -> List[Dict]:
     """
     try:
         from docx import Document
-        import io
     except ImportError as exc:
         raise ImportError(
             "python-docx is required for DOCX support. Run: pip install python-docx"
