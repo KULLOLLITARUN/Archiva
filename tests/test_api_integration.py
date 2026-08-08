@@ -115,6 +115,12 @@ def test_upload_rejects_unsupported_extension(client):
     assert resp.status_code == 415
 
 
+def test_upload_rejects_file_over_max_upload_bytes(client, monkeypatch):
+    monkeypatch.setattr(main, "MAX_UPLOAD_BYTES", 100)
+    resp = client.post("/upload", files={"file": ("big.txt", b"x" * 200, "text/plain")})
+    assert resp.status_code == 413
+
+
 def test_upload_txt_is_indexed_and_listed(client):
     resp = client.post("/upload", files={"file": ("test.txt", SAMPLE_TXT, "text/plain")})
     assert resp.status_code == 200

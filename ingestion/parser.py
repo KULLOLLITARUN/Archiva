@@ -17,7 +17,9 @@ import io
 import re
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, Iterator, List
+
+from config import MAX_INGEST_CHARS
 
 
 def compute_hash(content: bytes) -> str:
@@ -33,6 +35,22 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
+def _bound_for_ingest(text: str, filename: str) -> str:
+    """
+    Cap text length for single-page formats (.txt/.csv/.html/.docx — anything
+    that isn't naturally paginated) so chunking one huge blob does bounded
+    work regardless of how large the source file is. See MAX_INGEST_CHARS
+    in config.py for why this is separate from the upload-size guard.
+    """
+    if len(text) <= MAX_INGEST_CHARS:
+        return text
+    print(
+        f"  [WARN]  [parser] {filename!r} truncated at {MAX_INGEST_CHARS:,} chars "
+        f"(was {len(text):,}) — only the beginning of the file will be indexed."
+    )
+    return text[:MAX_INGEST_CHARS]
+
+
 # ── TXT ───────────────────────────────────────────────────────────────────────
 
 def parse_txt(content: bytes, filename: str) -> List[Dict]:
@@ -41,16 +59,21 @@ def parse_txt(content: bytes, filename: str) -> List[Dict]:
     Always returns a single page.
     """
     raw = content.decode("utf-8", errors="ignore")
-    cleaned = clean_text(raw)
+    cleaned = clean_text(_bound_for_ingest(raw, filename))
     return [{"page": 1, "text": cleaned}]
 
 
 # ── PDF ───────────────────────────────────────────────────────────────────────
 
-def parse_pdf(content: bytes, filename: str) -> List[Dict]:
+def parse_pdf(content: bytes, filename: str) -> Iterator[Dict]:
     """
-    Parse a PDF file into per-page dicts using pypdf.
-    Each PDF page becomes one element with its 1-based page number.
+    Lazily parse a PDF file into per-page dicts using pypdf, one page at a
+    time. Each PDF page becomes one element with its 1-based page number.
+
+    Yielding instead of building the full list upfront means
+    chunk_document()'s existing MAX_CHUNKS_PER_FILE early-stop actually
+    skips extracting text from pages beyond the cap — for a huge PDF, only
+    the pages that end up needed are ever text-extracted.
     """
     try:
         from pypdf import PdfReader
@@ -61,7 +84,7 @@ def parse_pdf(content: bytes, filename: str) -> List[Dict]:
         ) from exc
 
     reader = PdfReader(io.BytesIO(content))
-    pages = []
+    yielded_any = False
     for i, page in enumerate(reader.pages, start=1):
         raw = ""
         try:
@@ -75,9 +98,11 @@ def parse_pdf(content: bytes, filename: str) -> List[Dict]:
                 pass
         cleaned = clean_text(raw)
         if cleaned:
-            pages.append({"page": i, "text": cleaned})
+            yielded_any = True
+            yield {"page": i, "text": cleaned}
 
-    return pages if pages else [{"page": 1, "text": ""}]
+    if not yielded_any:
+        yield {"page": 1, "text": ""}
 
 
 # ── DOCX ──────────────────────────────────────────────────────────────────────
@@ -107,7 +132,7 @@ def parse_docx(content: bytes, filename: str) -> List[Dict]:
                 elements.append(row_text)
 
     raw = "\n\n".join(elements)
-    cleaned = clean_text(raw)
+    cleaned = clean_text(_bound_for_ingest(raw, filename))
     return [{"page": 1, "text": cleaned}]
 
 
@@ -132,7 +157,7 @@ def parse_csv(content: bytes, filename: str) -> List[Dict]:
     search can match a cell value together with the column it came from
     (rather than as bare comma-separated text).
     """
-    raw = content.decode("utf-8", errors="ignore")
+    raw = _bound_for_ingest(content.decode("utf-8", errors="ignore"), filename)
     rows = list(csv.reader(io.StringIO(raw)))
     if not rows:
         return [{"page": 1, "text": ""}]
@@ -174,7 +199,7 @@ class _TextExtractor(HTMLParser):
 
 def parse_html(content: bytes, filename: str) -> List[Dict]:
     """Parse an HTML file into plain text, stripping tags/scripts/styles."""
-    raw = content.decode("utf-8", errors="ignore")
+    raw = _bound_for_ingest(content.decode("utf-8", errors="ignore"), filename)
     extractor = _TextExtractor()
     extractor.feed(raw)
     cleaned = clean_text("\n".join(extractor.parts))

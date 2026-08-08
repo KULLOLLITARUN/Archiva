@@ -86,6 +86,23 @@ MAX_CHUNK_TOKENS = int(os.getenv("MAX_CHUNK_TOKENS", 300))
 MAX_TOTAL_CHUNKS    = int(os.getenv("MAX_TOTAL_CHUNKS", 5000))
 MAX_CHUNKS_PER_FILE = int(os.getenv("MAX_CHUNKS_PER_FILE", 500))
 
+# ── Large-file guards ─────────────────────────────────────────────────────────
+# Two independent bounds so a huge file costs bounded work, not unbounded:
+#
+# 1. MAX_UPLOAD_BYTES rejects an absurdly large upload outright, in
+#    main.py's /upload handler, before any parsing/chunking/embedding is
+#    attempted on a file we're going to refuse anyway.
+# 2. MAX_INGEST_CHARS bounds how much decoded text a single-page format
+#    (.txt/.csv/.html — anything that isn't naturally paginated like a PDF)
+#    will actually process. Chunking a whole page is not itself lazy
+#    (parent/child building materializes full lists), so without this, one
+#    enormous single-blob file could still do unbounded work even though it
+#    passed the upload-size gate. PDFs don't need this: parse_pdf() yields
+#    pages lazily, so chunk_document()'s existing MAX_CHUNKS_PER_FILE early
+#    stop already skips extracting pages beyond the cap.
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", 50 * 1024 * 1024))   # 50 MB
+MAX_INGEST_CHARS = int(os.getenv("MAX_INGEST_CHARS", 2_000_000))         # ~2M chars
+
 # ── Chunking ──────────────────────────────────────────────────────────────────
 
 CHUNK_SIZE    = 400

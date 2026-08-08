@@ -24,6 +24,7 @@ from slowapi.util import get_remote_address
 # ── Project imports ───────────────────────────────────────────────────────────
 from config import (
     GROQ_FAST, GROQ_STRONG, GROQ_QWEN, UPLOADED_DOCS_DIR, REINGESTION_QUEUE_PATH,
+    MAX_UPLOAD_BYTES,
 )
 from database import (
     init_db,
@@ -331,7 +332,21 @@ async def upload_file(
             detail=f"Unsupported file type '{ext}'. Supported: {', '.join(sorted(SUPPORTED_EXTENSIONS))}",
         )
 
-    content      = await file.read()
+    content = await file.read()
+
+    # Reject oversized uploads before spending any parse/chunk/embed work
+    # on a file we're going to refuse anyway. See config.py's
+    # "Large-file guards" section for why this and MAX_INGEST_CHARS are
+    # two separate bounds.
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                f"File too large ({len(content):,} bytes). "
+                f"Maximum allowed is {MAX_UPLOAD_BYTES:,} bytes."
+            ),
+        )
+
     content_hash = compute_hash(content)
 
     # Duplicate check
@@ -473,6 +488,11 @@ async def reload_docs() -> dict:
             content = filepath.read_bytes()
         except Exception as exc:
             log.append({"file": filename, "status": "error", "msg": str(exc)}); failed += 1; continue
+
+        if len(content) > MAX_UPLOAD_BYTES:
+            log.append({"file": filename, "status": "error",
+                       "msg": f"too large ({len(content):,} bytes, max {MAX_UPLOAD_BYTES:,})"})
+            failed += 1; continue
 
         content_hash = compute_hash(content)
         if content_hash in store.file_hash_map:
