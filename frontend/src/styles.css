@@ -22,10 +22,18 @@
   --border: #e2dacd;
   --border2: #d3c6b0;
 
-  --accent: #8b4a12;
+  /* --accent is a solid BUTTON FILL (Send, "Documents", Reload) — paired
+     with light --on-accent text on top, so it can afford to be a bright,
+     clearly-terracotta color rather than needing to be dark enough to
+     read as text itself. --accent2 stays darker: it's used directly AS
+     text/icon color on the light background in many places (links,
+     source-badge page numbers, etc.), where it needs the extra contrast
+     margin --accent doesn't. (Was #8b4a12 — read as near-black on a
+     button, not as a color, once next to this light a page.) */
+  --accent: #a6551a;
   --accent2: #6b3910;
   --accent-dark: #4a2a0c;
-  --accent-glow: rgba(139, 74, 18, 0.10);
+  --accent-glow: rgba(166, 85, 26, 0.10);
   --green: #3f7350;
   --green-dim: rgba(63, 115, 80, 0.12);
   --green-dark: #2c5439;
@@ -92,7 +100,7 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(139, 74, 18, 0.05), transparent 60%),
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(166, 85, 26, 0.05), transparent 60%),
     radial-gradient(ellipse 700px 500px at 100% 100%, rgba(63, 115, 80, 0.035), transparent 60%);
 }
 
@@ -1042,9 +1050,9 @@ body::before {
 }
 
 .pill--busy {
-  background: rgba(139, 74, 18, 0.12);
+  background: rgba(166, 85, 26, 0.12);
   color: var(--accent2);
-  border: 1px solid rgba(139, 74, 18, 0.3);
+  border: 1px solid rgba(166, 85, 26, 0.3);
   animation: pill-pulse 1.2s ease-in-out infinite;
 }
 
@@ -1610,9 +1618,9 @@ body::before {
 }
 
 .toast--info {
-  background: rgba(139, 74, 18, 0.14);
+  background: rgba(166, 85, 26, 0.14);
   color: var(--accent2);
-  border-color: rgba(139, 74, 18, 0.3);
+  border-color: rgba(166, 85, 26, 0.3);
 }
 
 .toast--err {
@@ -1756,7 +1764,7 @@ body::before {
 
 .ss-prompt-btn:hover:not(:disabled) {
   border-color: var(--accent);
-  background: rgba(139, 74, 18, 0.08);
+  background: rgba(166, 85, 26, 0.08);
 }
 
 .ss-prompt-btn:disabled {

@@ -193,11 +193,6 @@ export default function PlaybookPanel({ isOpen, onClose }) {
               </div>
             </div>
           ))}
-
-          {/* Footer */}
-          <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', padding: '8px 0' }}>
-            {BRAND.name} · {BRAND.sub} · v{BRAND.version}
-          </div>
         </div>
       </aside>
     </>
