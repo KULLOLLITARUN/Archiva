@@ -1,7 +1,7 @@
 """Tests for agents/reflection.py — the deterministic answer-quality checks
 that drive the self-healing loop's retry/refuse decisions."""
 
-from agents.reflection import _numbers_are_grounded, reflect, should_force_strong_model
+from agents.reflection import _has_contradiction, _numbers_are_grounded, reflect, should_force_strong_model
 from config import GROQ_STRONG
 
 WEAK_MODEL = "llama-3.1-8b-instant"
@@ -140,3 +140,64 @@ def test_reflect_accepts_a_verified_table_sum_end_to_end():
     decision = reflect("What are the total costs?", answer, chunks, attempt=0, model_used=WEAK_MODEL)
     assert decision["decision"] == "accept"
     assert decision["valid"] is True
+
+
+# ── _has_contradiction ────────────────────────────────────────────────────────
+# Regression coverage for a real bug found live: an honest, well-hedged answer
+# ("...but does not provide a formal definition...") got flagged as
+# contradicting the source, because the old check only asked "does the ANSWER
+# contain a negation phrase ANYWHERE" with no proximity requirement to the
+# keyword - unlike the chunk-side check, which correctly required the
+# negation to be near the keyword. A topic word that's simply the document's
+# subject (and so appears "positively" many times in the chunk) would then
+# false-positive against an unrelated negation elsewhere in the answer.
+
+AI_ENGINEER_CHUNK = (
+    "An AI engineer designs, builds, and deploys machine learning systems "
+    "in production. The role of an AI engineer includes data pipeline work, "
+    "model training, and MLOps. Many companies now hire an AI engineer to "
+    "bridge research and deployment."
+)
+
+
+def test_honest_hedge_with_unrelated_negation_is_not_a_contradiction():
+    # "does not" is far from "engineer" and negates something else entirely -
+    # this must NOT be flagged, even though "engineer" appears positively
+    # many times in the chunk.
+    answer = (
+        "An AI engineer builds and deploys machine learning systems in "
+        "production, working across the data pipeline and MLOps. The "
+        "document does not provide a single formal dictionary definition "
+        "of the term."
+    )
+    assert _has_contradiction("what is ai engineer", answer, AI_ENGINEER_CHUNK) is False
+
+
+def test_reflect_accepts_honest_hedge_end_to_end():
+    # Full pipeline reproduction of the live bug: this used to come back
+    # "possible_contradiction" / retry_model instead of "accept".
+    chunks = [{"text": AI_ENGINEER_CHUNK}]
+    answer = (
+        "An AI engineer builds and deploys machine learning systems in "
+        "production, working across the data pipeline and MLOps. The "
+        "document does not provide a single formal dictionary definition "
+        "of the term."
+    )
+    decision = reflect("what is ai engineer", answer, chunks, attempt=0, model_used=WEAK_MODEL)
+    assert decision["reason"] != "possible_contradiction"
+    assert decision["decision"] == "accept"
+
+
+def test_genuine_contradiction_is_still_caught():
+    # The keyword IS negated close-by in the answer, and the chunk positively
+    # asserts the same keyword elsewhere - a real contradiction, must still
+    # be flagged.
+    chunk = "The warranty covers accidental damage for the first two years of ownership."
+    answer = "There is no warranty coverage for accidental damage on this product."
+    assert _has_contradiction("warranty accidental damage", answer, chunk) is True
+
+
+def test_no_negation_in_answer_is_never_a_contradiction():
+    chunk = "The warranty covers accidental damage for two years."
+    answer = "The warranty covers accidental damage for two years, per the policy."
+    assert _has_contradiction("warranty accidental damage", answer, chunk) is False
