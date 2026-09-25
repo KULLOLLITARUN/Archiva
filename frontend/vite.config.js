@@ -17,6 +17,11 @@ const BACKEND = silentProxy('http://127.0.0.1:8000')
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.js'],
+    globals: false,
+  },
   server: {
     port: 3000,
     proxy: {
