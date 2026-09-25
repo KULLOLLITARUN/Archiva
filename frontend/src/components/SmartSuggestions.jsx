@@ -58,9 +58,9 @@ export default function SmartSuggestions({ onPromptClick, disabled, dynamicTopic
               className={`ss-chip ${isActive ? 'ss-chip--active' : ''}`}
               style={isActive ? {
                 borderColor: topic.color,
-                color:        topic.color,
-                boxShadow:   `0 0 16px ${glow}`,
-                background:   glow,
+                color: topic.color,
+                boxShadow: `0 0 16px ${glow}`,
+                background: glow,
               } : {}}
               onClick={() => toggleTopic(topic.label)}
               disabled={disabled}

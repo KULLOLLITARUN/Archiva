@@ -63,11 +63,11 @@ export default function Header({ docsInfo, onUploadClick, onPlaybookClick, onAdm
 
       {/* Actions */}
       <div className="header-actions">
-        {/* Admin dashboard button */}
+        {/* Admin dashboard — icon-only: a low-frequency action, doesn't
+            need the same visual weight as Documents (the primary action). */}
         {onAdminClick && (
-          <button className="hdr-btn hdr-btn--admin" onClick={onAdminClick} title="Admin Dashboard">
-            <span className="icon"><Settings size={15} /></span>
-            <span>Admin</span>
+          <button type="button" className="hdr-btn hdr-btn--icon-only" onClick={onAdminClick} title="Admin Dashboard" aria-label="Admin Dashboard">
+            <Settings size={15} />
           </button>
         )}
 

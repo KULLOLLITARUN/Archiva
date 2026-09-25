@@ -272,6 +272,10 @@ body::before {
   align-items: center;
 }
 
+.hdr-btn--icon-only {
+  padding: 8px;
+}
+
 /* ── Chat window ─────────────────────────────────────────── */
 .chat-window {
   flex: 1;
@@ -296,6 +300,77 @@ body::before {
   border-radius: 4px;
 }
 
+/* ── Documents strip ─────────────────────────────────────── */
+/* Always-visible row of loaded files, docked under the header — see
+   DocsStrip.jsx for why this exists instead of hiding files behind the
+   Documents panel until opened. */
+.docs-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.docs-strip-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s var(--trans);
+}
+
+.docs-strip-chip:hover {
+  border-color: var(--accent2);
+  color: var(--text);
+}
+
+.docs-strip-chip-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docs-strip-chip-count {
+  background: var(--bg3);
+  color: var(--text3);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.docs-strip-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px dashed var(--border2);
+  border-radius: 999px;
+  padding: 5px 12px;
+  color: var(--text3);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s var(--trans);
+}
+
+.docs-strip-add:hover {
+  border-color: var(--accent);
+  color: var(--accent2);
+}
+
 /* ── Welcome / empty state ───────────────────────────────── */
 .welcome {
   flex: 1;
@@ -304,7 +379,7 @@ body::before {
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 26px;
+  gap: 20px;
   animation: fade-up 0.5s var(--trans) both;
 }
 
@@ -321,11 +396,11 @@ body::before {
 }
 
 .welcome-orb {
-  width: 64px;
-  height: 64px;
+  width: 44px;
+  height: 44px;
   background: var(--surface);
   border: 1px solid var(--border2);
-  border-radius: 18px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -334,45 +409,45 @@ body::before {
 
 .welcome h1 {
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 23px;
   font-weight: 600;
   color: var(--text);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 
 .welcome p {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text2);
   max-width: 380px;
-  line-height: 1.65;
-  margin-top: 10px;
+  line-height: 1.6;
+  margin-top: 8px;
 }
 
 .suggestions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
   max-width: 560px;
 }
 
-.suggestion-btn {
+.suggestion-chip {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 7px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  text-align: left;
+  border-radius: 999px;
+  padding: 7px 14px;
   cursor: pointer;
   color: var(--text2);
   font-size: 13px;
-  line-height: 1.5;
-  transition: all 0.2s var(--trans);
+  font-weight: 500;
+  transition: all 0.15s var(--trans);
 }
 
-.suggestion-btn:hover {
+.suggestion-chip:hover {
   border-color: var(--accent);
   color: var(--text);
   background: var(--surface2);
@@ -381,7 +456,6 @@ body::before {
 .suggestion-icon {
   display: flex;
   flex-shrink: 0;
-  margin-top: 1px;
   color: var(--accent2);
 }
 
@@ -1812,7 +1886,8 @@ body::before {
   }
 
   .suggestions {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .header-tagline {

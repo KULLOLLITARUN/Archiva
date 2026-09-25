@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Header          from './components/Header.jsx'
+import DocsStrip       from './components/DocsStrip.jsx'
 import ChatWindow      from './components/ChatWindow.jsx'
 import InputBar        from './components/InputBar.jsx'
 import UploadPanel     from './components/UploadPanel.jsx'
@@ -182,6 +183,7 @@ export default function App() {
           backendStatus={backendStatus}
         />
 
+        <DocsStrip docsInfo={docsInfo} onManage={openPanel} />
 
         <ChatWindow
           messages={messages}
@@ -189,6 +191,7 @@ export default function App() {
           streamStatus={streamStatus}
           onSuggestionClick={handleSend}
           dynamicTopics={dynTopics}
+          hasDocs={docsInfo.total_files > 0}
         />
         <InputBar
           onSend={handleSend}

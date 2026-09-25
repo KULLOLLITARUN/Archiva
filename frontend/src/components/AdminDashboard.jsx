@@ -16,9 +16,9 @@ import {
 const TABS = ['Overview', 'Documents']
 
 export default function AdminDashboard({ onClose }) {
-  const [tab,   setTab]   = useState('Overview')
-  const [data,  setData]  = useState({})
-  const [busy,  setBusy]  = useState(false)
+  const [tab, setTab] = useState('Overview')
+  const [data, setData] = useState({})
+  const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState('')
 
   function showToast(msg) {
@@ -101,11 +101,11 @@ export default function AdminDashboard({ onClose }) {
                 <>
                   <div className="admin-stat-grid">
                     {[
-                      { label: 'Total Documents', value: data.stats.total_docs,    icon: <FileText size={20} />,     color: 'var(--green)'   },
-                      { label: 'Total Chunks',    value: data.stats.total_chunks,  icon: <Puzzle size={20} />,       color: 'var(--yellow)'  },
-                      { label: 'Total Queries',   value: data.stats.total_queries, icon: <MessageCircle size={20} />, color: 'var(--orange)'  },
-                      { label: 'Success Rate',    value: `${data.stats.success_rate}%`, icon: <CheckCircle2 size={20} />, color: 'var(--green)' },
-                      { label: 'Live Chunks',     value: data.stats.store_chunks,  icon: <Database size={20} />,     color: 'var(--accent)'  },
+                      { label: 'Total Documents', value: data.stats.total_docs, icon: <FileText size={20} />, color: 'var(--green)' },
+                      { label: 'Total Chunks', value: data.stats.total_chunks, icon: <Puzzle size={20} />, color: 'var(--yellow)' },
+                      { label: 'Total Queries', value: data.stats.total_queries, icon: <MessageCircle size={20} />, color: 'var(--orange)' },
+                      { label: 'Success Rate', value: `${data.stats.success_rate}%`, icon: <CheckCircle2 size={20} />, color: 'var(--green)' },
+                      { label: 'Live Chunks', value: data.stats.store_chunks, icon: <Database size={20} />, color: 'var(--accent)' },
                     ].map(s => (
                       <div className="admin-stat-card" key={s.label}>
                         <span className="admin-stat-icon">{s.icon}</span>

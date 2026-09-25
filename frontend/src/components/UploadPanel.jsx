@@ -27,11 +27,11 @@ function fileIcon() {
 
 function StatusPill({ status }) {
   const map = {
-    ok:        { label: 'indexed',   cls: 'pill--ok'   },
+    ok: { label: 'indexed', cls: 'pill--ok' },
     duplicate: { label: 'duplicate', cls: 'pill--skip' },
     uploading: { label: 'uploading', cls: 'pill--busy' },
-    error:     { label: 'error',     cls: 'pill--err'  },
-    limit:     { label: 'limit',     cls: 'pill--err'  },
+    error: { label: 'error', cls: 'pill--err' },
+    limit: { label: 'limit', cls: 'pill--err' },
   }
   const { label, cls } = map[status] || { label: status, cls: '' }
   return <span className={`up-pill ${cls}`}>{label}</span>
@@ -55,15 +55,15 @@ function Toast({ toasts }) {
 export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, onDocsChanged }) {
   const { files = [], total_files = 0, total_chunks = 0 } = docsInfo
 
-  const [uploads, setUploads]       = useState([])   // { name, status, chunks, msg }
-  const [dragging, setDragging]     = useState(false)
-  const [reloading, setReloading]   = useState(false)
-  const [reloadLog, setReloadLog]   = useState(null)
-  const [clearing,  setClearing]    = useState(false)  // clear-all in progress
+  const [uploads, setUploads] = useState([])   // { name, status, chunks, msg }
+  const [dragging, setDragging] = useState(false)
+  const [reloading, setReloading] = useState(false)
+  const [reloadLog, setReloadLog] = useState(null)
+  const [clearing, setClearing] = useState(false)  // clear-all in progress
   const [confirmClear, setConfirmClear] = useState(false) // show confirm step
-  const [toasts, setToasts]         = useState([])
-  const fileInputRef                = useRef(null)
-  const toastCounter                = useRef(0)
+  const [toasts, setToasts] = useState([])
+  const fileInputRef = useRef(null)
+  const toastCounter = useRef(0)
 
   /** Show an auto-dismissing toast */
   const toast = useCallback((msg, type = 'ok') => {
