@@ -48,7 +48,14 @@ _NUMBER_PATTERN: re.Pattern = re.compile(r"\b\d[\d,\.%/-]*\b")
 _FT_RETRIEVAL     = "RETRIEVAL_FAILURE"
 _FT_INSUFFICIENT  = "INSUFFICIENT_CONTEXT"
 _FT_HALLUCINATION = "HALLUCINATION"
-_FT_OUTDATED      = "OUTDATED_DATA"
+_FT_OUTDATED      = "OUTDATED_DATA"  # kept for the root_cause.py mapping table;
+                                      # _map_failure_type() below never returns
+                                      # it — staleness isn't derivable from a
+                                      # query/answer/chunks alone the way the
+                                      # other failure types are, so REINGEST is
+                                      # operator-triggered only, not reflected
+                                      # into automatically. See main.py's
+                                      # GET /admin/reingestion-queue docstring.
 _FT_FORMAT        = "FORMAT_ERROR"
 _FT_UNKNOWN       = "UNKNOWN"
 

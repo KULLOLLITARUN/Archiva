@@ -63,11 +63,17 @@ Reflection (deterministic: overlap ratio, number-grounding, contradiction
         │
         ▼
    Self-Healing Loop (root_cause → healer)
-     REWRITE_QUERY | INCREASE_TOP_K | STRICT_PROMPT | REINGEST
+     REWRITE_QUERY | INCREASE_TOP_K | STRICT_PROMPT | REINGEST*
         │
         └── retry (up to MAX_REFLECTION_ATTEMPTS), optionally escalating
             to the strong model, optionally consulting an LLM faithfulness
             judge on borderline-confidence answers
+
+   * REINGEST is the one action reflection never triggers automatically —
+     staleness isn't derivable from a query/answer/chunks the way the other
+     three failure types are. It's reachable only by an operator (or a
+     future signal source) writing OUTDATED_DATA as the failure_reason;
+     see agents/reflection.py's _map_failure_type().
    │
    ▼
 Validator → Response + Sources

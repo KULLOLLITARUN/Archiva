@@ -126,6 +126,13 @@ SEMANTIC_CACHE_THRESHOLD = float(os.getenv("SEMANTIC_CACHE_THRESHOLD", 0.97))
 # Maximum number of (query, result) pairs to keep in memory.
 SEMANTIC_CACHE_MAX_SIZE  = int(os.getenv("SEMANTIC_CACHE_MAX_SIZE", 200))
 
+# ── Suggestions retrieval-gate ────────────────────────────────────────────────
+# GET /suggestions runs a lightweight retrieve+rerank for each LLM-proposed
+# prompt and drops any whose best cross-encoder score is below this threshold,
+# so the UI never surfaces a question the store can't actually answer.
+SUGGESTION_MIN_SCORE = float(os.getenv("SUGGESTION_MIN_SCORE", -5.0))
+SUGGESTION_CE_TOP_N   = int(os.getenv("SUGGESTION_CE_TOP_N", 5))
+
 # ── Router ────────────────────────────────────────────────────────────────────
 
 ROUTER_LONG_QUERY = 20

@@ -23,7 +23,7 @@ from slowapi.util import get_remote_address
 # ── Project imports ───────────────────────────────────────────────────────────
 from config import (
     GROQ_FAST, GROQ_STRONG, GROQ_QWEN, UPLOADED_DOCS_DIR, REINGESTION_QUEUE_PATH,
-    MAX_UPLOAD_BYTES,
+    MAX_UPLOAD_BYTES, SUGGESTION_MIN_SCORE, SUGGESTION_CE_TOP_N,
 )
 from db.postgres import (
     init_db,
@@ -617,7 +617,45 @@ async def get_suggestions() -> dict:
                 continue
             clean.append({"label": label, "icon": icon, "color": color, "prompts": prompts})
 
-        return {"topics": clean, "generated": True}
+        # ── Retrieval-gate: drop any prompt the store can't answer ───────────
+        # Run a lightweight retrieve+rerank for each suggested question and
+        # discard any whose best cross-encoder score is below the threshold.
+        # This prevents the UI from surfacing a question that the LLM will
+        # inevitably answer with "Not found in the document."
+        #
+        # Each check does real retrieval + cross-encoder inference (both
+        # CPU-bound and synchronous) — up to 16 of them here (4 topics x 4
+        # prompts). Run the whole batch in the executor, same as /chat does
+        # for run_reflection_loop, so this doesn't stall the event loop for
+        # every other concurrent request.
+        from retrieval.search import hybrid_retrieve
+        from retrieval.reranker import rerank as _rerank
+
+        def _prompt_is_answerable(question: str) -> bool:
+            try:
+                candidates = hybrid_retrieve(question, store, top_k=SUGGESTION_CE_TOP_N)
+                if not candidates:
+                    return False
+                ranked = _rerank(candidates, query=question, final_k=SUGGESTION_CE_TOP_N)
+                if not ranked:
+                    return False
+                best_score = ranked[0].get("reranker_score", ranked[0].get("score", -99.0))
+                return best_score >= SUGGESTION_MIN_SCORE
+            except Exception:
+                return True   # fail open — keep the prompt if check errors
+
+        def _validate_topics() -> list:
+            validated = []
+            for topic in clean:
+                good_prompts = [p for p in topic["prompts"] if _prompt_is_answerable(p)]
+                if good_prompts:
+                    validated.append({**topic, "prompts": good_prompts})
+            return validated
+
+        event_loop = asyncio.get_event_loop()
+        validated = await event_loop.run_in_executor(None, _validate_topics)
+
+        return {"topics": validated, "generated": True}
 
     except Exception as exc:
         return {"topics": [], "generated": False, "message": str(exc)}
@@ -654,7 +692,14 @@ async def admin_list_documents():
 async def admin_reingestion_queue(clear: bool = False):
     """
     Return all entries in the healer reingestion signal queue.
-    These are queries where the system detected OUTDATED_DATA failure.
+
+    Queueing is operator-driven, not automatic: nothing in the live
+    reflection pipeline currently detects "this data is stale" from a
+    query/answer/chunks alone (unlike the other failure types, staleness
+    needs an external signal reflection doesn't have) — see
+    agents/reflection.py's _map_failure_type() docstring. An operator (or
+    a future signal source) queues an entry by writing OUTDATED_DATA as
+    the failure_reason via agents/healer.py's REINGEST action.
     Pass ?clear=true to flush the queue after reading.
     """
     import json as _json
