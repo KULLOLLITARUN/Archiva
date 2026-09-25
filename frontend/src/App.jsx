@@ -45,7 +45,12 @@ export default function App() {
 
   const refreshSuggestions = useCallback(() => {
     apiGetSuggestions()
-      .then(data => { if (data.generated) setDynTopics(data.topics) })
+      // Always sync from the response, even when generated is false (e.g.
+      // the store is now empty after a delete) — gating this on `generated`
+      // meant deleting all documents left the old topic pills stuck on
+      // screen forever, since there was never a fresh `true` response to
+      // replace them with.
+      .then(data => setDynTopics(data.topics || []))
       .catch(() => {})
   }, [])
 
@@ -170,6 +175,7 @@ export default function App() {
       {showAdmin && (
         <AdminDashboard
           onClose={() => setShowAdmin(false)}
+          onDocsChanged={() => { refreshDocs(); refreshSuggestions() }}
         />
       )}
 

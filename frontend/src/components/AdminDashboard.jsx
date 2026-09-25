@@ -15,7 +15,7 @@ import {
 
 const TABS = ['Overview', 'Documents']
 
-export default function AdminDashboard({ onClose }) {
+export default function AdminDashboard({ onClose, onDocsChanged }) {
   const [tab, setTab] = useState('Overview')
   const [data, setData] = useState({})
   const [busy, setBusy] = useState(false)
@@ -52,6 +52,11 @@ export default function AdminDashboard({ onClose }) {
       await adminDeleteDocument(id)
       showToast('Document deleted.')
       fetchTab('Documents')
+      // Admin-panel deletes bypass UploadPanel's onDocsChanged path entirely —
+      // without this, the header pill / DocsStrip / Smart Suggestions on the
+      // main chat page stay stale (showing the deleted file) until something
+      // else happens to trigger a refresh, e.g. a full page reload.
+      onDocsChanged?.()
     } catch (e) { showToast(`Error: ${e.message}`) }
   }
 
@@ -61,6 +66,7 @@ export default function AdminDashboard({ onClose }) {
       const res = await adminDeleteAllDocuments()
       showToast(`Deleted ${res.count} documents.`)
       fetchTab('Documents')
+      onDocsChanged?.()
     } catch (e) { showToast(`Error: ${e.message}`) }
   }
 
