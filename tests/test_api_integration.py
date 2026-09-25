@@ -194,6 +194,23 @@ def test_clear_all_documents(client):
     assert client.get("/docs-loaded").json()["total_files"] == 0
 
 
+def test_clear_all_documents_is_rate_limited(client):
+    # This is the single most destructive endpoint in an otherwise
+    # no-auth app — @limiter.limit("5/minute") is the only thing
+    # standing between "reachable" and "repeatedly wipeable". Prove the
+    # decorator actually rejects the 6th call, not just that it's present.
+    #
+    # slowapi's in-memory counters live on the module-level `limiter`
+    # singleton, not on the TestClient/app lifespan — they persist across
+    # tests in the same process (unlike the Postgres tables, which the
+    # `client` fixture truncates). Reset explicitly so this test's result
+    # doesn't depend on how much quota earlier tests already spent.
+    main.limiter.reset()
+    responses = [client.delete("/documents/clear-all") for _ in range(6)]
+    assert [r.status_code for r in responses[:5]] == [200] * 5
+    assert responses[5].status_code == 429
+
+
 # ── Admin / reingestion queue ────────────────────────────────────────────────────
 
 def test_admin_reingestion_queue_is_empty_by_default(client):
@@ -216,6 +233,65 @@ def test_admin_list_documents(client):
     assert resp.status_code == 200
     filenames = [d["filename"] for d in resp.json()["documents"]]
     assert "test.txt" in filenames
+
+
+# ── Suggestions cache ──────────────────────────────────────────────────────────
+# GET /suggestions is expensive (one LLM call + up to 16 retrieval/rerank
+# checks); main.py caches the last result keyed by a fingerprint of the
+# loaded file IDs so an unchanged doc set is served without re-hitting the
+# LLM. call_groq and the retrieval-gate helpers are mocked here so these
+# tests don't need a live Groq key or the real ML models.
+
+_TOPICS_JSON = (
+    '[{"label": "Policy", "icon": "\\ud83d\\udcc4", "color": "#8b4a12", '
+    '"prompts": ["what is the notice period?", "who approves leave?", '
+    '"how many sick days?", "what is the remote policy?"]}]'
+)
+
+
+@pytest.fixture(autouse=True)
+def _mock_suggestion_dependencies(monkeypatch):
+    main.limiter.reset()
+    calls = {"count": 0}
+
+    def _fake_call_groq(model_id, prompt, query):
+        calls["count"] += 1
+        return _TOPICS_JSON
+
+    monkeypatch.setattr(main, "call_groq", _fake_call_groq)
+    monkeypatch.setattr("retrieval.search.hybrid_retrieve", lambda q, store, top_k=5: [{"text": q, "score": 1.0}])
+    monkeypatch.setattr("retrieval.reranker.rerank", lambda results, query="", final_k=5: results)
+    return calls
+
+
+def test_suggestions_calls_llm_once_then_serves_cache_for_unchanged_docs(client, _mock_suggestion_dependencies):
+    client.post("/upload", files={"file": ("test.txt", SAMPLE_TXT, "text/plain")})
+
+    first = client.get("/suggestions")
+    second = client.get("/suggestions")
+
+    assert first.status_code == second.status_code == 200
+    assert first.json() == second.json()
+    assert first.json()["generated"] is True
+    assert _mock_suggestion_dependencies["count"] == 1  # second call was a cache hit
+
+
+def test_suggestions_cache_misses_after_doc_set_changes(client, _mock_suggestion_dependencies):
+    client.post("/upload", files={"file": ("test.txt", SAMPLE_TXT, "text/plain")})
+    client.get("/suggestions")
+
+    client.post("/upload", files={"file": ("second.txt", b"unrelated other content here", "text/plain")})
+    client.get("/suggestions")
+
+    assert _mock_suggestion_dependencies["count"] == 2  # doc set changed -> fresh generation each time
+
+
+def test_suggestions_empty_store_returns_not_generated(client):
+    resp = client.get("/suggestions")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body == {"topics": [], "generated": False,
+                     "message": "Upload documents to get suggestions."}
 
 
 # ── Stats ────────────────────────────────────────────────────────────────────────

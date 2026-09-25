@@ -18,7 +18,7 @@ from typing import List, Optional
 
 from groq import Groq
 
-from config import GROQ_API_KEYS
+from config import GROQ_API_KEYS, GROQ_REQUEST_TIMEOUT_S
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -90,9 +90,16 @@ class GroqKeyManager:
         """
         Return ``(api_key, Groq_client)`` for the next healthy key.
         The caller should pass the key to ``mark_failed()`` on error.
+
+        timeout=GROQ_REQUEST_TIMEOUT_S bounds a single HTTP call so a
+        stalled connection can't hang indefinitely. max_retries=0 disables
+        the SDK's own internal retry-on-error — callers (agents/worker.py's
+        call_groq()) already implement retry + key rotation on top of this
+        client, so leaving the SDK's default retries on top would silently
+        multiply attempts without that logic knowing about it.
         """
         key = self.get_key()
-        return key, Groq(api_key=key)
+        return key, Groq(api_key=key, timeout=GROQ_REQUEST_TIMEOUT_S, max_retries=0)
 
     def healthy_count(self) -> int:
         """Return the number of currently healthy (non-blacklisted) keys."""

@@ -3,9 +3,15 @@ from typing import Dict
 
 from groq import Groq
 
-from config import GROQ_API_KEY, GROQ_QWEN, BLOCK_PATTERNS, AMBIGUITY_TRIGGERS
+from config import (
+    GROQ_API_KEY, GROQ_QWEN, BLOCK_PATTERNS, AMBIGUITY_TRIGGERS,
+    GROQ_REQUEST_TIMEOUT_S,
+)
 
-_client = Groq(api_key=GROQ_API_KEY)
+# timeout + max_retries=0: same reasoning as llm/groq_manager.py's
+# get_client() — bound a single HTTP call and avoid the SDK's own retry
+# silently stacking with the query-level fail-open handling below.
+_client = Groq(api_key=GROQ_API_KEY, timeout=GROQ_REQUEST_TIMEOUT_S, max_retries=0)
 
 
 def check_regex(query: str) -> bool:

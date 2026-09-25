@@ -27,6 +27,23 @@ GROQ_FAST   = os.getenv("GROQ_FAST",   "llama-3.1-8b-instant")
 GROQ_STRONG = os.getenv("GROQ_STRONG", "llama-3.3-70b-versatile")
 GROQ_QWEN   = os.getenv("GROQ_QWEN",   "llama-3.3-70b-versatile")  # override with Qwen if available on your plan
 
+# Per-HTTP-call ceiling (connect+read) on the Groq client itself — bounds a
+# single network call so a stalled connection can't hang indefinitely.
+# The SDK's own max_retries is set to 0 wherever this client is built
+# (llm/groq_manager.py): agents/worker.py already implements its own
+# retry/key-rotation loop (_MAX_RETRIES), so leaving the SDK's default
+# retries on top would silently multiply attempts (and worst-case latency)
+# without worker.py's logic knowing about it.
+GROQ_REQUEST_TIMEOUT_S = float(os.getenv("GROQ_REQUEST_TIMEOUT_S", 30.0))
+
+# Ceiling on a single /chat or /chat/stream request's retrieve->generate->
+# reflect->heal pipeline (run off the event loop via run_in_executor). This
+# doesn't stop the underlying thread — Python threads can't be forcibly
+# killed — but it bounds how long the HTTP response can be held open, so
+# one stuck request can't hang a client (or, via slow-loris-style repeated
+# calls, exhaust the executor's thread pool) forever.
+CHAT_REQUEST_TIMEOUT_S = float(os.getenv("CHAT_REQUEST_TIMEOUT_S", 60.0))
+
 # ── BM25 Retrieval ────────────────────────────────────────────────────────────
 
 # Minimum BM25 score to return a result.

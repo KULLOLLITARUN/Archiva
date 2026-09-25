@@ -23,7 +23,7 @@ from slowapi.util import get_remote_address
 # ── Project imports ───────────────────────────────────────────────────────────
 from config import (
     GROQ_FAST, GROQ_STRONG, GROQ_QWEN, UPLOADED_DOCS_DIR, REINGESTION_QUEUE_PATH,
-    MAX_UPLOAD_BYTES, SUGGESTION_MIN_SCORE, SUGGESTION_CE_TOP_N,
+    MAX_UPLOAD_BYTES, SUGGESTION_MIN_SCORE, SUGGESTION_CE_TOP_N, CHAT_REQUEST_TIMEOUT_S,
 )
 from db.postgres import (
     init_db,
@@ -56,6 +56,20 @@ limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 store = MultiDocStore()
 memory = ConversationMemory()
+
+# GET /suggestions is expensive — one LLM call plus up to 16 retrieval+rerank
+# checks — but every browser reload and every upload/delete re-fetches it even
+# when the loaded document set hasn't actually changed. Cache the last result
+# keyed by a fingerprint of the loaded file IDs: any real doc-set change
+# (upload, delete, clear-all, reload) changes the fingerprint and produces a
+# natural cache miss, so there's no separate invalidation path to keep in
+# sync across endpoints. Single slot, not an LRU map — this is a single-
+# process, single-tenant app, so there's only ever one "current" doc set.
+_suggestions_cache: dict = {"fingerprint": None, "result": None}
+
+
+def _suggestions_fingerprint() -> str:
+    return ",".join(sorted(store.files.keys()))
 
 
 @asynccontextmanager
@@ -106,6 +120,54 @@ def _build_sources(chunks: list) -> list:
         }
         for c in chunks
     ]
+
+
+def _sample_for_suggestions(all_chunks: list, total: int = 30) -> list:
+    """
+    Select up to `total` chunks to seed the /suggestions prompt: balanced
+    across files, and within each file spread evenly across its full length
+    rather than just its first few chunks.
+
+    The old version round-robinned files but walked each file's chunk list
+    front-to-back, so for a small number of large documents it only ever
+    sampled their opening chunks — a 40-page handbook's suggestions would
+    skew entirely toward whatever's on page 1, never seeing its later
+    sections. Picking evenly-spaced indices per file fixes that while
+    keeping the same per-file balance.
+    """
+    by_file: dict = {}
+    for c in all_chunks:
+        fid = c["metadata"].get("file_id", "x")
+        by_file.setdefault(fid, []).append(c)
+
+    if not by_file:
+        return []
+
+    per_file = max(1, total // len(by_file))
+
+    def _evenly_spaced(chunks: list, k: int) -> list:
+        n = len(chunks)
+        if n <= k:
+            return chunks
+        return [chunks[i * n // k] for i in range(k)]
+
+    per_file_samples = [_evenly_spaced(chunks, per_file) for chunks in by_file.values()]
+
+    # Round-robin interleave across files so no single document dominates
+    # the sample just for having more chunks.
+    interleaved = []
+    iters = [iter(v) for v in per_file_samples]
+    while iters:
+        next_iters = []
+        for it in iters:
+            try:
+                interleaved.append(next(it))
+                next_iters.append(it)
+            except StopIteration:
+                pass
+        iters = next_iters
+
+    return interleaved[:total]
 
 
 def _build_log_payload(request_id, query, safety, loop_result, intent, elapsed, flagged):
@@ -164,9 +226,24 @@ async def chat(
             latency_ms=elapsed, flagged=False,
         )
 
-    loop_result = await event_loop.run_in_executor(
-        None, run_reflection_loop, query, store, intent, None,
-    )
+    try:
+        loop_result = await asyncio.wait_for(
+            event_loop.run_in_executor(None, run_reflection_loop, query, store, intent, None),
+            timeout=CHAT_REQUEST_TIMEOUT_S,
+        )
+    except asyncio.TimeoutError:
+        # Note: this bounds the HTTP response, not the underlying thread —
+        # Python threads can't be forcibly killed, so the reflection loop
+        # keeps running in the executor's thread pool until it naturally
+        # finishes. This still achieves the goal (the caller isn't left
+        # hanging, and a single stuck request can't hold this connection
+        # open forever); it just isn't true cancellation.
+        elapsed = int((time.time() - t_start) * 1000)
+        return ChatResponse(
+            answer="Request timed out. Please try again.",
+            sources=[], intent=intent, model_used="none",
+            latency_ms=elapsed, flagged=False,
+        )
 
     answer     = loop_result["answer"]
     top_chunks = loop_result["chunks"]
@@ -241,9 +318,16 @@ async def chat_stream(
         return StreamingResponse(_error_stream("No documents loaded. Upload a document first."),
                                  media_type="text/event-stream")
 
-    loop_result = await event_loop.run_in_executor(
-        None, run_reflection_loop, query, store, intent, None,
-    )
+    try:
+        loop_result = await asyncio.wait_for(
+            event_loop.run_in_executor(None, run_reflection_loop, query, store, intent, None),
+            timeout=CHAT_REQUEST_TIMEOUT_S,
+        )
+    except asyncio.TimeoutError:
+        # See /chat's identical try/except for why this bounds the response,
+        # not the underlying executor thread.
+        return StreamingResponse(_error_stream("Request timed out. Please try again."),
+                                 media_type="text/event-stream")
 
     answer     = loop_result["answer"]
     top_chunks = loop_result["chunks"]
@@ -402,7 +486,8 @@ async def upload_file(
 
 
 @app.delete("/files/{file_id}", response_model=DeleteResponse)
-async def delete_file(file_id: str) -> DeleteResponse:
+@limiter.limit("20/minute")
+async def delete_file(request: Request, file_id: str) -> DeleteResponse:
     doc = db_get_document(file_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="File not found.")
@@ -453,7 +538,8 @@ async def docs_loaded() -> DocsLoadedResponse:
 
 
 @app.post("/reload")
-async def reload_docs() -> dict:
+@limiter.limit("5/minute")
+async def reload_docs(request: Request) -> dict:
     """Re-index all files in test_docs/."""
     from pathlib import Path
 
@@ -520,7 +606,8 @@ async def reload_docs() -> dict:
 # ── Dynamic Suggestions Agent ─────────────────────────────────────────────────
 
 @app.get("/suggestions", tags=["suggestions"])
-async def get_suggestions() -> dict:
+@limiter.limit("10/minute")
+async def get_suggestions(request: Request) -> dict:
     """
     Analyses uploaded document chunks and generates structured topic cards.
     """
@@ -530,23 +617,11 @@ async def get_suggestions() -> dict:
         return {"topics": [], "generated": False,
                 "message": "Upload documents to get suggestions."}
 
-    all_chunks = store.get_all_chunks()
-    by_file: dict = {}
-    for c in all_chunks:
-        fid = c["metadata"].get("file_id", "x")
-        by_file.setdefault(fid, []).append(c)
-    interleaved = []
-    iters = [iter(v) for v in by_file.values()]
-    while iters:
-        next_iters = []
-        for it in iters:
-            try:
-                interleaved.append(next(it))
-                next_iters.append(it)
-            except StopIteration:
-                pass
-        iters = next_iters
-    sample_chunks = interleaved[:30]
+    fingerprint = _suggestions_fingerprint()
+    if _suggestions_cache["fingerprint"] == fingerprint and _suggestions_cache["result"] is not None:
+        return _suggestions_cache["result"]
+
+    sample_chunks = _sample_for_suggestions(store.get_all_chunks(), total=30)
 
     sample_text = "\n\n".join(
         f"[{c['metadata']['filename']} p{c['metadata'].get('page',1)}]: {c['text'][:400]}"
@@ -581,13 +656,21 @@ async def get_suggestions() -> dict:
     def _call_suggestions(model_id: str) -> str:
         return call_groq(model_id, f"{system_prompt}\n\n{user_msg}", "")
 
-    try:
+    def _generate_topics_raw() -> str:
         # Try preferred Qwen model first; fall back to GROQ_STRONG if unavailable
         try:
-            raw = _call_suggestions(GROQ_QWEN)
+            return _call_suggestions(GROQ_QWEN)
         except Exception as qwen_err:
             print(f"  [WARN]  [suggestions] {GROQ_QWEN} failed ({qwen_err}) -- falling back to {GROQ_STRONG}")
-            raw = _call_suggestions(GROQ_STRONG)
+            return _call_suggestions(GROQ_STRONG)
+
+    event_loop = asyncio.get_event_loop()
+
+    try:
+        # Same reasoning as the retrieval-gate below: call_groq() is a
+        # blocking network call — run it off the event loop so one slow
+        # /suggestions request can't stall every other concurrent request.
+        raw = await event_loop.run_in_executor(None, _generate_topics_raw)
 
         raw = _re.sub(r"```(?:json)?|```", "", raw).strip()
         match = _re.search(r'\[.*\]', raw, _re.DOTALL)
@@ -652,10 +735,15 @@ async def get_suggestions() -> dict:
                     validated.append({**topic, "prompts": good_prompts})
             return validated
 
-        event_loop = asyncio.get_event_loop()
         validated = await event_loop.run_in_executor(None, _validate_topics)
 
-        return {"topics": validated, "generated": True}
+        result = {"topics": validated, "generated": True}
+        # Only cache real successes — a transient LLM/parse failure above
+        # returns early without reaching here, so it's naturally retried on
+        # the next call instead of getting stuck cached.
+        _suggestions_cache["fingerprint"] = fingerprint
+        _suggestions_cache["result"] = result
+        return result
 
     except Exception as exc:
         return {"topics": [], "generated": False, "message": str(exc)}
@@ -730,7 +818,8 @@ async def admin_reingestion_queue(clear: bool = False):
 
 
 @app.post("/admin/reingestion-queue/process", tags=["admin"])
-async def admin_process_reingestion_queue() -> dict:
+@limiter.limit("5/minute")
+async def admin_process_reingestion_queue(request: Request) -> dict:
     """
     Consume the reingestion signal queue: re-parse + re-chunk every active
     document from its persisted upload (see ingestion/reingest.py), replace
@@ -784,7 +873,8 @@ async def admin_stats():
 
 
 @app.delete("/admin/documents/{doc_id}", tags=["admin"])
-async def admin_delete_document(doc_id: str):
+@limiter.limit("20/minute")
+async def admin_delete_document(request: Request, doc_id: str):
     doc = db_get_document(doc_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="Document not found.")
@@ -799,13 +889,15 @@ async def admin_delete_document(doc_id: str):
 
 
 @app.delete("/admin/bulk-delete/documents", tags=["admin"])
-async def admin_delete_all_documents():
+@limiter.limit("5/minute")
+async def admin_delete_all_documents(request: Request):
     """Alias for DELETE /documents/clear-all — prefer that endpoint."""
-    return await clear_all_documents()
+    return await clear_all_documents(request)
 
 
 @app.delete("/documents/clear-all", tags=["documents"])
-async def clear_all_documents():
+@limiter.limit("5/minute")
+async def clear_all_documents(request: Request):
     """Delete ALL documents from the store."""
     count = len(store.files)
     file_ids_in_store = list(store.files.keys())
