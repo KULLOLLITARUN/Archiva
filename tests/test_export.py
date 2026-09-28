@@ -1,6 +1,6 @@
-"""Tests for chatbot/export.py — Markdown rendering of conversation history."""
+"""Tests for chatbot/export.py — Markdown/PDF rendering of conversation history."""
 
-from chatbot.export import to_markdown
+from chatbot.export import _sanitize_for_pdf, to_markdown, to_pdf
 from models.schemas import MemoryEntry, SourceRef
 
 
@@ -60,3 +60,39 @@ def test_to_markdown_dedupes_repeated_source_citations():
 def test_to_markdown_handles_empty_history():
     md = to_markdown("s1", [])
     assert "s1" in md
+
+
+def test_sanitize_for_pdf_maps_common_unicode_punctuation():
+    text = "Dr. Smith’s answer – 15 minutes 【Source: x】"
+    sanitized = _sanitize_for_pdf(text)
+
+    assert sanitized == "Dr. Smith's answer - 15 minutes [Source: x]"
+    sanitized.encode("latin-1")  # must not raise
+
+
+def test_sanitize_for_pdf_never_raises_on_arbitrary_unicode():
+    text = "emoji \U0001F600 and CJK 中文"
+    sanitized = _sanitize_for_pdf(text)
+    sanitized.encode("latin-1")  # must not raise
+
+
+def test_to_pdf_produces_nonempty_pdf_bytes():
+    history = [_entry("What is X?", "X is Y.")]
+    pdf_bytes = to_pdf("session-123", history)
+
+    assert isinstance(pdf_bytes, bytes)
+    assert pdf_bytes.startswith(b"%PDF")
+    assert len(pdf_bytes) > 100
+
+
+def test_to_pdf_handles_real_llm_style_unicode_without_raising():
+    history = [
+        _entry(
+            "What is the ack window?",
+            "Must acknowledge within 15 minutes — otherwise it escalates. "
+            "【Source: oncall_runbook.txt, page 1】",
+            sources=[SourceRef(filename="oncall_runbook.txt", page=1, text="...", score=0.9)],
+        ),
+    ]
+    pdf_bytes = to_pdf("session-1", history)
+    assert pdf_bytes.startswith(b"%PDF")

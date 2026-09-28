@@ -303,6 +303,7 @@ def _merge_sub_results(sub_results: List[tuple]) -> Dict:
     all_reranker_scores: List[float] = []
     models_used: List[str] = []
     failure_types: List[str] = []
+    healing_actions: List[str] = []
 
     max_attempts = 0
     any_reflected = False
@@ -328,6 +329,7 @@ def _merge_sub_results(sub_results: List[tuple]) -> Dict:
         if model not in models_used:
             models_used.append(model)
         failure_types.append(result.get("failure_type", "UNKNOWN"))
+        healing_actions.append(result.get("healing_action", "NONE"))
 
         max_attempts = max(max_attempts, result.get("attempts", 1))
         any_reflected = any_reflected or result.get("reflected", False)
@@ -338,6 +340,7 @@ def _merge_sub_results(sub_results: List[tuple]) -> Dict:
     # UNKNOWN/NONE mean "no failure" in the per-attempt schema — surface a
     # real failure_type only if at least one sub-answer actually had one.
     distinct_failures = sorted({f for f in failure_types if f not in ("UNKNOWN", "NONE")})
+    distinct_healing_actions = sorted({a for a in healing_actions if a != "NONE"})
 
     return {
         "answer":               "\n\n".join(answer_parts),
@@ -349,6 +352,14 @@ def _merge_sub_results(sub_results: List[tuple]) -> Dict:
         "confidence":           round(min_confidence, 3),
         "search_queries":       all_search_queries,
         "failure_type":         distinct_failures[0] if distinct_failures else "UNKNOWN",
+        # Mirrors model_used's "+".join() above for the same reason: a
+        # decomposed query can trigger different healing actions across its
+        # sub-questions, and monitor/logger.py's bucketed stat can't represent
+        # a composite - it'll fall into "NONE" for a multi-action case just
+        # like model_used falls into "none" for multi-model merges. The raw
+        # value is still preserved here for anyone reading the log payload
+        # directly instead of the bucketed /stats summary.
+        "healing_action":       "+".join(distinct_healing_actions) if distinct_healing_actions else "NONE",
         "retrieval_latency_ms": total_retrieval_ms,
         "reranker_scores":      all_reranker_scores,
         "tokens_used":          total_tokens,
@@ -445,18 +456,21 @@ def run_reflection_loop(
                     state.failure_reason = "no_results"
                     action = analyze_failure(state)
                     apply_healing(state, action)
+                    state.last_healing_action = action
                     print(
                         f"  [RETRY]  [loop] No results (attempt {attempt + 1}) "
                         f"-> {action} -> {state.active_query()!r}"
                     )
                     continue
 
-                return _not_found_result(
+                result = _not_found_result(
                     attempt,
                     reflected=attempt > 0,
                     reason="no_results_after_retry",
                     search_queries=state.search_queries,
                 )
+                result["healing_action"] = state.last_healing_action
+                return result
 
             # ── Attach search_queries ─────────────────────────────────────────
             result["search_queries"] = list(state.search_queries)
@@ -473,6 +487,7 @@ def run_reflection_loop(
             ):
                 best_result["answer"] = _NOT_FOUND_ANSWER
                 best_result["chunks"] = []
+                best_result["healing_action"] = state.last_healing_action
                 return best_result
 
             # ── Early exit: reflection says valid + sufficient confidence ─────
@@ -492,10 +507,12 @@ def run_reflection_loop(
                         state.answer         = result["answer"]
                         action = analyze_failure(state)
                         apply_healing(state, action)
+                        state.last_healing_action = action
                         if action == "STRICT_PROMPT" and should_force_strong_model(decision, result["model_used"]):
                             force_strong = True
                         continue
                 # Store successful result in semantic cache
+                best_result["healing_action"] = state.last_healing_action
                 semantic_cache.store(query, best_result)
                 return best_result
 
@@ -510,6 +527,7 @@ def run_reflection_loop(
 
             action = analyze_failure(state)
             apply_healing(state, action)
+            state.last_healing_action = action
 
             # Escalate to strong model when healer returns STRICT_PROMPT
             # (covers HALLUCINATION and FORMAT_ERROR failure types)
@@ -527,18 +545,22 @@ def run_reflection_loop(
             best_result["reflection_reason"] = (
                 best_result["reflection_reason"] + "_max_attempts_reached"
             )
+            best_result["healing_action"] = state.last_healing_action
             return best_result
 
     except Exception as exc:
         print(f"  [ERR]  [loop] Unexpected error: {exc}")
         if best_result:
+            best_result["healing_action"] = state.last_healing_action
             semantic_cache.store(query, best_result)
             return best_result
 
-    return _not_found_result(
+    result = _not_found_result(
         attempt=MAX_ATTEMPTS - 1,
         reflected=True,
         reason="max_attempts_no_result",
         search_queries=state.search_queries,
     )
+    result["healing_action"] = state.last_healing_action
+    return result
 

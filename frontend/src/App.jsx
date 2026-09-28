@@ -186,7 +186,7 @@ export default function App() {
           onUploadClick={openPanel}
           onPlaybookClick={openPlay}
           onAdminClick={() => setShowAdmin(true)}
-          onExportClick={() => apiExportConversation(sessionId).catch(err => alert(err.message))}
+          onExportClick={(format) => apiExportConversation(sessionId, format).catch(err => alert(err.message))}
           hasMessages={messages.length > 0}
           backendStatus={backendStatus}
         />
