@@ -55,6 +55,11 @@ jobs:
           DATABASE_URL: postgresql://archiva:archiva_ci_password@localhost:5432/archiva
         run: pytest -v
 
+      - name: Run retrieval-quality eval
+        # BM25-only: no model download, no GROQ_API_KEY needed, matches the
+        # retrieval-only scope documented in eval/run_eval.py's module docstring.
+        run: python eval/run_eval.py --bm25-only
+
   frontend-tests:
     runs-on: ubuntu-latest
 
