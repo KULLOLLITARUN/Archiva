@@ -2,6 +2,7 @@
 log-file detection, and the parent-child chunk_document() pipeline."""
 
 from ingestion.chunker import (
+    _split_into_sentences,
     chunk_document,
     content_hash,
     estimate_tokens,
@@ -41,6 +42,15 @@ def test_is_log_file_detects_timestamped_lines():
 
 def test_is_log_file_rejects_prose():
     assert is_log_file(PROSE_TEXT) is False
+
+
+def test_split_into_sentences_keeps_abbreviations_intact():
+    text = "Dr. Smith noted i.e. growth continued. Prof. Lee agreed."
+    sentences = _split_into_sentences(text)
+    assert sentences == [
+        "Dr. Smith noted i.e. growth continued.",
+        "Prof. Lee agreed.",
+    ]
 
 
 def test_chunk_document_produces_linked_parent_child_metadata():

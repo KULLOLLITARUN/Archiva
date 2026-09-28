@@ -205,6 +205,34 @@ def chunk_log(
     return chunks
 
 
+# ── Abbreviation-safe sentence splitting ──────────────────────────────────────
+# A plain "text.replace('. ', '.\n')" splits "Dr. Smith" into "Dr." and
+# "Smith ..." - harmless if both pieces land in the same child chunk (they
+# get rejoined with " " below), but if CHILD_CHUNK_SIZE happens to cut
+# between them, "Dr." and "Smith" end up embedded in separate chunks,
+# hurting retrieval for anything that mentions the name/term intact.
+# Protect known abbreviations before splitting, then restore them.
+
+_ABBREVIATIONS = (
+    "Mr.", "Mrs.", "Ms.", "Dr.", "Prof.", "Sr.", "Jr.", "St.",
+    "vs.", "etc.", "approx.", "i.e.", "e.g.", "U.S.", "U.K.",
+    "Ph.D.", "Inc.", "Co.", "Ltd.", "No.",
+)
+_ABBREV_PLACEHOLDER = "\x00"
+
+
+def _split_into_sentences(text: str) -> List[str]:
+    protected = text
+    for abbr in _ABBREVIATIONS:
+        protected = protected.replace(abbr, abbr.replace(".", _ABBREV_PLACEHOLDER))
+    protected = protected.replace(". ", ".\n")
+    return [
+        line.replace(_ABBREV_PLACEHOLDER, ".").strip()
+        for line in protected.splitlines()
+        if line.strip()
+    ]
+
+
 # ── Paragraph splitting ───────────────────────────────────────────────────────
 
 def split_into_paragraphs(text: str) -> List[str]:
@@ -304,7 +332,7 @@ def _build_children(
         section = f"Page {page_num} | Table"
     else:
         # Split parent into sentences / lines for finer child boundaries
-        lines = [l.strip() for l in parent_text.replace(". ", ".\n").splitlines() if l.strip()]
+        lines = _split_into_sentences(parent_text)
         child_joiner = " "
         section = f"Page {page_num}"
 
