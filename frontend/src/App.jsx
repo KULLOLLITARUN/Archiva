@@ -12,7 +12,7 @@ import UploadPanel     from './components/UploadPanel.jsx'
 import PlaybookPanel   from './components/PlaybookPanel.jsx'
 import AdminDashboard  from './components/AdminDashboard.jsx'
 import {
-  streamChat, apiGetFiles, apiGetSuggestions, waitForBackend,
+  streamChat, apiGetFiles, apiGetSuggestions, waitForBackend, apiExportConversation,
 } from './api.js'
 import './styles.css'
 import './auth-admin.css'
@@ -186,6 +186,8 @@ export default function App() {
           onUploadClick={openPanel}
           onPlaybookClick={openPlay}
           onAdminClick={() => setShowAdmin(true)}
+          onExportClick={() => apiExportConversation(sessionId).catch(err => alert(err.message))}
+          hasMessages={messages.length > 0}
           backendStatus={backendStatus}
         />
 

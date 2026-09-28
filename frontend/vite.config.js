@@ -35,6 +35,7 @@ export default defineConfig({
       '/docs-loaded': BACKEND,
       '/reload':      BACKEND,
       '/suggestions': BACKEND,
+      '/conversations': BACKEND,
       '/admin':       BACKEND,
       '/stats':       BACKEND,
       '/health':      BACKEND,

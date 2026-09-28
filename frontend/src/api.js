@@ -141,6 +141,25 @@ export async function adminDeleteAllDocuments() {
   return res.json()
 }
 
+// ── Export ────────────────────────────────────────────────────────────────────
+
+export async function apiExportConversation(sessionId) {
+  const res = await fetch(`${BASE}/conversations/${sessionId}/export`)
+  if (!res.ok) {
+    const e = await safeJson(res)
+    throw new Error(e?.detail || `Export failed (${res.status})`)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `conversation_${sessionId}.md`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 export async function apiHealth() {
   const res = await fetch(`${BASE}/health`)
   if (!res.ok) throw new Error('Server offline')

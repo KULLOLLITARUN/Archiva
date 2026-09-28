@@ -6,12 +6,12 @@
  */
 
 import { useEffect, useState } from 'react'
-import { BookOpen, FolderOpen, Settings } from 'lucide-react'
+import { BookOpen, Download, FolderOpen, Settings } from 'lucide-react'
 import { apiHealth as checkHealth } from '../api.js'
 import { BRAND } from '../brand.js'
 import ArchivaLogo from './ArchivaLogo.jsx'
 
-export default function Header({ docsInfo, onUploadClick, onPlaybookClick, onAdminClick, backendStatus = '' }) {
+export default function Header({ docsInfo, onUploadClick, onPlaybookClick, onAdminClick, onExportClick, hasMessages = false, backendStatus = '' }) {
   const { total_files = 0 } = docsInfo
   const [online, setOnline] = useState(false)
 
@@ -68,6 +68,12 @@ export default function Header({ docsInfo, onUploadClick, onPlaybookClick, onAdm
         {onAdminClick && (
           <button type="button" className="hdr-btn hdr-btn--icon-only" onClick={onAdminClick} title="Admin Dashboard" aria-label="Admin Dashboard">
             <Settings size={15} />
+          </button>
+        )}
+
+        {onExportClick && hasMessages && (
+          <button type="button" className="hdr-btn hdr-btn--icon-only" onClick={onExportClick} title="Export Conversation" aria-label="Export Conversation">
+            <Download size={15} />
           </button>
         )}
 
