@@ -1,12 +1,14 @@
 """Tests for ingestion/chunker.py — token estimation, content hashing,
 log-file detection, and the parent-child chunk_document() pipeline."""
 
+from config import PARENT_CHUNK_SIZE
 from ingestion.chunker import (
     _split_into_sentences,
     chunk_document,
     content_hash,
     estimate_tokens,
     is_log_file,
+    split_into_paragraphs,
 )
 
 PROSE_TEXT = (
@@ -77,6 +79,46 @@ def test_chunk_document_dedupes_identical_content_across_pages():
     # Identical paragraph text on both pages hashes the same -> second is deduped.
     hashes = [c["metadata"]["content_hash"] for c in chunks]
     assert len(hashes) == len(set(hashes))
+
+
+def test_split_into_paragraphs_bounds_unbroken_blob_by_sentence():
+    # No "\n\n" or "\n" at all - common for OCR output / poorly formatted
+    # PDF text extraction. Without a fallback, this single "paragraph" would
+    # become one oversized parent chunk whose full text is embedded as LLM
+    # context for every matching child.
+    sentence = "This is a sentence about important topics in the document. "
+    blob = sentence * 400  # no newlines anywhere, ~6000 tokens as one unit
+
+    paragraphs = split_into_paragraphs(blob)
+
+    assert len(paragraphs) > 1
+    for p in paragraphs:
+        assert estimate_tokens(p) <= PARENT_CHUNK_SIZE
+
+
+def test_split_into_paragraphs_hard_slices_unbroken_text_with_no_punctuation():
+    blob = "a" * (PARENT_CHUNK_SIZE * 4 * 3)  # no spaces, no punctuation at all
+
+    paragraphs = split_into_paragraphs(blob)
+
+    assert len(paragraphs) == 3
+    for p in paragraphs:
+        assert estimate_tokens(p) <= PARENT_CHUNK_SIZE
+
+
+def test_chunk_document_bounds_parent_text_for_unbroken_input():
+    sentence = "This is a sentence about important topics in the document. "
+    blob = sentence * 400
+    pages = [{"text": blob, "page": 1}]
+
+    chunks = chunk_document(pages=pages, file_id="f1", filename="ocr.txt", file_type="txt")
+
+    # +100 tolerance: estimate_tokens() is a soft chars/4 heuristic, and
+    # summing per-sentence estimates during accumulation vs. re-estimating
+    # the final "\n"-joined string drifts slightly - this asserts the fix
+    # (bounded to roughly PARENT_CHUNK_SIZE), not exact-token precision.
+    for chunk in chunks:
+        assert estimate_tokens(chunk["metadata"]["parent_text"]) <= PARENT_CHUNK_SIZE + 100
 
 
 def test_chunk_document_log_chunks_are_self_referential_parents():

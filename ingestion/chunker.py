@@ -235,19 +235,44 @@ def _split_into_sentences(text: str) -> List[str]:
 
 # ── Paragraph splitting ───────────────────────────────────────────────────────
 
+# Char budget matching estimate_tokens()'s chars/4 heuristic: a single
+# paragraph-shaped unit should never alone exceed PARENT_CHUNK_SIZE, or
+# _build_parents() (which only ever splits BETWEEN units, never within one)
+# would hand back one oversized parent - and its full text is embedded as
+# parent_text / LLM context for every child chunk that matches it.
+_MAX_PARAGRAPH_CHARS = PARENT_CHUNK_SIZE * 4
+
+
 def split_into_paragraphs(text: str) -> List[str]:
     parts = []
     for block in text.split("\n\n"):
         block = block.strip()
         if not block:
             continue
-        if len(block) > 1600:
-            for line in block.split("\n"):
-                line = line.strip()
-                if line:
-                    parts.append(line)
-        else:
+        if len(block) <= 1600:
             parts.append(block)
+            continue
+
+        lines = [l.strip() for l in block.split("\n") if l.strip()]
+        if len(lines) > 1:
+            parts.extend(lines)
+            continue
+
+        # No newlines within this "paragraph" either (OCR output / a
+        # poorly-formatted PDF often comes through as one unbroken blob) -
+        # fall back to sentence boundaries so it doesn't become a single
+        # oversized parent.
+        block = lines[0] if lines else block
+        sentences = _split_into_sentences(block)
+        if len(sentences) > 1:
+            parts.extend(sentences)
+            continue
+
+        # Still one unbroken unit (no sentence punctuation either) - hard
+        # slice as a last resort so it's still bounded.
+        for i in range(0, len(block), _MAX_PARAGRAPH_CHARS):
+            parts.append(block[i:i + _MAX_PARAGRAPH_CHARS])
+
     return parts
 
 
