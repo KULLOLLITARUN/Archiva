@@ -143,17 +143,18 @@ export async function adminDeleteAllDocuments() {
 
 // ── Export ────────────────────────────────────────────────────────────────────
 
-export async function apiExportConversation(sessionId) {
-  const res = await fetch(`${BASE}/conversations/${sessionId}/export`)
+export async function apiExportConversation(sessionId, format = 'markdown') {
+  const res = await fetch(`${BASE}/conversations/${sessionId}/export?format=${format}`)
   if (!res.ok) {
     const e = await safeJson(res)
     throw new Error(e?.detail || `Export failed (${res.status})`)
   }
   const blob = await res.blob()
+  const ext = format === 'pdf' ? 'pdf' : 'md'
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `conversation_${sessionId}.md`
+  a.download = `conversation_${sessionId}.${ext}`
   document.body.appendChild(a)
   a.click()
   a.remove()

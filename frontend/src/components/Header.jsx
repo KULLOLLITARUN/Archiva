@@ -72,9 +72,16 @@ export default function Header({ docsInfo, onUploadClick, onPlaybookClick, onAdm
         )}
 
         {onExportClick && hasMessages && (
-          <button type="button" className="hdr-btn hdr-btn--icon-only" onClick={onExportClick} title="Export Conversation" aria-label="Export Conversation">
-            <Download size={15} />
-          </button>
+          <>
+            <button type="button" className="hdr-btn" onClick={() => onExportClick('markdown')} title="Export as Markdown">
+              <span className="icon"><Download size={15} /></span>
+              <span>MD</span>
+            </button>
+            <button type="button" className="hdr-btn" onClick={() => onExportClick('pdf')} title="Export as PDF">
+              <span className="icon"><Download size={15} /></span>
+              <span>PDF</span>
+            </button>
+          </>
         )}
 
         <button className="hdr-btn" onClick={onPlaybookClick} title="Open Playbook">

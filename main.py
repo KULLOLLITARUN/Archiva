@@ -43,7 +43,7 @@ from ingestion.parser import parse_file, SUPPORTED_EXTENSIONS, compute_hash
 from ingestion.chunker import chunk_document
 from ingestion.reingest import save_uploaded_file, refresh_all_from_disk
 from chatbot.memory import ConversationMemory
-from chatbot.export import to_markdown
+from chatbot.export import to_markdown, to_pdf
 from chatbot.normalizer import normalize
 from chatbot.rewriter import rewrite
 from chatbot.intent import detect_intent
@@ -775,17 +775,25 @@ async def export_conversation(session_id: str, format: str = "markdown") -> Resp
     if not history:
         raise HTTPException(status_code=404, detail="No conversation history found for this session.")
 
-    if format != "markdown":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported export format '{format}'. Supported: markdown",
+    if format == "markdown":
+        content = to_markdown(session_id, history)
+        return Response(
+            content=content,
+            media_type="text/markdown",
+            headers={"Content-Disposition": f'attachment; filename="conversation_{session_id}.md"'},
         )
 
-    content = to_markdown(session_id, history)
-    return Response(
-        content=content,
-        media_type="text/markdown",
-        headers={"Content-Disposition": f'attachment; filename="conversation_{session_id}.md"'},
+    if format == "pdf":
+        content = to_pdf(session_id, history)
+        return Response(
+            content=content,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="conversation_{session_id}.pdf"'},
+        )
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Unsupported export format '{format}'. Supported: markdown, pdf",
     )
 
 
