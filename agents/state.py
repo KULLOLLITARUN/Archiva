@@ -45,6 +45,13 @@ class AgentState:
     attempt:        int           = 0
     max_attempts:   int           = 3
 
+    # Last action apply_healing() actually took (REWRITE_QUERY | INCREASE_TOP_K |
+    # STRICT_PROMPT | REINGEST | NONE) - surfaced on the result dict so
+    # monitor/logger.py's healing_actions stat reflects real activity instead
+    # of always reading "NONE" (main.py only ever reads loop_result.get
+    # ("healing_action", "NONE"); nothing was ever writing that key).
+    last_healing_action: str = "NONE"
+
     # ── Accumulator ────────────────────────────────────────────────────────────
     search_queries: List[str] = field(default_factory=list)  # all queries tried
 
