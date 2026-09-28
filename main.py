@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Body, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from starlette.requests import Request
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -43,6 +43,7 @@ from ingestion.parser import parse_file, SUPPORTED_EXTENSIONS, compute_hash
 from ingestion.chunker import chunk_document
 from ingestion.reingest import save_uploaded_file, refresh_all_from_disk
 from chatbot.memory import ConversationMemory
+from chatbot.export import to_markdown
 from chatbot.normalizer import normalize
 from chatbot.rewriter import rewrite
 from chatbot.intent import detect_intent
@@ -765,6 +766,26 @@ async def health() -> HealthResponse:
         model_fast=GROQ_FAST,
         model_strong=GROQ_STRONG,
         model_reasoning=GROQ_QWEN,
+    )
+
+
+@app.get("/conversations/{session_id}/export")
+async def export_conversation(session_id: str, format: str = "markdown") -> Response:
+    history = memory.get_history(session_id)
+    if not history:
+        raise HTTPException(status_code=404, detail="No conversation history found for this session.")
+
+    if format != "markdown":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported export format '{format}'. Supported: markdown",
+        )
+
+    content = to_markdown(session_id, history)
+    return Response(
+        content=content,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="conversation_{session_id}.md"'},
     )
 
 
