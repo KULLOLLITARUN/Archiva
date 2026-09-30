@@ -39,7 +39,7 @@ import re
 from typing import Dict, List, Optional, Set, Tuple
 
 from config import GROQ_FAST
-from llm.groq_manager import groq_manager
+from llm.groq_manager import groq_manager, light_completion_params
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -70,6 +70,15 @@ _SYSTEM_PROMPT = (
     "self-contained question, preserving the original wording where possible.\n"
     "- Use {N} only for a genuine dependency on an EARLIER step's answer. "
     "Independent sub-questions must NOT contain placeholders.\n"
+    "- A later step that points back at something an earlier step asks "
+    "about (\"that disk\", \"the same vendor\", \"it\", \"those\", \"they\") IS "
+    "dependent: replace the pointer with {N} so the step stands alone once "
+    "{N} is filled in.\n"
+    '- "Which disk creates VM-1, what zone must that disk be in, and what '
+    'happens if it is wrong?" -> ["Which disk creates VM-1?", "What zone must '
+    '{1} be in?", "What happens if the zone of {1} is wrong?"]\n'
+    "- Keep every qualifier from the original question in the wording of the "
+    "step it belongs to (region, zone, date, name). Never drop one.\n"
     "- Never invent a sub-question that isn't implied by the original text.\n"
     "- Return ONLY a JSON array of strings. No markdown, no explanation."
 )
@@ -142,7 +151,7 @@ def decompose_query(query: str) -> List[str]:
                 {"role": "user", "content": query},
             ],
             temperature=_TEMPERATURE,
-            max_tokens=_MAX_TOKENS,
+            **light_completion_params(GROQ_FAST, _MAX_TOKENS),
         )
         raw = (response.choices[0].message.content or "").strip()
         raw = re.sub(r"```(?:json)?|```", "", raw).strip()
@@ -151,7 +160,7 @@ def decompose_query(query: str) -> List[str]:
             return [query]
 
         parsed = json.loads(match.group())
-        sub_queries = [str(q).strip() for q in parsed if isinstance(q, str) and q.strip()]
+        sub_queries = [normalize_llm_text(str(q)).strip() for q in parsed if isinstance(q, str) and q.strip()]
         if not sub_queries:
             return [query]
         return sanitize_plan(sub_queries[:_MAX_SUBQUESTIONS])
@@ -194,19 +203,48 @@ _RESOLVE_MAX_TOKENS = 100
 
 _RESOLVE_PROMPT = (
     "You rewrite one step of a multi-step question into a standalone "
-    "question. Earlier steps and their answers are given. Replace every {N} "
-    "placeholder (and any pronoun that refers to an earlier answer) with the "
-    "concrete entity or value from that step's answer, so the question can "
-    "be understood with no other context.\n"
+    "question. The original full question, the earlier steps and their "
+    "answers are given. Replace every {N} placeholder (and any pronoun that "
+    "refers to an earlier answer) with the concrete entity or value from that "
+    "step's answer, so the question can be understood with no other context.\n"
     "Rules:\n"
+    "- {N} stands for WHAT step N's question asks for, not for other things "
+    "its answer mentions. If Step 1 asks \"Which disk creates VM-A?\" and the "
+    "answer is \"VM-A is created from Disk-7\", then {1} = Disk-7, NOT VM-A.\n"
+    "- Keep every part of the step's meaning. Use the original full question "
+    "to keep qualifiers the step depends on (region, zone, date, name); never "
+    "drop or generalise them.\n"
+    "- Copy names and identifiers EXACTLY as written in the answers, using "
+    "plain ASCII hyphens.\n"
     "- Keep the question's intent and wording otherwise unchanged.\n"
     "- Use only facts stated in the given answers; never add new facts.\n"
     "- Return ONLY the rewritten question. No quotes, no explanation."
 )
 
 
+# LLMs (gpt-oss in particular) emit typographic look-alikes: non-breaking
+# hyphens (U+2011) inside identifiers ("Disk\u2011Clone\u20111"), narrow
+# no-break spaces (U+202F), curly quotes. The document has the plain ASCII
+# characters, so a step rewritten with the look-alikes searches for a token
+# that exists nowhere: keyword search misses, and the step wrongly answers
+# "Not found". Everything an LLM writes that becomes part of a search query
+# goes through this first.
+_DASHES_RE = re.compile("[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]")
+_ODD_SPACES_RE = re.compile("[\u00a0\u2007\u2009\u200a\u202f\u205f\u3000]")
+_CITATION_RE = re.compile(r"[\[\u3010][^\]\u3011]*Source:[^\]\u3011]*[\]\u3011]")
+
+
+def normalize_llm_text(text: str) -> str:
+    """ASCII-fy hyphen/space/quote look-alikes so LLM output matches document text."""
+    text = _DASHES_RE.sub("-", text or "")
+    text = _ODD_SPACES_RE.sub(" ", text)
+    return (text.replace("\u2018", "'").replace("\u2019", "'")
+                .replace("\u201c", '"').replace("\u201d", '"'))
+
+
 def _compact(answer: str) -> str:
-    text = " ".join((answer or "").split())
+    """Shorten an answer for use inside a search query: no citations, plain ASCII punctuation."""
+    text = " ".join(normalize_llm_text(_CITATION_RE.sub(" ", answer or "")).split())
     return text if len(text) <= _MAX_ANSWER_CHARS else text[:_MAX_ANSWER_CHARS].rstrip() + "..."
 
 
@@ -226,6 +264,7 @@ def resolve_dependent_query(
     sub_query: str,
     answers: Dict[int, str],
     questions: Dict[int, str],
+    original_query: Optional[str] = None,
 ) -> str:
     """
     Turn a step containing {N} placeholders into a standalone question using
@@ -244,6 +283,8 @@ def resolve_dependent_query(
     context = "\n".join(
         f"Step {n}: {questions.get(n, '')}\nAnswer {n}: {_compact(answers[n])}" for n in deps
     )
+    if original_query:
+        context = f"Original full question: {original_query}\n\n{context}"
     try:
         _, client = groq_manager.get_client()
         response = client.chat.completions.create(
@@ -253,9 +294,9 @@ def resolve_dependent_query(
                 {"role": "user", "content": f"{context}\n\nStep to rewrite: {sub_query}"},
             ],
             temperature=_TEMPERATURE,
-            max_tokens=_RESOLVE_MAX_TOKENS,
+            **light_completion_params(GROQ_FAST, _RESOLVE_MAX_TOKENS),
         )
-        rewritten = " ".join((response.choices[0].message.content or "").split()).strip("\"' ")
+        rewritten = " ".join(normalize_llm_text(response.choices[0].message.content or "").split()).strip("\"' ")
         if rewritten and not _PLACEHOLDER_RE.search(rewritten):
             return rewritten
     except Exception as exc:

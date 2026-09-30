@@ -240,8 +240,9 @@ def test_run_decomposed_resolves_placeholder_step_from_prior_answer(monkeypatch)
     monkeypatch.setattr(loop, "run_reflection_loop", fake_run_reflection_loop)
     seen = {}
 
-    def fake_resolve(sub_query, answers, questions):
-        seen.update(sub_query=sub_query, answers=dict(answers), questions=dict(questions))
+    def fake_resolve(sub_query, answers, questions, original_query=None):
+        seen.update(sub_query=sub_query, answers=dict(answers), questions=dict(questions),
+                    original_query=original_query)
         return "What is the renewal date of Acme Corp?"
 
     monkeypatch.setattr(loop, "resolve_dependent_query", fake_resolve)
@@ -249,9 +250,11 @@ def test_run_decomposed_resolves_placeholder_step_from_prior_answer(monkeypatch)
     merged = loop._run_decomposed(
         ["Which vendor supplies Project Atlas?", "What is the renewal date of {1}?"],
         store=None, intent="qa", force_model=None,
+        original_query="Which vendor supplies Atlas and when does it renew?",
     )
 
     assert calls == ["Which vendor supplies Project Atlas?", "What is the renewal date of Acme Corp?"]
+    assert seen["original_query"] == "Which vendor supplies Atlas and when does it renew?"
     assert seen["answers"] == {1: "Acme Corp supplies Project Atlas."}
     # Header is user-facing text, never the raw {1} placeholder.
     assert "**What is the renewal date of the answer to step 1?**" in merged["answer"]
@@ -307,7 +310,7 @@ def test_run_reflection_loop_routes_to_decomposition_when_split(monkeypatch):
     sentinel = {"answer": "merged", "reflection_reason": "decomposed_2_subquestions"}
     recorded = {}
 
-    def fake_run_decomposed(sub_queries, store, intent, force_model):
+    def fake_run_decomposed(sub_queries, store, intent, force_model, original_query=None):
         recorded["sub_queries"] = sub_queries
         return sentinel
 

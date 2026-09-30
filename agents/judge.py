@@ -16,7 +16,7 @@ Design principles:
 from typing import Dict, List
 
 from config import GROQ_FAST
-from llm.groq_manager import groq_manager
+from llm.groq_manager import groq_manager, light_completion_params
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -76,9 +76,15 @@ def judge_faithfulness(
                 {"role": "user",   "content": user_message},
             ],
             temperature=_TEMPERATURE,
-            max_tokens=_MAX_TOKENS,
+            **light_completion_params(GROQ_FAST, _MAX_TOKENS),
         )
         raw: str = (response.choices[0].message.content or "").strip().upper()
+        if not raw:
+            # No verdict at all (e.g. the model ran out of tokens). That is an
+            # error, NOT a "NO": reading "" as unfaithful would condemn every
+            # answer the judge looked at.
+            print("  [WARN]  [judge] empty verdict -- assuming faithful")
+            return {"faithful": True, "reason": "judge_error"}
         faithful = raw.startswith("YES")
         reason   = "judge_pass" if faithful else "judge_fail"
         print(f"  [INFO]  [judge] faithfulness={faithful!r} (raw={raw!r})")

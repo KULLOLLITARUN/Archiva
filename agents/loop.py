@@ -33,9 +33,11 @@ from config import (
     FINAL_K,
     GROQ_STRONG,
     JUDGE_CONFIDENCE_THRESHOLD,
+    MAX_CHUNKS_PER_DOC,
     MAX_CONTEXT_TOKENS,
     MAX_REFLECTION_ATTEMPTS,
     MIN_REFLECTION_CONFIDENCE,
+    NOT_FOUND_RECHECK_MIN_CE_SCORE,
 )
 from cache.semantic_cache import semantic_cache
 from agents.decomposer import (
@@ -91,6 +93,50 @@ def build_labeled_context(chunks: List[dict]) -> str:
     context = "\n".join(labeled_parts)
     words = context.split()
     return " ".join(words[:MAX_CONTEXT_TOKENS])
+
+
+# ── Context chunk selection ───────────────────────────────────────────────────
+
+def _select_context_chunks(
+    chunks: List[dict],
+    max_per_doc: int = MAX_CHUNKS_PER_DOC,
+    limit: int = FINAL_K,
+) -> List[dict]:
+    """
+    Choose which retrieved chunks go into the LLM context (input is in rank order).
+
+      1. A parent section is only included once (child chunks of the same
+         parent would repeat the same text).
+      2. Diversity first: at most *max_per_doc* chunks per document, so one
+         document doesn't crowd out the others.
+      3. Then backfill: slots still free (up to *limit*) are filled, in rank
+         order, with chunks step 2 skipped. The per-document cap is a
+         preference, never a reason to leave room unused - it used to drop
+         the one chunk naming the thing asked about whenever a single
+         document supplied the whole top-5.
+    """
+    seen_parents: set = set()
+    per_doc: dict = {}
+    picked: List[dict] = []
+    skipped: List[dict] = []
+
+    for chunk in chunks:
+        pid   = chunk["metadata"].get("parent_id") or chunk.get("chunk_id", "")
+        fname = chunk["metadata"].get("filename", "")
+        if pid in seen_parents:
+            continue
+        seen_parents.add(pid)
+        if per_doc.get(fname, 0) >= max_per_doc:
+            skipped.append(chunk)
+            continue
+        per_doc[fname] = per_doc.get(fname, 0) + 1
+        picked.append(chunk)
+
+    for chunk in skipped:
+        if len(picked) >= limit:
+            break
+        picked.append(chunk)
+    return picked
 
 
 # ── "No result" fast-path ─────────────────────────────────────────────────────
@@ -179,27 +225,14 @@ def _single_attempt(
     # 4. Context optimization — MMR + compression + citations
     optimized = optimize_context(top_chunks, query=current_query, top_k=FINAL_K)
 
-    # 5. Build context — two-stage diversity filter:
-    #    a) Deduplicate by parent_id (same section can't appear twice)
-    #    b) Cap at MAX_CHUNKS_PER_DOC per file (stops one doc dominating context)
-    MAX_CHUNKS_PER_DOC = 2
+    # 5. Build context - see _select_context_chunks (parent dedupe, per-document
+    #    diversity preference, then backfill to FINAL_K).
     if optimized:
-        seen_parents: set = set()
-        doc_counts: dict  = {}
-        unique_by_parent: list = []
-
-        for chunk in optimized:
-            pid   = chunk["metadata"].get("parent_id") or chunk.get("chunk_id", "")
+        unique_by_parent = _select_context_chunks(optimized)
+        doc_counts: dict = {}
+        for chunk in unique_by_parent:
             fname = chunk["metadata"].get("filename", "")
-
-            if pid in seen_parents:
-                continue
-            if doc_counts.get(fname, 0) >= MAX_CHUNKS_PER_DOC:
-                continue
-
-            seen_parents.add(pid)
             doc_counts[fname] = doc_counts.get(fname, 0) + 1
-            unique_by_parent.append(chunk)
 
         context_chunks = unique_by_parent if unique_by_parent else optimized
 
@@ -373,11 +406,33 @@ def _merge_sub_results(sub_results: List[tuple]) -> Dict:
     }
 
 
+def _should_recheck_not_found(
+    result: Dict,
+    already_rechecked: bool,
+    force_model: Optional[str],
+    attempt: int,
+) -> bool:
+    """
+    True if a "not found" answer deserves one more try with the strong model:
+    retrieval found strongly relevant text (best cross-encoder score at or
+    above NOT_FOUND_RECHECK_MIN_CE_SCORE), we haven't already re-asked, the
+    strong model wasn't the one that just said it, nobody pinned the model,
+    and an attempt is still available.
+    """
+    if already_rechecked or force_model or attempt >= MAX_ATTEMPTS - 1:
+        return False
+    if result.get("model_used") == GROQ_STRONG:
+        return False
+    scores = result.get("reranker_scores") or []
+    return bool(scores) and max(scores) >= NOT_FOUND_RECHECK_MIN_CE_SCORE
+
+
 def _run_decomposed(
     sub_queries: List[str],
     store,
     intent: str,
     force_model: Optional[str],
+    original_query: Optional[str] = None,
 ) -> Dict:
     """
     Run each sub-question through its own full loop, then merge.
@@ -429,7 +484,7 @@ def _run_decomposed(
             continue
 
         if deps:
-            resolved_query = resolve_dependent_query(sub_query, answers, questions)
+            resolved_query = resolve_dependent_query(sub_query, answers, questions, original_query)
             print(f"  [DECOMPOSE]  [loop] Step {step} resolved: {resolved_query!r}")
         else:
             resolved_query = anchor_to_prior_answer(sub_query, prior_answer)
@@ -478,7 +533,7 @@ def run_reflection_loop(
     sub_queries = _maybe_decompose(query, _allow_decompose)
     if sub_queries:
         print(f"  [DECOMPOSE]  [loop] Split into {len(sub_queries)} sub-question(s): {sub_queries}")
-        return _run_decomposed(sub_queries, store, intent, force_model)
+        return _run_decomposed(sub_queries, store, intent, force_model, original_query=query)
 
     state = AgentState(
         original_query = query,
@@ -493,6 +548,7 @@ def run_reflection_loop(
         return cached
 
     force_strong: bool      = False
+    rechecked_not_found     = False   # at most one strong-model second look per query
     best_result: Optional[Dict] = None
 
     try:
@@ -530,6 +586,21 @@ def run_reflection_loop(
             best_result = result
 
             decision: Dict = result.pop("_decision")
+
+            # ── "Not found" despite strong retrieval: second look, strong model ─
+            if (
+                decision["reason"] == "explicit_not_found"
+                and _should_recheck_not_found(
+                    result, rechecked_not_found, force_model, attempt,
+                )
+            ):
+                rechecked_not_found = True
+                force_strong = True
+                print(
+                    f"  [RECHECK]  [loop] Model said not-found but retrieval is strong "
+                    f"(top CE {max(result['reranker_scores']):.2f}) -> re-asking {GROQ_STRONG}"
+                )
+                continue
 
             # ── Hard refuse: answer explicitly says not found ─────────────────
             if decision["reason"] in (

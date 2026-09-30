@@ -26,6 +26,34 @@ _BACKOFF_S: float = 60.0       # seconds to blacklist a failed key
 _MIN_KEYS: int    = 1          # must have at least one key
 
 
+# ── Small-output calls on reasoning models ───────────────────────────────────
+
+# Reasoning models (e.g. openai/gpt-oss-*) "think" before answering, and that
+# thinking is paid for out of max_tokens. The helpers that ask for a tiny reply
+# (a YES/NO verdict, one search query, a short JSON list) used budgets of
+# 20-300 tokens, which the thinking alone exhausts: the API then returns
+# finish_reason="length" with EMPTY content. Callers fell back silently
+# (no decomposition, no query rewrite) or, worse, read the empty string as a
+# NO verdict. Low reasoning effort plus a budget with room for that thinking
+# fixes it; the visible reply stays as short as the prompt demands.
+_REASONING_MIN_TOKENS: int = 600
+
+
+def light_completion_params(model: str, max_tokens: int) -> dict:
+    """
+    Request kwargs for a short-output chat completion on *model*.
+
+    Usage: client.chat.completions.create(model=m, messages=..., **light_completion_params(m, 100))
+    Non-reasoning models get their max_tokens back unchanged.
+    """
+    if "gpt-oss" in model.lower():
+        return {
+            "max_tokens": max(max_tokens, _REASONING_MIN_TOKENS),
+            "extra_body": {"reasoning_effort": "low"},
+        }
+    return {"max_tokens": max_tokens}
+
+
 # ── Manager ───────────────────────────────────────────────────────────────────
 
 class GroqKeyManager:

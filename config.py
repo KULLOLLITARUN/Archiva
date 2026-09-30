@@ -53,6 +53,13 @@ BM25_THRESHOLD = float(os.getenv("BM25_THRESHOLD", 0.1))
 
 TOP_K       = int(os.getenv("TOP_K", 5))
 FINAL_K     = int(os.getenv("FINAL_K", 5))
+# Diversity preference when assembling the LLM context: take at most this many
+# chunks per document FIRST so one document can't crowd out the others, then
+# backfill any unused slots (up to FINAL_K) from the chunks that were skipped.
+# It is a preference, not a ceiling - with a single document loaded there is
+# nothing to balance, and a hard cap of 2 used to throw away the very chunk
+# that contained the answer.
+MAX_CHUNKS_PER_DOC = int(os.getenv("MAX_CHUNKS_PER_DOC", 2))
 
 # Hybrid retrieval (Part 2): per-source candidate counts before RRF fusion.
 TOP_K_BM25  = int(os.getenv("TOP_K_BM25", 20))
@@ -276,4 +283,15 @@ MIN_OVERLAP_RATIO = float(os.getenv("MIN_OVERLAP_RATIO", 0.15))
 # an optional LLM faithfulness judge as a second-pass check.
 # Set to 0.0 to disable the judge entirely.
 JUDGE_CONFIDENCE_THRESHOLD = float(os.getenv("JUDGE_CONFIDENCE_THRESHOLD", 0.7))
+
+# A "Not found in the document" answer is normally final. But the model says
+# that even when the retrieved text plainly contains the answer (seen live:
+# top chunk read "The managed disk must be created in Central India, Zone 1"
+# and the fast model still answered "Not found"). If the best cross-encoder
+# score among the retrieved chunks is at least this high - i.e. retrieval
+# found strongly relevant text - the loop re-asks the strong model once
+# before giving up. Measured on real data: questions the documents cannot
+# answer score about -10 to -11 and answerable ones 4.8 to 7.5, so 3.0
+# leaves wide margin on both sides. Set very high (e.g. 999) to disable.
+NOT_FOUND_RECHECK_MIN_CE_SCORE = float(os.getenv("NOT_FOUND_RECHECK_MIN_CE_SCORE", 3.0))
 
