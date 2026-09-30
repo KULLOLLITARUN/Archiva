@@ -38,7 +38,14 @@ from config import (
     MIN_REFLECTION_CONFIDENCE,
 )
 from cache.semantic_cache import semantic_cache
-from agents.decomposer import anchor_to_prior_answer, decompose_query, should_decompose
+from agents.decomposer import (
+    anchor_to_prior_answer,
+    decompose_query,
+    dependencies_of,
+    display_query,
+    resolve_dependent_query,
+    should_decompose,
+)
 from agents.state import AgentState
 from agents.root_cause import analyze_failure
 from agents.healer import apply_healing
@@ -375,22 +382,68 @@ def _run_decomposed(
     """
     Run each sub-question through its own full loop, then merge.
 
-    Sequential, not parallel: sub-question N is anchored to sub-question
-    N-1's answer when it contains an unresolved pronoun (see
-    agents/decomposer.py's anchor_to_prior_answer()), so a dependent chain
-    like "who manages the roadmap team, and what's THEIR vacation policy"
-    resolves "their" via the prior answer instead of retrieving for it
-    literally. The merged result's per-question header still shows the
-    ORIGINAL sub-question text, not the anchored version — the anchor is
-    an internal retrieval/generation aid, not user-facing phrasing.
+    Sequential, not parallel, because later steps can depend on earlier
+    answers in two ways (see agents/decomposer.py):
+
+      * "{N}" placeholders — a genuine dependency chain. The step is first
+        rewritten into a standalone question from the real answers it
+        depends on (resolve_dependent_query). If any prerequisite step could
+        not be answered, the step is SKIPPED with an explicit reason instead
+        of retrieving for a question that still has an unresolved reference
+        — and that skip propagates down the rest of the chain.
+      * A loose pronoun ("their", "it") with no placeholder — anchored to
+        the previous answer as before (anchor_to_prior_answer).
+
+    The merged result's per-question header shows the user-facing text, not
+    the internal retrieval query: original wording for plain/anchored
+    steps, "the answer to step N" for placeholders.
     """
     sub_results = []
     prior_answer = ""
-    for sub_query in sub_queries:
-        resolved_query = anchor_to_prior_answer(sub_query, prior_answer)
+    answers: Dict[int, str] = {}      # 1-based step -> its answer
+    questions: Dict[int, str] = {}    # 1-based step -> resolved question text
+    unanswered: set = set()           # 1-based steps with no usable answer
+
+    for step, sub_query in enumerate(sub_queries, start=1):
+        deps = dependencies_of(sub_query)
+        blocked_by = sorted(d for d in deps if d in unanswered)
+        header = display_query(sub_query) if deps else sub_query
+
+        if blocked_by:
+            print(f"  [DECOMPOSE]  [loop] Skipping step {step}: depends on unanswered step(s) {blocked_by}")
+            result = _not_found_result(
+                attempt=0,
+                reflected=False,
+                reason="dependency_unresolved",
+                search_queries=[],
+            )
+            result["answer"] = (
+                "Could not answer this step because it depends on step "
+                + ", ".join(str(d) for d in blocked_by)
+                + ", which was not found in the documents."
+            )
+            unanswered.add(step)
+            sub_results.append((header, result))
+            questions[step] = header
+            prior_answer = ""
+            continue
+
+        if deps:
+            resolved_query = resolve_dependent_query(sub_query, answers, questions)
+            print(f"  [DECOMPOSE]  [loop] Step {step} resolved: {resolved_query!r}")
+        else:
+            resolved_query = anchor_to_prior_answer(sub_query, prior_answer)
+
         result = run_reflection_loop(resolved_query, store, intent, force_model, _allow_decompose=False)
-        sub_results.append((sub_query, result))
-        prior_answer = result.get("answer", "")
+        sub_results.append((header, result))
+
+        answer = result.get("answer", "")
+        answers[step] = answer
+        questions[step] = resolved_query if deps else sub_query
+        if not answer or answer.strip() == _NOT_FOUND_ANSWER:
+            unanswered.add(step)
+        prior_answer = answer
+
     return _merge_sub_results(sub_results)
 
 
