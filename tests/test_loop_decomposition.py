@@ -3,6 +3,7 @@ _maybe_decompose (the recursion-safe branch decision) and _merge_sub_results
 (combining per-sub-question results). Both are pure — no store/LLM needed."""
 
 import agents.loop as loop
+from agents.decomposer import _mechanical_resolve as loop_mechanical
 
 
 # ── _maybe_decompose ────────────────────────────────────────────────────────────
@@ -256,9 +257,28 @@ def test_run_decomposed_resolves_placeholder_step_from_prior_answer(monkeypatch)
     assert calls == ["Which vendor supplies Project Atlas?", "What is the renewal date of Acme Corp?"]
     assert seen["original_query"] == "Which vendor supplies Atlas and when does it renew?"
     assert seen["answers"] == {1: "Acme Corp supplies Project Atlas."}
-    # Header is user-facing text, never the raw {1} placeholder.
-    assert "**What is the renewal date of the answer to step 1?**" in merged["answer"]
+    # Heading is the cleanly rewritten standalone question, never the raw {1}
+    # placeholder and never the clumsy "the answer to step 1" wording.
+    assert "**What is the renewal date of Acme Corp?**" in merged["answer"]
     assert "{1}" not in merged["answer"]
+    assert "the answer to step" not in merged["answer"]
+
+
+def test_heading_falls_back_to_generic_wording_when_rewrite_only_pasted_answers_in(monkeypatch):
+    def fake_run_reflection_loop(query, store, intent, force_model, _allow_decompose=True):
+        return _result("Acme Corp." if "supplies" in query else "March 3.", ["c1"], confidence=0.9)
+
+    monkeypatch.setattr(loop, "run_reflection_loop", fake_run_reflection_loop)
+    # The LLM rewrite failed -> resolve_dependent_query returns the mechanical paste-in.
+    monkeypatch.setattr(loop, "resolve_dependent_query",
+                        lambda sub_query, answers, questions, original_query=None:
+                        loop_mechanical(sub_query, answers))
+    merged = loop._run_decomposed(
+        ["Who supplies Atlas?", "What is the renewal date of {1}?"],
+        store=None, intent="qa", force_model=None,
+    )
+    assert "**What is the renewal date of the answer to step 1?**" in merged["answer"]
+    assert "(Acme Corp.)" not in merged["answer"].split("March 3.")[0].split("**What is")[1]
 
 
 def test_run_decomposed_skips_dependent_steps_when_prerequisite_not_found(monkeypatch):

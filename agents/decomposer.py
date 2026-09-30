@@ -260,6 +260,20 @@ def _mechanical_resolve(sub_query: str, answers: Dict[int, str]) -> str:
     )
 
 
+def step_heading(sub_query: str, resolved: str, answers: Dict[int, str]) -> str:
+    """
+    Heading to show the user for a dependent step.
+
+    When the model cleanly rewrote the step ("What region must Disk-Clone-1
+    be in?") that standalone question is the natural heading. If resolution
+    fell back to pasting the earlier answers into the placeholders, that text
+    is clutter, so fall back to the generic "the answer to step N" wording.
+    """
+    if resolved and resolved != _mechanical_resolve(sub_query, answers):
+        return resolved
+    return display_query(sub_query)
+
+
 def resolve_dependent_query(
     sub_query: str,
     answers: Dict[int, str],

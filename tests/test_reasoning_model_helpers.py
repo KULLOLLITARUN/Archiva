@@ -168,3 +168,19 @@ def test_resolver_works_without_an_original_question(monkeypatch):
     sent = _patch(monkeypatch, decomposer, "When does Acme renew?")
     resolve_dependent_query("When does {1} renew?", {1: "Acme"}, {1: "Who?"})
     assert "Original full question" not in sent[0]["messages"][1]["content"]
+
+
+# ── step_heading ────────────────────────────────────────────────────────────────
+
+def test_heading_is_the_clean_rewrite_when_the_model_resolved_the_step():
+    from agents.decomposer import step_heading
+    assert step_heading(
+        "What region must {1} be in?", "What region must Disk-Clone-1 be in?", {1: "Disk-Clone-1"},
+    ) == "What region must Disk-Clone-1 be in?"
+
+
+def test_heading_uses_generic_wording_for_the_paste_in_fallback():
+    from agents.decomposer import _mechanical_resolve, step_heading
+    answers = {1: "Disk-Clone-1"}
+    pasted = _mechanical_resolve("What region must {1} be in?", answers)
+    assert step_heading("What region must {1} be in?", pasted, answers) == "What region must the answer to step 1 be in?"

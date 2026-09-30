@@ -47,6 +47,7 @@ from agents.decomposer import (
     display_query,
     resolve_dependent_query,
     should_decompose,
+    step_heading,
 )
 from agents.state import AgentState
 from agents.root_cause import analyze_failure
@@ -449,9 +450,10 @@ def _run_decomposed(
       * A loose pronoun ("their", "it") with no placeholder — anchored to
         the previous answer as before (anchor_to_prior_answer).
 
-    The merged result's per-question header shows the user-facing text, not
-    the internal retrieval query: original wording for plain/anchored
-    steps, "the answer to step N" for placeholders.
+    The merged result's per-question header shows user-facing text, not the
+    internal retrieval query: original wording for plain/anchored steps, the
+    cleanly rewritten standalone question for placeholder steps (or "the
+    answer to step N" if the rewrite fell back to pasting answers in).
     """
     sub_results = []
     prior_answer = ""
@@ -485,6 +487,7 @@ def _run_decomposed(
 
         if deps:
             resolved_query = resolve_dependent_query(sub_query, answers, questions, original_query)
+            header = step_heading(sub_query, resolved_query, answers)
             print(f"  [DECOMPOSE]  [loop] Step {step} resolved: {resolved_query!r}")
         else:
             resolved_query = anchor_to_prior_answer(sub_query, prior_answer)
