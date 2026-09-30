@@ -6,6 +6,11 @@ from urllib.parse import urlsplit
 
 import pytest
 
+# Every TestClient(app) start would otherwise warm the embedding + reranker
+# models on a background thread - slow and pointless for tests. Set before the
+# app (and config) are imported.
+os.environ.setdefault("WARM_UP_ON_START", "false")
+
 
 def _database_is_disposable(url: str) -> bool:
     """

@@ -148,6 +148,10 @@ OCR_LEASE_SECONDS       = float(os.getenv("OCR_LEASE_SECONDS", 120))
 # documents (db/store_sync.py's StoreSynchronizer). Costs one tiny query per
 # tick when idle. Set STORE_SYNC_ENABLED=false to skip the background task
 # in a strictly single-process deployment.
+# Load the embedding + reranker models on a background thread at startup so the
+# first question after a restart isn't ~8s slower than the rest. Disable to
+# skip the memory/CPU spike at boot (they then load on first use, as before).
+WARM_UP_ON_START      = os.getenv("WARM_UP_ON_START", "true").lower() in ("1", "true", "yes")
 STORE_SYNC_ENABLED    = os.getenv("STORE_SYNC_ENABLED", "true").lower() in ("1", "true", "yes")
 STORE_SYNC_INTERVAL_S = float(os.getenv("STORE_SYNC_INTERVAL_S", 2.0))
 

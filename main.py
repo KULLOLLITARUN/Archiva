@@ -24,7 +24,7 @@ from slowapi.util import get_remote_address
 from config import (
     GROQ_FAST, GROQ_STRONG, GROQ_QWEN, UPLOADED_DOCS_DIR, REINGESTION_QUEUE_PATH,
     MAX_UPLOAD_BYTES, SUGGESTION_MIN_SCORE, SUGGESTION_CE_TOP_N, CHAT_REQUEST_TIMEOUT_S,
-    STORE_SYNC_ENABLED, STORE_SYNC_INTERVAL_S, RATE_LIMIT_STORAGE_URI,
+    STORE_SYNC_ENABLED, STORE_SYNC_INTERVAL_S, RATE_LIMIT_STORAGE_URI, WARM_UP_ON_START,
 )
 from db.postgres import (
     init_db,
@@ -41,6 +41,7 @@ from models.schemas import (
     StatsResponse, UploadResponse,
 )
 from retrieval.store import MultiDocStore
+from retrieval.warmup import warm_up_models
 from ingestion.parser import parse_file, SUPPORTED_EXTENSIONS, compute_hash
 from ingestion.chunker import chunk_document
 from ingestion.reingest import save_uploaded_file, refresh_all_from_disk
@@ -125,6 +126,11 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(synchronizer.run(STORE_SYNC_INTERVAL_S))
         if STORE_SYNC_ENABLED else None
     )
+    # Fire-and-forget: the server takes requests immediately; a question that
+    # arrives mid-warm-up waits on the models' own load lock (no double load).
+    if WARM_UP_ON_START:
+        asyncio.get_running_loop().run_in_executor(None, warm_up_models)
+
     try:
         yield
     finally:
