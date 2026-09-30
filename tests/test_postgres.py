@@ -39,10 +39,10 @@ pytestmark = pytest.mark.skipif(
 def _clean_tables():
     pg.init_db()
     with pg.get_db() as db:
-        db.execute("TRUNCATE chunks, documents, feedback_logs")
+        db.execute("TRUNCATE chunks, documents, feedback_logs, chat_sessions")
     yield
     with pg.get_db() as db:
-        db.execute("TRUNCATE chunks, documents, feedback_logs")
+        db.execute("TRUNCATE chunks, documents, feedback_logs, chat_sessions")
 
 
 # ── Schema / init ────────────────────────────────────────────────────────────────

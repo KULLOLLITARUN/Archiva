@@ -121,6 +121,12 @@ This pulls in `sentence-transformers` (dense embeddings) and its `torch`
 dependency — expect a ~1-2 GB download and a couple of minutes on first
 install. Everything else is small.
 
+It also installs `rapidocr-onnxruntime` and `pypdfium2`, which let the app
+OCR scanned PDFs in the background. Both are plain pip packages — there is no
+separate OCR program (like Tesseract) to install. If you don't want OCR, set
+`OCR_ENABLED=false` and scanned PDFs will be rejected with a clear message
+instead.
+
 ---
 
 ## 5. Install frontend dependencies

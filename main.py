@@ -24,14 +24,16 @@ from slowapi.util import get_remote_address
 from config import (
     GROQ_FAST, GROQ_STRONG, GROQ_QWEN, UPLOADED_DOCS_DIR, REINGESTION_QUEUE_PATH,
     MAX_UPLOAD_BYTES, SUGGESTION_MIN_SCORE, SUGGESTION_CE_TOP_N, CHAT_REQUEST_TIMEOUT_S,
+    STORE_SYNC_ENABLED, STORE_SYNC_INTERVAL_S, RATE_LIMIT_STORAGE_URI,
 )
 from db.postgres import (
     init_db,
-    db_list_all_documents, db_get_document,
+    db_list_all_documents, db_get_document, db_get_store_version,
     db_log_feedback, db_get_system_stats,
 )
 from db.store_sync import (
     load_store_from_postgres, sync_file_to_postgres, delete_file_from_postgres,
+    register_pending_document, synchronizer,
 )
 from models.schemas import (
     ChatRequest, ChatResponse, SourceRef,
@@ -42,7 +44,9 @@ from retrieval.store import MultiDocStore
 from ingestion.parser import parse_file, SUPPORTED_EXTENSIONS, compute_hash
 from ingestion.chunker import chunk_document
 from ingestion.reingest import save_uploaded_file, refresh_all_from_disk
-from chatbot.memory import ConversationMemory
+from ingestion import ocr_jobs
+from chatbot.memory import ConversationMemory, make_memory
+from cache.semantic_cache import semantic_cache
 from chatbot.export import to_markdown, to_pdf
 from chatbot.normalizer import normalize
 from chatbot.rewriter import rewrite
@@ -53,7 +57,9 @@ from agents.validator import validate
 from agents.loop import run_reflection_loop, build_labeled_context
 from monitor.logger import log_pipeline, get_stats
 
-limiter = Limiter(key_func=get_remote_address, default_limits=[])
+# Counters live in RATE_LIMIT_STORAGE_URI (per-process memory by default; point
+# it at Redis for one limit shared by all worker processes - see config.py).
+limiter = Limiter(key_func=get_remote_address, default_limits=[], storage_uri=RATE_LIMIT_STORAGE_URI)
 
 store = MultiDocStore()
 memory = ConversationMemory()
@@ -80,6 +86,13 @@ async def lifespan(app: FastAPI):
     # Apply the Postgres schema (idempotent)
     init_db()
 
+    # Read the document-set version BEFORE loading the data, so a change
+    # that lands mid-load is caught by the next sync tick, never missed.
+    try:
+        loaded_version = db_get_store_version()
+    except Exception:
+        loaded_version = 0
+
     # Load the store from Postgres — replaces the old store_state.pkl load.
     # No STORE_VERSION migration concern here: every call reconstructs a
     # fresh MultiDocStore from source data (documents + chunks), never
@@ -92,8 +105,35 @@ async def lifespan(app: FastAPI):
         store = MultiDocStore()
         print(f"[Warn] Could not load store from Postgres ({e}). Starting empty.")
 
-    memory = ConversationMemory()
-    yield
+    # Multi-process: keep this worker's in-memory store in step with Postgres.
+    # Each tick also lets this worker take over OCR jobs whose owner died.
+    synchronizer.attach(
+        store, loaded_version,
+        on_change=semantic_cache.clear,   # cached answers may cite changed documents
+        on_tick=lambda: ocr_jobs.resume_interrupted(store),
+    )
+
+    # Finish OCR jobs a previous run was killed in the middle of.
+    try:
+        ocr_jobs.resume_interrupted(store)
+    except Exception as e:
+        print(f"[Warn] Could not resume OCR jobs ({e}).")
+
+    memory = make_memory()
+
+    sync_task = (
+        asyncio.create_task(synchronizer.run(STORE_SYNC_INTERVAL_S))
+        if STORE_SYNC_ENABLED else None
+    )
+    try:
+        yield
+    finally:
+        if sync_task is not None:
+            sync_task.cancel()
+            try:
+                await sync_task
+            except asyncio.CancelledError:
+                pass
 
 
 app = FastAPI(title="Archiva", version="5.0.0", lifespan=lifespan)
@@ -433,6 +473,20 @@ async def upload_file(
                               chunk_count=0, status="duplicate",
                               message="File already exists in the store.")
 
+    pending_dup = store.find_pending_by_hash(content_hash)
+    if pending_dup is not None:
+        if pending_dup["status"] == "processing":
+            return UploadResponse(filename=filename, file_id=pending_dup["file_id"],
+                                  chunk_count=0, status="duplicate",
+                                  message="This file is already being processed (OCR).")
+        # An earlier OCR attempt failed: drop it so this re-upload is a clean retry
+        # (its row would otherwise hold the content hash and block the new one).
+        store.remove_pending(pending_dup["file_id"])
+        try:
+            delete_file_from_postgres(pending_dup["file_id"])
+        except Exception as exc:
+            print(f"[WARN] Failed to clear failed OCR record {pending_dup['file_id']!r}: {exc}")
+
     try:
         pages = parse_file(content, filename)
     except Exception as exc:
@@ -452,9 +506,19 @@ async def upload_file(
 
     valid_chunks = [c for c in chunks if c.get("text", "").strip()]
     if not valid_chunks:
+        # A PDF with no extractable text is a scan. OCR takes too long to run
+        # inside this request, so queue it as a background job instead.
+        if ext == ".pdf" and ocr_jobs.ocr_ready():
+            return _queue_ocr_job(content, file_id, filename, file_type, content_hash)
+        hint = (
+            " This looks like a scanned PDF, but OCR is unavailable "
+            "(install rapidocr-onnxruntime and pypdfium2, or set OCR_ENABLED=true)."
+            if ext == ".pdf" else
+            " If this is a scanned PDF/image, convert it to searchable PDF/text."
+        )
         return UploadResponse(filename=filename, file_id="", chunk_count=0,
                               status="error",
-                              message="No readable text extracted. If this is a scanned PDF/image, convert it to searchable PDF/text.")
+                              message="No readable text extracted." + hint)
     chunks = valid_chunks
 
 
@@ -486,6 +550,39 @@ async def upload_file(
                           status="ok", message=f"Successfully indexed {len(chunks)} chunks.")
 
 
+def _queue_ocr_job(content: bytes, file_id: str, filename: str, file_type: str,
+                   content_hash: str) -> UploadResponse:
+    """
+    Accept a scanned PDF as a pending document and start its OCR job.
+
+    The raw bytes are persisted first: a restart mid-job resumes from that
+    copy (ocr_jobs.resume_interrupted), so failing to save it fails the
+    upload up front rather than promising work that could silently vanish.
+    """
+    try:
+        save_uploaded_file(content, file_id, file_type, UPLOADED_DOCS_DIR)
+    except Exception as exc:
+        return UploadResponse(filename=filename, file_id="", chunk_count=0, status="error",
+                              message=f"Could not save the file for OCR: {exc}")
+
+    store.add_pending(file_id, filename, content_hash, file_type, message="Queued for OCR")
+    try:
+        register_pending_document(file_id, filename, file_type, content_hash)
+        if not ocr_jobs.claim(file_id):   # take the lease so no other worker starts the same job
+            raise RuntimeError("could not take the OCR lease")
+    except Exception as exc:
+        store.remove_pending(file_id)
+        return UploadResponse(filename=filename, file_id="", chunk_count=0, status="error",
+                              message=f"Could not record the document for OCR: {exc}")
+
+    ocr_jobs.submit(store, file_id, content)
+    return UploadResponse(
+        filename=filename, file_id=file_id, chunk_count=0, status="processing",
+        message="Scanned PDF detected - running OCR in the background. "
+                "It becomes searchable when processing finishes.",
+    )
+
+
 @app.delete("/files/{file_id}", response_model=DeleteResponse)
 @limiter.limit("20/minute")
 async def delete_file(request: Request, file_id: str) -> DeleteResponse:
@@ -493,7 +590,9 @@ async def delete_file(request: Request, file_id: str) -> DeleteResponse:
     if doc is None:
         raise HTTPException(status_code=404, detail="File not found.")
 
-    deleted = store.delete_file(file_id)
+    # A document still being OCR'd lives in store.pending, not store.files;
+    # removing it also cancels its job at the next page boundary.
+    deleted = store.delete_file(file_id) or store.remove_pending(file_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"File '{file_id}' not found in store.")
 
@@ -511,27 +610,58 @@ async def delete_file(request: Request, file_id: str) -> DeleteResponse:
 async def docs_loaded() -> DocsLoadedResponse:
     """Return all documents currently loaded in the store."""
     store_files = store.get_files()
-    if store_files:
+    pending_files = [
+        {
+            "file_id":     f["file_id"],
+            "filename":    f["filename"],
+            "chunk_count": 0,
+            "uploaded_at": f["uploaded_at"],
+            "status":      f["status"],        # "processing" | "failed"
+            "message":     f["message"],
+            "progress":    f["progress"],      # [pages_done, pages_total] or null
+        }
+        for f in store.get_pending()
+    ]
+    if store_files or pending_files:
         files = [
             {
+                "file_id":     f["file_id"],
                 "filename":    f["filename"],
                 "chunk_count": f["chunk_count"],
                 "uploaded_at": f["uploaded_at"],
+                "status":      "ready",
             }
             for f in store_files if f.get("status") == "active"
         ]
     else:
         db_docs = db_list_all_documents()
+        live_rows = [row for row in db_docs if not row["is_deleted"]]
         files = [
             {
+                "file_id":     row["id"],
                 "filename":    row["filename"],
                 "chunk_count": row["chunk_count"],
                 "uploaded_at": row["upload_time"],
+                "status":      "ready",
             }
-            for row in db_docs if not row["is_deleted"]
+            for row in live_rows if row["status"] == "ready"
         ]
+        pending_files = [
+            {
+                "file_id":     row["id"],
+                "filename":    row["filename"],
+                "chunk_count": 0,
+                "uploaded_at": row["upload_time"],
+                "status":      row["status"],
+                "message":     row["status_message"] or "",
+                "progress":    None,
+            }
+            for row in live_rows if row["status"] != "ready"
+        ]
+    # Only searchable documents count toward the totals; pending ones are
+    # listed (so the UI can show progress / failures) but not counted.
     return DocsLoadedResponse(
-        files=files,
+        files=files + pending_files,
         total_files=len(files),
         total_chunks=sum(f["chunk_count"] for f in files),
     )
@@ -908,7 +1038,8 @@ async def admin_delete_document(request: Request, doc_id: str):
     if doc is None:
         raise HTTPException(status_code=404, detail="Document not found.")
 
-    store.delete_file(doc_id)
+    if not store.delete_file(doc_id):
+        store.remove_pending(doc_id)   # cancels an in-flight OCR job
     try:
         delete_file_from_postgres(doc_id)
     except Exception as exc:
@@ -928,9 +1059,10 @@ async def admin_delete_all_documents(request: Request):
 @limiter.limit("5/minute")
 async def clear_all_documents(request: Request):
     """Delete ALL documents from the store."""
-    count = len(store.files)
-    file_ids_in_store = list(store.files.keys())
+    count = len(store.files) + len(store.pending)
+    file_ids_in_store = list(store.files.keys()) + list(store.pending.keys())
 
+    store.pending.clear()   # also cancels any in-flight OCR jobs
     store.files.clear()
     store.chunks.clear()
     store.file_hash_map.clear()

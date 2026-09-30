@@ -120,6 +120,36 @@ MAX_CHUNKS_PER_FILE = int(os.getenv("MAX_CHUNKS_PER_FILE", 500))
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", 50 * 1024 * 1024))   # 50 MB
 MAX_INGEST_CHARS = int(os.getenv("MAX_INGEST_CHARS", 2_000_000))         # ~2M chars
 
+# ── OCR (scanned/image-only PDFs) ──────────────────────────────────────────────
+# OCR runs as a background job (ingestion/ocr_jobs.py), never inline in
+# /upload. Bounded like every other ingestion path: OCR_MAX_PAGES caps the
+# work per file, and lines the engine isn't confident about are DROPPED
+# rather than indexed (OCR_MIN_LINE_CONFIDENCE) - low-confidence text in
+# the search index is worse than a gap, since it invites hallucination.
+OCR_ENABLED             = os.getenv("OCR_ENABLED", "true").lower() in ("1", "true", "yes")
+OCR_MAX_PAGES           = int(os.getenv("OCR_MAX_PAGES", 50))
+OCR_RENDER_SCALE        = float(os.getenv("OCR_RENDER_SCALE", 2.0))       # 2.0 ~ 144 dpi
+OCR_MIN_LINE_CONFIDENCE = float(os.getenv("OCR_MIN_LINE_CONFIDENCE", 0.6))
+# A worker owning an OCR job renews its lease once per page; if it goes this
+# long without renewing (crash, hang) another worker may take the job over.
+OCR_LEASE_SECONDS       = float(os.getenv("OCR_LEASE_SECONDS", 120))
+
+# ── Multi-process operation ────────────────────────────────────────────────────
+# Each worker process keeps its own in-memory copy of the document store.
+# Every STORE_SYNC_INTERVAL_S seconds it compares Postgres's store_version
+# with the one it last loaded and reloads only if another worker changed the
+# documents (db/store_sync.py's StoreSynchronizer). Costs one tiny query per
+# tick when idle. Set STORE_SYNC_ENABLED=false to skip the background task
+# in a strictly single-process deployment.
+STORE_SYNC_ENABLED    = os.getenv("STORE_SYNC_ENABLED", "true").lower() in ("1", "true", "yes")
+STORE_SYNC_INTERVAL_S = float(os.getenv("STORE_SYNC_INTERVAL_S", 2.0))
+
+# Where slowapi keeps rate-limit counters. The default is per-process memory,
+# so with N workers each one enforces the limit separately (effective limit
+# is N x the stated one). Point this at a shared backend for a true global
+# limit, e.g. redis://localhost:6379 (needs `pip install redis`).
+RATE_LIMIT_STORAGE_URI = os.getenv("RATE_LIMIT_STORAGE_URI", "memory://")
+
 # ── Chunking ──────────────────────────────────────────────────────────────────
 
 CHUNK_SIZE    = 400

@@ -63,3 +63,44 @@ CREATE TABLE IF NOT EXISTS chunks (
 
 CREATE INDEX IF NOT EXISTS idx_chunks_file_id ON chunks(file_id);
 CREATE INDEX IF NOT EXISTS idx_chunks_content_hash ON chunks(content_hash);
+
+-- ── Document processing status (background OCR) ───────────────────────────────
+-- 'ready'      - searchable; chunks live in the chunks table (the default, and
+--                what every pre-existing row becomes)
+-- 'processing' - accepted but not yet searchable: a scanned PDF whose OCR job
+--                is queued/running (ingestion/ocr_jobs.py). No chunks yet.
+-- 'failed'     - the background job could not produce usable text;
+--                status_message says why. Kept (not deleted) so the user can
+--                see the failure and remove it themselves.
+-- A restart while 'processing' resumes the job from the persisted upload.
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ready';
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS status_message TEXT;
+
+-- ── Multi-process coordination ─────────────────────────────────────────────────
+-- Each worker process keeps its own in-memory copy of the document store
+-- (chunks + BM25 + embeddings) for query speed. store_version is the single
+-- counter every document-set mutation bumps (in the same transaction as the
+-- change), so a worker can tell "someone changed the documents" with one
+-- cheap query and reload only then. See db/store_sync.py's StoreSynchronizer.
+CREATE TABLE IF NOT EXISTS store_version (
+    id      INTEGER PRIMARY KEY CHECK (id = 1),
+    version BIGINT NOT NULL DEFAULT 0
+);
+INSERT INTO store_version (id, version) VALUES (1, 0) ON CONFLICT (id) DO NOTHING;
+
+-- Background OCR lease: which worker is processing a 'processing' document,
+-- and when it last proved it was alive (once per page). A lease that stops
+-- being renewed can be claimed by another worker, so a crashed worker's
+-- job is picked up instead of hanging forever; a live one is never doubled.
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS ocr_worker TEXT;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS ocr_heartbeat TIMESTAMPTZ;
+
+-- ── Chat sessions ───────────────────────────────────────────────────────────────
+-- Replaces sessions.json. That file was rewritten whole on every message, so
+-- two processes silently overwrote each other's turns; a row per session
+-- updated under a row lock cannot lose writes.
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    session_id TEXT PRIMARY KEY,
+    entries    JSONB NOT NULL DEFAULT '[]'::jsonb,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

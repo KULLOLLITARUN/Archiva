@@ -58,7 +58,7 @@ def _no_background_embeddings(monkeypatch):
 
 def _truncate_tables():
     with pg.get_db() as db:
-        db.execute("TRUNCATE chunks, documents, feedback_logs")
+        db.execute("TRUNCATE chunks, documents, feedback_logs, chat_sessions")
 
 
 @pytest.fixture()

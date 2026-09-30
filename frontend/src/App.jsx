@@ -69,6 +69,21 @@ export default function App() {
   }, [refreshDocs, refreshSuggestions])
   useEffect(() => () => cancelStreamRef.current?.(), [])
 
+  // Scanned PDFs are OCR'd in the background: poll while any document is
+  // still processing, and refresh suggestions once the last one finishes
+  // (it only becomes searchable at that point).
+  const hasProcessing = (docsInfo.files || []).some(f => f.status === 'processing')
+  const wasProcessingRef = useRef(false)
+  useEffect(() => {
+    if (!hasProcessing) return undefined
+    const id = setInterval(refreshDocs, 3000)
+    return () => clearInterval(id)
+  }, [hasProcessing, refreshDocs])
+  useEffect(() => {
+    if (wasProcessingRef.current && !hasProcessing) refreshSuggestions()
+    wasProcessingRef.current = hasProcessing
+  }, [hasProcessing, refreshSuggestions])
+
   // ── Chat handler ──────────────────────────────────────────────────────────
 
   const handleSend = useCallback((text) => {

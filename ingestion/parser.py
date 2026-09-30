@@ -7,8 +7,8 @@ Fix #9: Added parse_pdf() (via pypdf) and parse_docx() (via python-docx).
         Returns the same [{page, text}] structure regardless of format.
 
 Format expansion: Added parse_md() / parse_csv() / parse_html() — all
-stdlib-only, no new dependencies. Scanned/image PDFs still need OCR
-(out of scope here — see README for the manual-conversion workaround).
+stdlib-only, no new dependencies. Scanned/image PDFs are handled by
+ingestion/ocr.py (background job), not here.
 """
 
 import csv
@@ -275,13 +275,10 @@ def parse_html(content: bytes, filename: str) -> List[Dict]:
 
 # ── Dispatcher ────────────────────────────────────────────────────────────────
 
-# No OCR: scanned/image-only PDFs return an explicit "no readable text
-# extracted" error (see main.py's /upload handler) rather than silently
-# ingesting low-confidence OCR noise that would pollute BM25/dense search
-# and increase hallucination risk. This is deliberate, not an oversight —
-# revisit only if scanned documents become an actual input source, and if
-# so, run OCR as a background job (Tesseract on a 50-page scan can take
-# 30-60s, which would block the synchronous /upload request today).
+# Scanned/image-only PDFs yield no text here. main.py's /upload detects that
+# and hands the file to ingestion/ocr_jobs.py, which OCRs it in the background
+# (OCR is far too slow to run inside the request). parse_pdf() itself stays
+# OCR-free on purpose: it is the fast path for every normal PDF.
 SUPPORTED_EXTENSIONS = {".txt", ".pdf", ".docx", ".md", ".csv", ".html", ".htm"}
 
 _PARSERS = {

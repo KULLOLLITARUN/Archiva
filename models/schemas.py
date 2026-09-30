@@ -117,7 +117,7 @@ class UploadResponse(BaseModel):
     filename: str
     file_id: str
     chunk_count: int
-    status: str       # "ok" | "duplicate" | "limit" | "error"
+    status: str       # "ok" | "processing" (background OCR) | "duplicate" | "limit" | "error"
     message: str
 
 
