@@ -16,3 +16,5 @@ rag_agentic_project.zip
 .DS_Store
 cache/embeddings/
 uploaded_docs/
+eval/results/
+eval/answer_cases.local.json

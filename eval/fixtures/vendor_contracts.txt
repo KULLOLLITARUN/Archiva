@@ -1,0 +1,21 @@
+Vendor Contracts Register 2026
+
+Suppliers
+Project Atlas hardware is supplied by Northwind Systems.
+Project Borealis software licences are supplied by Contoso Ltd.
+
+Contract Renewal Dates
+The Northwind Systems contract renews on 15 March 2027.
+The Contoso Ltd contract renews on 30 November 2026.
+
+Compliance
+The annual compliance audit takes place on 1 June 2027. Every vendor
+contract must be renewed before the audit date.
+
+Account Managers
+Northwind Systems account manager: Priya Raman.
+Contoso Ltd account manager: Daniel Okafor.
+
+Annual Contract Costs (USD)
+Northwind Systems licences cost 42000 per year and support costs 8000 per year.
+Contoso Ltd licences cost 30000 per year and support costs 5000 per year.

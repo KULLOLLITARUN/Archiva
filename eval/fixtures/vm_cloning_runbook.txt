@@ -1,0 +1,40 @@
+VM Cloning Runbook - Build Server Clones
+
+Overview
+Method: Snapshot -> Managed Disk -> Specialized VM (safe, no Sysprep).
+The previous approach, Generalized Capture, ran Sysprep on the source VM,
+wiped the user profile and disabled the source VM's Start/Stop buttons.
+Generalized Capture is now used only for clean template images.
+The Specialized VM method never modifies the source VM Build-Primary and
+keeps its user profile intact.
+
+Step 1.1 - Create Snapshot
+Snapshot name: Snap-Build-1
+Source disk: the OS disk of Build-Primary
+Snapshot type: Full
+
+Step 1.2 - Create Managed Disk from Snapshot
+Disk name: Disk-Build-1
+Source snapshot: Snap-Build-1
+Region: West Europe
+Availability zone: 2
+
+Warning - Region and Zone Must Match
+The managed disk must be created in West Europe, Zone 2, exactly matching
+Build-Primary. If the region or zone is different, VM creation in Step 1.3
+will fail with a ZonalAllocationFailed error.
+
+Step 1.3 - Create VM from Managed Disk
+VM name: Build-Clone-1
+OS disk: Disk-Build-1
+VM size: Standard_D4s_v5
+
+Step 2 - Second Clone
+Repeat Steps 1.1 to 1.3 using snapshot Snap-Build-2, disk Disk-Build-2 and
+VM name Build-Clone-2.
+
+Cost Notes
+A VM that is Stopped (deallocated) in the portal does not incur compute
+charges. Shutting down from inside the operating system does not deallocate
+the VM, so compute charges continue. Snapshots and managed disks always incur
+storage charges.
