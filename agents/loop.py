@@ -56,7 +56,7 @@ from agents.context_optimizer import optimize_context
 from retrieval.search import apply_threshold, balanced_retrieval, hybrid_retrieve
 from retrieval.reranker import rerank
 from agents.router import route
-from agents.worker import build_prompt, call_groq
+from agents.worker import SERVICE_UNAVAILABLE_ANSWER, build_prompt, call_groq
 from agents.reflection import reflect, should_force_strong_model
 from agents.query_rewriter import rewrite_for_retry
 from agents.judge import judge_faithfulness
@@ -66,6 +66,28 @@ from agents.judge import judge_faithfulness
 MAX_ATTEMPTS: int = MAX_REFLECTION_ATTEMPTS
 
 _NOT_FOUND_ANSWER = "Not found in the document."
+
+# Shown when the LLM provider is down or out of quota. Starts with the worker's
+# own wording so anything that already recognises it (the answer eval, logs)
+# still does, then says plainly that this is not a statement about the documents.
+_PROVIDER_UNAVAILABLE_ANSWER = (
+    "Service temporarily unavailable: the AI provider could not be reached or its "
+    "rate limit / daily quota was reached. This is not an answer about your "
+    "documents - please try again in a few minutes."
+)
+
+
+def _is_provider_unavailable(answer: str) -> bool:
+    return (answer or "").strip().startswith("Service temporarily unavailable")
+
+
+def _provider_unavailable_result(attempt: int, search_queries: List[str]) -> Dict:
+    result = _not_found_result(
+        attempt, reflected=attempt > 0, reason="provider_unavailable",
+        search_queries=search_queries, failure_type="PROVIDER_UNAVAILABLE",
+    )
+    result["answer"] = _PROVIDER_UNAVAILABLE_ANSWER
+    return result
 
 
 # ── Context builder (self-contained; used by main.py /chat/stream) ────────────
@@ -493,6 +515,10 @@ def _run_decomposed(
             resolved_query = anchor_to_prior_answer(sub_query, prior_answer)
 
         result = run_reflection_loop(resolved_query, store, intent, force_model, _allow_decompose=False)
+        if _is_provider_unavailable(result.get("answer", "")):
+            # No point asking the remaining steps: the provider is down for all of them.
+            print(f"  [ERR]  [loop] Provider unavailable at step {step} - abandoning the chain")
+            return result
         sub_results.append((header, result))
 
         answer = result.get("answer", "")
@@ -560,6 +586,17 @@ def run_reflection_loop(
 
             # ── One full attempt ──────────────────────────────────────────────
             result = _single_attempt(state, store, intent, force_strong, force_model)
+
+            # ── Provider outage / quota: stop, and say so ─────────────────────
+            # Retrying just burns more of an exhausted quota, and the old path
+            # (too-short answer -> retries -> hard refuse) ended in "Not found
+            # in the document", telling the user the documents lack an answer
+            # when the real problem was the AI service. Never cached.
+            if result is not None and result.get("answer") == SERVICE_UNAVAILABLE_ANSWER:
+                print("  [ERR]  [loop] LLM provider unavailable - stopping without retries")
+                unavailable = _provider_unavailable_result(attempt, list(state.search_queries))
+                unavailable["healing_action"] = state.last_healing_action
+                return unavailable
 
             # ── No results from retrieval ─────────────────────────────────────
             if result is None:
