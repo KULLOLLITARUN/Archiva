@@ -193,9 +193,9 @@ _TRAILING_NEGATION_RE: re.Pattern = re.compile(r"\bnot (?:mentioned|stated|speci
 _TRAILING_REACH_WORDS: int = 3      # "X is not mentioned": negation FOLLOWS the keyword
 
 
-def _is_negated_at(text: str, idx: int, kw: str) -> bool:
+def _is_negated_at(text: str, idx: int, end: int) -> bool:
     """
-    True if the occurrence of *kw* at text[idx:] is negated BY a negation
+    True if the keyword occurrence text[idx:end] is negated BY a negation
     word that governs it: one from _NEGATION_WORD_RE within
     _NEGATION_REACH_WORDS words before it in the same clause, or
     "not mentioned" (and similar) within a few words after it in the same clause.
@@ -211,7 +211,7 @@ def _is_negated_at(text: str, idx: int, kw: str) -> bool:
         if len(gap_words) <= _NEGATION_REACH_WORDS:
             return True
 
-    after = text[idx + len(kw): idx + len(kw) + _NEGATION_LOOKBACK_CHARS]
+    after = text[end: end + _NEGATION_LOOKBACK_CHARS]
     clause_end = _CLAUSE_BREAK_RE.search(after)
     if clause_end:
         after = after[:clause_end.start()]
@@ -219,11 +219,30 @@ def _is_negated_at(text: str, idx: int, kw: str) -> bool:
     return _TRAILING_NEGATION_RE.search(leading) is not None
 
 
+_STEM_SUFFIXES = ("ing", "ed", "es", "s", "e")
+
+
+def _stem(word: str) -> str:
+    """Strip one common English ending: deallocated/deallocate -> deallocat."""
+    for suffix in _STEM_SUFFIXES:
+        if word.endswith(suffix) and len(word) - len(suffix) >= 3:
+            return word[: -len(suffix)]
+    return word
+
+
 def _occurrences(text: str, kw: str):
-    idx = text.find(kw)
-    while idx != -1:
-        yield idx
-        idx = text.find(kw, idx + 1)
+    """
+    (start, end) of every whole-word occurrence of *kw* or a simple inflection
+    of it. Whole-word: the query word "run" must not match inside "runbook"
+    (seen live - the source title "VM Cloning Runbook" counted as the source
+    asserting "run", and a correct "does not run Sysprep" was flagged).
+    Inflections: "deallocated" in the answer and "does not deallocate" in the
+    source are the same word; exact matching missed that the source negates
+    it and flagged a correct "it is not deallocated".
+    """
+    pattern = re.compile(r"\b" + re.escape(_stem(kw)) + r"(?:e|es|ed|ing|s|d)?\b")
+    for match in pattern.finditer(text):
+        yield match.start(), match.end()
 
 
 def _has_contradiction(query: str, answer: str, chunk_text: str) -> bool:
@@ -257,15 +276,15 @@ def _has_contradiction(query: str, answer: str, chunk_text: str) -> bool:
     query_lower  = query.lower()
 
     for kw in _filter_stopwords(query):
-        if not any(_is_negated_at(answer_lower, i, kw) for i in _occurrences(answer_lower, kw)):
+        if not any(_is_negated_at(answer_lower, s, e) for s, e in _occurrences(answer_lower, kw)):
             continue
-        if any(_is_negated_at(query_lower, i, kw) for i in _occurrences(query_lower, kw)):
+        if any(_is_negated_at(query_lower, s, e) for s, e in _occurrences(query_lower, kw)):
             continue   # the QUESTION negates it ("...if they don't match"); echoing that is not a contradiction
 
         source_positions = list(_occurrences(chunk_lower, kw))
         if not source_positions:
             continue
-        if any(_is_negated_at(chunk_lower, i, kw) for i in source_positions):
+        if any(_is_negated_at(chunk_lower, s, e) for s, e in source_positions):
             continue   # the source negates it somewhere too: consistent, not contradictory
         return True
 

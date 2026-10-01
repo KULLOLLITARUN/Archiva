@@ -239,3 +239,44 @@ def test_resolve_falls_back_when_llm_leaves_a_placeholder(monkeypatch):
     _mock_llm_response(monkeypatch, "What is the renewal date of {1}?")
     result = resolve_dependent_query("When does {1} renew?", {1: "Acme Corp"}, {1: "Who?"})
     assert "{1}" not in result and "Acme Corp" in result
+
+
+# ── promote_back_references (found by the answer-quality eval) ──────────────────
+from agents.decomposer import promote_back_references
+
+
+def test_demonstrative_noun_from_an_earlier_step_becomes_a_placeholder():
+    plan = ["Which vendor supplies Project Atlas?", "When does that vendor's contract renew?"]
+    assert promote_back_references(plan)[1] == "When does {1}'s contract renew?"
+
+
+def test_bare_subject_pronoun_links_to_the_previous_step():
+    plan = ["Which vendor supplies Atlas?", "When does {1}'s contract renew?", "Is that before the audit?"]
+    assert promote_back_references(plan)[2] == "Is {2} before the audit?"
+
+
+def test_plural_nouns_match_their_singular():
+    plan = ["Which vendors supply Atlas?", "Who manages those vendors?"]
+    assert promote_back_references(plan)[1] == "Who manages {1}?"
+
+
+def test_most_recent_matching_step_wins():
+    plan = ["Which disk is used?", "Which disk backs the second clone?", "What zone must that disk be in?"]
+    assert promote_back_references(plan)[2] == "What zone must {2} be in?"
+
+
+def test_relative_clause_that_is_left_alone():
+    plan = ["What is the vacation policy?", "Who is on the team that manages the roadmap?"]
+    assert promote_back_references(plan) == plan
+
+
+def test_steps_with_placeholders_and_the_first_step_are_untouched():
+    plan = ["Is that the first step?", "What zone must {1} be in?"]
+    assert promote_back_references(plan) == plan
+
+
+def test_decompose_query_applies_back_reference_linking(monkeypatch):
+    _mock_llm_response(monkeypatch, json.dumps(
+        ["Which vendor supplies Project Atlas?", "When does that vendor's contract renew?"]))
+    assert decompose_query("which vendor supplies atlas and when does that vendor renew") == [
+        "Which vendor supplies Project Atlas?", "When does {1}'s contract renew?"]

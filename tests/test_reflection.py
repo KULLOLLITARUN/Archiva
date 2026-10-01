@@ -307,3 +307,36 @@ def test_same_answer_to_a_positive_question_is_still_judged_on_its_merits():
     query = "Does the disk region match the original VM?"
     answer = "The disk region does not match the original VM."
     assert _has_contradiction(query, answer, MATCH_CHUNK.lower()) is True
+
+
+# Regressions found by the answer-quality eval (eval/run_answer_eval.py):
+# keywords were matched as raw substrings with exact spelling.
+
+RUNBOOK_CHUNK = (
+    "vm cloning runbook - build server clones. method: snapshot -> managed disk -> "
+    "specialized vm (safe, no sysprep). the previous approach, generalized capture, "
+    "ran sysprep on the source vm."
+)
+
+
+def test_keyword_inside_a_longer_word_is_not_a_source_assertion():
+    # "run" (from the question) matched inside "runbook", so the source looked
+    # like it asserted "run" and a correct "does not run Sysprep" was flagged.
+    answer = "No. The Specialized VM method does not run Sysprep."
+    assert _has_contradiction("Does the Specialized VM method run Sysprep?", answer, RUNBOOK_CHUNK) is False
+
+
+def test_inflected_form_in_the_source_counts_as_the_same_word():
+    # Answer: "not deallocated"; source: "does not deallocate" - the source
+    # negates the same word, so the answer agrees with it.
+    chunk = ("a vm that is stopped (deallocated) in the portal does not incur compute charges. "
+             "shutting down from inside the operating system does not deallocate the vm.")
+    answer = "If you only shut it down from inside the OS, it is not deallocated and charges continue."
+    query = "Does a VM that is stopped and deallocated still incur compute charges?"
+    assert _has_contradiction(query, answer, chunk) is False
+
+
+def test_whole_word_matching_still_catches_a_real_contradiction():
+    chunk = "the backup job runs every night at 2am."
+    answer = "The backup job does not run at night."
+    assert _has_contradiction("when does the backup job run", answer, chunk) is True

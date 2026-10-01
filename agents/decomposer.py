@@ -131,6 +131,70 @@ def sanitize_plan(sub_queries: List[str]) -> List[str]:
     return cleaned
 
 
+# ── Deterministic back-reference linking ──────────────────────────────────────
+# The planner is told to write {N} for "that vendor"-style references, but it
+# doesn't always (seen in the answer-quality eval: "When does that vendor's
+# contract renew?" came back with no placeholder, ran on its own, and
+# answered "Not found"). This pass links the references it left behind.
+
+_DEMONSTRATIVE_RE = re.compile(
+    r"\b(?:that|this|those|these|the same)\s+([a-z][a-z0-9-]*)('s)?", re.IGNORECASE
+)
+# "Is that before ...", "Was it approved ...": a bare pronoun as the subject
+# of a yes/no step refers to the previous step's answer.
+_SUBJECT_PRONOUN_RE = re.compile(
+    r"^(\s*(?:is|was|are|were|does|did|will|can)\s+)(?:that|this|it)\b", re.IGNORECASE
+)
+
+
+def _noun_key(word: str) -> str:
+    word = word.lower()
+    for suffix in ("'s", "es", "s"):
+        if word.endswith(suffix) and len(word) - len(suffix) >= 3:
+            return word[: -len(suffix)]
+    return word
+
+
+def promote_back_references(sub_queries: List[str]) -> List[str]:
+    """
+    Turn leftover back-references into {N} placeholders.
+
+      * "that/this/those/these/the same <noun>" where <noun> appears in an
+        earlier step's question -> {k} for the most recent such step
+        ("When does that vendor's contract renew?" after "Which vendor
+        supplies Atlas?" -> "When does {1}'s contract renew?").
+      * A bare subject pronoun opening a yes/no step ("Is that before the
+        audit?") -> the previous step.
+
+    Deliberately conservative: a demonstrative whose noun appears in no
+    earlier step ("the team that manages the roadmap") is left alone, and
+    steps that already carry a placeholder are not touched.
+    """
+    promoted: List[str] = []
+    for position, query in enumerate(sub_queries, start=1):
+        if position == 1 or dependencies_of(query):
+            promoted.append(query)
+            continue
+
+        earlier_nouns = [
+            {_noun_key(w) for w in re.findall(r"[a-z][a-z0-9-]*", q.lower())}
+            for q in sub_queries[: position - 1]
+        ]
+
+        def link(match):
+            noun = _noun_key(match.group(1))
+            for step in range(position - 1, 0, -1):
+                if noun in earlier_nouns[step - 1]:
+                    return "{%d}%s" % (step, match.group(2) or "")
+            return match.group(0)
+
+        rewritten = _DEMONSTRATIVE_RE.sub(link, query)
+        if rewritten == query:
+            rewritten = _SUBJECT_PRONOUN_RE.sub(lambda m: m.group(1) + "{%d}" % (position - 1), query, count=1)
+        promoted.append(rewritten)
+    return promoted
+
+
 # ── LLM-assisted split ─────────────────────────────────────────────────────────
 
 def decompose_query(query: str) -> List[str]:
@@ -163,7 +227,7 @@ def decompose_query(query: str) -> List[str]:
         sub_queries = [normalize_llm_text(str(q)).strip() for q in parsed if isinstance(q, str) and q.strip()]
         if not sub_queries:
             return [query]
-        return sanitize_plan(sub_queries[:_MAX_SUBQUESTIONS])
+        return sanitize_plan(promote_back_references(sub_queries[:_MAX_SUBQUESTIONS]))
 
     except Exception as exc:
         print(f"  [WARN]  [decomposer] Decomposition failed: {exc} — treating as a single question")
