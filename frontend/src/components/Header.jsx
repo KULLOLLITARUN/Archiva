@@ -73,11 +73,11 @@ export default function Header({ docsInfo, onUploadClick, onPlaybookClick, onAdm
 
         {onExportClick && hasMessages && (
           <>
-            <button type="button" className="hdr-btn" onClick={() => onExportClick('markdown')} title="Export as Markdown">
+            <button type="button" className="hdr-btn hdr-btn--keep-label" onClick={() => onExportClick('markdown')} title="Export as Markdown">
               <span className="icon"><Download size={15} /></span>
               <span>MD</span>
             </button>
-            <button type="button" className="hdr-btn" onClick={() => onExportClick('pdf')} title="Export as PDF">
+            <button type="button" className="hdr-btn hdr-btn--keep-label" onClick={() => onExportClick('pdf')} title="Export as PDF">
               <span className="icon"><Download size={15} /></span>
               <span>PDF</span>
             </button>
