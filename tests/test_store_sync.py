@@ -37,6 +37,16 @@ def run(coro):
     return asyncio.run(coro)
 
 
+async def _until(predicate, timeout=5.0):
+    """Wait for the polling loop to reach a state instead of sleeping a fixed
+    window - tick timing varies with machine load (and Windows' ~15ms timer)."""
+    deadline = asyncio.get_running_loop().time() + timeout
+    while not predicate():
+        if asyncio.get_running_loop().time() > deadline:
+            raise AssertionError(f"condition not met within {timeout}s")
+        await asyncio.sleep(0.005)
+
+
 class FakeRemote:
     """Stands in for Postgres: a version number and the store a reload returns."""
 
@@ -175,7 +185,7 @@ def test_run_survives_a_failing_tick_and_keeps_polling(monkeypatch):
 
     async def go():
         task = asyncio.create_task(sync.run(interval=0.01))
-        await asyncio.sleep(0.15)
+        await _until(lambda: len(ticks) >= 2)
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
@@ -192,7 +202,7 @@ def test_on_tick_runs_every_poll(monkeypatch):
 
     async def go():
         task = asyncio.create_task(sync.run(interval=0.01))
-        await asyncio.sleep(0.12)
+        await _until(lambda: len(ticks) >= 3)
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
