@@ -261,7 +261,13 @@ def main() -> int:
     out = RESULTS_DIR / f"answer_eval_{datetime.now():%Y%m%d_%H%M%S}.json"
     out.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\nResults written to {out}")
-    if args.save_baseline:
+    if args.save_baseline and summary["errors"]:
+        # A provider outage leaves errored cases ungraded, so the pass rate is
+        # computed over fewer cases and looks better than it is.
+        print(f"Baseline NOT saved: {summary['errors']} case(s) hit provider errors - re-run when the provider is up.")
+    elif args.save_baseline and (args.only or args.case):
+        print("Baseline NOT saved: --only/--case runs a subset of the cases.")
+    elif args.save_baseline:
         args.baseline.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
         print(f"Baseline saved to {args.baseline}")
 
