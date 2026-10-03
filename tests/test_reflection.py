@@ -33,6 +33,17 @@ def test_short_answer_refuses_at_max_attempts():
     assert decision["reason"] == "answer_too_short_max_attempts"
 
 
+def test_short_answer_with_a_fact_from_the_chunks_is_accepted():
+    # Under _MIN_ANSWER_WORDS, but "1000" and "users" come from the chunks, not the question.
+    decision = reflect("How many people use the system?", "1000 users.", CHUNKS, attempt=0, model_used=WEAK_MODEL)
+    assert decision["decision"] == "accept"
+
+
+def test_short_answer_that_only_echoes_the_question_still_retries():
+    decision = reflect("What drove the growth?", "The growth.", CHUNKS, attempt=0, model_used=WEAK_MODEL)
+    assert decision["reason"] == "answer_too_short"
+
+
 def test_no_chunks_is_refused():
     decision = reflect(
         "q", "This is a sufficiently long answer with plenty of words in it.",

@@ -68,7 +68,11 @@ def rewrite_for_retry(
             **light_completion_params(GROQ_FAST, _MAX_TOKENS),
         )
         raw_query: str = response.choices[0].message.content or ""
-        new_query = raw_query.strip()[:_QUERY_MAX_CHARS]
+        # Reasoning models sometimes append their own deliberation after the
+        # query ("...\n\n(Note: must be <=15 words...)"), which would be
+        # searched as keywords. The query is the first non-empty line.
+        first_line = next((line for line in raw_query.splitlines() if line.strip()), "")
+        new_query = first_line.strip().strip('"\'')[:_QUERY_MAX_CHARS]
 
         if not new_query:
             # Empty response — fall back to original

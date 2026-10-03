@@ -59,6 +59,16 @@ def test_rewrite_for_retry_returns_llm_query(monkeypatch):
     assert result == "termination notice period keywords"
 
 
+def test_rewrite_for_retry_drops_reasoning_model_notes_after_the_query(monkeypatch):
+    # Seen live from a reasoning model: its deliberation followed the query.
+    _mock_llm(monkeypatch, content=(
+        "Contoso Ltd account manager name search query\n\n"
+        "(Note: but must be <=15 words, no explanation. Actually just the query."
+    ))
+    result = rewrite_for_retry("Who is the account manager for Contoso Ltd?", "a", "answer_too_short", 0)
+    assert result == "Contoso Ltd account manager name search query"
+
+
 def test_rewrite_for_retry_truncates_to_max_chars(monkeypatch):
     _mock_llm(monkeypatch, content="x" * 500)
     result = rewrite_for_retry("q", "a", "low_overlap", 0)

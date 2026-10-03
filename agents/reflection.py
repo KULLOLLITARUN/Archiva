@@ -293,6 +293,12 @@ def _has_contradiction(query: str, answer: str, chunk_text: str) -> bool:
 
 
 
+def _adds_grounded_fact(query: str, answer: str, chunks: List[dict]) -> bool:
+    """True if *answer* has a content word that the chunks contain but the query doesn't."""
+    new_words = _filter_stopwords(answer) - _filter_stopwords(query)
+    return bool(new_words & _filter_stopwords(_all_chunk_text(chunks)))
+
+
 def _build_confidence(overlap_ratio: float, attempt: int) -> float:
     base    = min(1.0, overlap_ratio * _CONF_SCALE)
     penalty = _CONF_RETRY_PENALTY * attempt
@@ -355,8 +361,12 @@ def reflect(
         return _decision("refuse", "explicit_not_found", 0.0, attempt)
 
     # ── Check 2: Answer too short ─────────────────────────────────────────────
+    # A terse answer is fine when it carries a fact from the documents
+    # ("Daniel Okafor is the account manager." is 6 words). Only short
+    # answers that add nothing beyond the question ("Yes.", an echo of the
+    # question) are retried.
     word_count = len(answer_stripped.split())
-    if word_count < _MIN_ANSWER_WORDS:
+    if word_count < _MIN_ANSWER_WORDS and not _adds_grounded_fact(query, answer_stripped, chunks):
         if attempt < 2:
             return _decision("retry_search", "answer_too_short", 0.0, attempt)
         return _decision("refuse", "answer_too_short_max_attempts", 0.0, attempt)
