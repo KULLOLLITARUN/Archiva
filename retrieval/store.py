@@ -33,6 +33,10 @@ class MultiDocStore:
         self.file_hash_map: Dict[str, str] = {}   # content_hash → file_id
         self._bm25: Optional[BM25Okapi]  = None
         self._chunk_hashes: Set[str]     = set()  # SHA-256 of each chunk text
+        # Documents accepted but not yet searchable (background OCR). Kept
+        # apart from `files`/`chunks` so retrieval, BM25 and get_files_summary()
+        # never see a document with nothing indexed. See add_pending().
+        self.pending: Dict[str, dict]    = {}
         # Fix #2: track the background embedding thread so we can join it
         self._embed_thread: Optional[threading.Thread] = None
 
@@ -44,6 +48,7 @@ class MultiDocStore:
     def __setstate__(self, state):
         self.__dict__.update(state)
         self._embed_thread = None
+        self.__dict__.setdefault("pending", {})
 
     # ── Private ────────────────────────────────────────────────────────────────
 
@@ -164,6 +169,80 @@ class MultiDocStore:
         ]
         self._rebuild_index()
         return True
+
+    def adopt(self, fresh: "MultiDocStore") -> None:
+        """
+        Replace this store's contents with *fresh*'s, IN PLACE.
+
+        Used when another worker process changed the documents and this
+        one reloads from Postgres. In place (rather than rebinding the
+        module-level `store`) so every holder of this object - the OCR job
+        runner, background tasks - keeps a valid reference.
+
+        Pending records for documents that are STILL pending keep their
+        local entry, so a job running in this process keeps its page
+        progress across a reload.
+        """
+        merged_pending = {}
+        for file_id, record in fresh.pending.items():
+            local = self.pending.get(file_id)
+            merged_pending[file_id] = local if local is not None and local["status"] == record["status"] else record
+
+        self.files          = fresh.files
+        self.chunks         = fresh.chunks
+        self.file_hash_map  = fresh.file_hash_map
+        self._chunk_hashes  = fresh._chunk_hashes
+        self._bm25          = fresh._bm25
+        self.pending        = merged_pending
+
+    # ── Pending (not-yet-searchable) documents ─────────────────────────────────
+
+    def add_pending(
+        self,
+        file_id: str,
+        filename: str,
+        content_hash: str,
+        file_type: str,
+        status: str = "processing",
+        message: str = "",
+    ) -> dict:
+        """
+        Register a document whose text isn't extracted yet (a scanned PDF
+        queued for OCR) or whose extraction failed. It holds its content
+        hash so the same file can't be uploaded twice while it is in flight,
+        but contributes nothing to retrieval.
+        """
+        record = {
+            "file_id":     file_id,
+            "filename":    filename,
+            "file_type":   file_type,
+            "hash":        content_hash,
+            "chunk_count": 0,
+            "uploaded_at": datetime.now(timezone.utc).isoformat(),
+            "status":      status,
+            "message":     message,
+            "progress":    None,   # (pages_done, pages_total) while processing
+        }
+        self.pending[file_id] = record
+        return record
+
+    def set_pending_state(self, file_id: str, status: str, message: str = "") -> None:
+        record = self.pending.get(file_id)
+        if record is not None:
+            record["status"] = status
+            record["message"] = message
+
+    def remove_pending(self, file_id: str) -> bool:
+        return self.pending.pop(file_id, None) is not None
+
+    def find_pending_by_hash(self, content_hash: str) -> Optional[dict]:
+        for record in self.pending.values():
+            if record["hash"] == content_hash:
+                return record
+        return None
+
+    def get_pending(self) -> List[dict]:
+        return list(self.pending.values())
 
     # ── Read ───────────────────────────────────────────────────────────────────
 

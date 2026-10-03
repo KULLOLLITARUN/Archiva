@@ -53,6 +53,13 @@ BM25_THRESHOLD = float(os.getenv("BM25_THRESHOLD", 0.1))
 
 TOP_K       = int(os.getenv("TOP_K", 5))
 FINAL_K     = int(os.getenv("FINAL_K", 5))
+# Diversity preference when assembling the LLM context: take at most this many
+# chunks per document FIRST so one document can't crowd out the others, then
+# backfill any unused slots (up to FINAL_K) from the chunks that were skipped.
+# It is a preference, not a ceiling - with a single document loaded there is
+# nothing to balance, and a hard cap of 2 used to throw away the very chunk
+# that contained the answer.
+MAX_CHUNKS_PER_DOC = int(os.getenv("MAX_CHUNKS_PER_DOC", 2))
 
 # Hybrid retrieval (Part 2): per-source candidate counts before RRF fusion.
 TOP_K_BM25  = int(os.getenv("TOP_K_BM25", 20))
@@ -119,6 +126,40 @@ MAX_CHUNKS_PER_FILE = int(os.getenv("MAX_CHUNKS_PER_FILE", 500))
 #    stop already skips extracting pages beyond the cap.
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", 50 * 1024 * 1024))   # 50 MB
 MAX_INGEST_CHARS = int(os.getenv("MAX_INGEST_CHARS", 2_000_000))         # ~2M chars
+
+# ── OCR (scanned/image-only PDFs) ──────────────────────────────────────────────
+# OCR runs as a background job (ingestion/ocr_jobs.py), never inline in
+# /upload. Bounded like every other ingestion path: OCR_MAX_PAGES caps the
+# work per file, and lines the engine isn't confident about are DROPPED
+# rather than indexed (OCR_MIN_LINE_CONFIDENCE) - low-confidence text in
+# the search index is worse than a gap, since it invites hallucination.
+OCR_ENABLED             = os.getenv("OCR_ENABLED", "true").lower() in ("1", "true", "yes")
+OCR_MAX_PAGES           = int(os.getenv("OCR_MAX_PAGES", 50))
+OCR_RENDER_SCALE        = float(os.getenv("OCR_RENDER_SCALE", 2.0))       # 2.0 ~ 144 dpi
+OCR_MIN_LINE_CONFIDENCE = float(os.getenv("OCR_MIN_LINE_CONFIDENCE", 0.6))
+# A worker owning an OCR job renews its lease once per page; if it goes this
+# long without renewing (crash, hang) another worker may take the job over.
+OCR_LEASE_SECONDS       = float(os.getenv("OCR_LEASE_SECONDS", 120))
+
+# ── Multi-process operation ────────────────────────────────────────────────────
+# Each worker process keeps its own in-memory copy of the document store.
+# Every STORE_SYNC_INTERVAL_S seconds it compares Postgres's store_version
+# with the one it last loaded and reloads only if another worker changed the
+# documents (db/store_sync.py's StoreSynchronizer). Costs one tiny query per
+# tick when idle. Set STORE_SYNC_ENABLED=false to skip the background task
+# in a strictly single-process deployment.
+# Load the embedding + reranker models on a background thread at startup so the
+# first question after a restart isn't ~8s slower than the rest. Disable to
+# skip the memory/CPU spike at boot (they then load on first use, as before).
+WARM_UP_ON_START      = os.getenv("WARM_UP_ON_START", "true").lower() in ("1", "true", "yes")
+STORE_SYNC_ENABLED    = os.getenv("STORE_SYNC_ENABLED", "true").lower() in ("1", "true", "yes")
+STORE_SYNC_INTERVAL_S = float(os.getenv("STORE_SYNC_INTERVAL_S", 2.0))
+
+# Where slowapi keeps rate-limit counters. The default is per-process memory,
+# so with N workers each one enforces the limit separately (effective limit
+# is N x the stated one). Point this at a shared backend for a true global
+# limit, e.g. redis://localhost:6379 (needs `pip install redis`).
+RATE_LIMIT_STORAGE_URI = os.getenv("RATE_LIMIT_STORAGE_URI", "memory://")
 
 # ── Chunking ──────────────────────────────────────────────────────────────────
 
@@ -246,4 +287,15 @@ MIN_OVERLAP_RATIO = float(os.getenv("MIN_OVERLAP_RATIO", 0.15))
 # an optional LLM faithfulness judge as a second-pass check.
 # Set to 0.0 to disable the judge entirely.
 JUDGE_CONFIDENCE_THRESHOLD = float(os.getenv("JUDGE_CONFIDENCE_THRESHOLD", 0.7))
+
+# A "Not found in the document" answer is normally final. But the model says
+# that even when the retrieved text plainly contains the answer (seen live:
+# top chunk read "The managed disk must be created in Central India, Zone 1"
+# and the fast model still answered "Not found"). If the best cross-encoder
+# score among the retrieved chunks is at least this high - i.e. retrieval
+# found strongly relevant text - the loop re-asks the strong model once
+# before giving up. Measured on real data: questions the documents cannot
+# answer score about -10 to -11 and answerable ones 4.8 to 7.5, so 3.0
+# leaves wide margin on both sides. Set very high (e.g. 999) to disable.
+NOT_FOUND_RECHECK_MIN_CE_SCORE = float(os.getenv("NOT_FOUND_RECHECK_MIN_CE_SCORE", 3.0))
 

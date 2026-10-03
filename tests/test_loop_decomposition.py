@@ -3,6 +3,7 @@ _maybe_decompose (the recursion-safe branch decision) and _merge_sub_results
 (combining per-sub-question results). Both are pure — no store/LLM needed."""
 
 import agents.loop as loop
+from agents.decomposer import _mechanical_resolve as loop_mechanical
 
 
 # ── _maybe_decompose ────────────────────────────────────────────────────────────
@@ -226,6 +227,100 @@ def test_run_decomposed_independent_subquestions_are_not_anchored(monkeypatch):
     assert calls == ["What is the vacation policy?", "What is planned for Q3 2026?"]
 
 
+# ── Dependent chains ({N} placeholders) ────────────────────────────────────────
+
+def test_run_decomposed_resolves_placeholder_step_from_prior_answer(monkeypatch):
+    calls = []
+
+    def fake_run_reflection_loop(query, store, intent, force_model, _allow_decompose=True):
+        calls.append(query)
+        if "supplies" in query:
+            return _result("Acme Corp supplies Project Atlas.", ["c1"], confidence=0.9)
+        return _result("March 3.", ["c2"], confidence=0.9)
+
+    monkeypatch.setattr(loop, "run_reflection_loop", fake_run_reflection_loop)
+    seen = {}
+
+    def fake_resolve(sub_query, answers, questions, original_query=None):
+        seen.update(sub_query=sub_query, answers=dict(answers), questions=dict(questions),
+                    original_query=original_query)
+        return "What is the renewal date of Acme Corp?"
+
+    monkeypatch.setattr(loop, "resolve_dependent_query", fake_resolve)
+
+    merged = loop._run_decomposed(
+        ["Which vendor supplies Project Atlas?", "What is the renewal date of {1}?"],
+        store=None, intent="qa", force_model=None,
+        original_query="Which vendor supplies Atlas and when does it renew?",
+    )
+
+    assert calls == ["Which vendor supplies Project Atlas?", "What is the renewal date of Acme Corp?"]
+    assert seen["original_query"] == "Which vendor supplies Atlas and when does it renew?"
+    assert seen["answers"] == {1: "Acme Corp supplies Project Atlas."}
+    # Heading is the cleanly rewritten standalone question, never the raw {1}
+    # placeholder and never the clumsy "the answer to step 1" wording.
+    assert "**What is the renewal date of Acme Corp?**" in merged["answer"]
+    assert "{1}" not in merged["answer"]
+    assert "the answer to step" not in merged["answer"]
+
+
+def test_heading_falls_back_to_generic_wording_when_rewrite_only_pasted_answers_in(monkeypatch):
+    def fake_run_reflection_loop(query, store, intent, force_model, _allow_decompose=True):
+        return _result("Acme Corp." if "supplies" in query else "March 3.", ["c1"], confidence=0.9)
+
+    monkeypatch.setattr(loop, "run_reflection_loop", fake_run_reflection_loop)
+    # The LLM rewrite failed -> resolve_dependent_query returns the mechanical paste-in.
+    monkeypatch.setattr(loop, "resolve_dependent_query",
+                        lambda sub_query, answers, questions, original_query=None:
+                        loop_mechanical(sub_query, answers))
+    merged = loop._run_decomposed(
+        ["Who supplies Atlas?", "What is the renewal date of {1}?"],
+        store=None, intent="qa", force_model=None,
+    )
+    assert "**What is the renewal date of the answer to step 1?**" in merged["answer"]
+    assert "(Acme Corp.)" not in merged["answer"].split("March 3.")[0].split("**What is")[1]
+
+
+def test_run_decomposed_skips_dependent_steps_when_prerequisite_not_found(monkeypatch):
+    calls = []
+
+    def fake_run_reflection_loop(query, store, intent, force_model, _allow_decompose=True):
+        calls.append(query)
+        return _result(loop._NOT_FOUND_ANSWER, [], confidence=0.0)
+
+    monkeypatch.setattr(loop, "run_reflection_loop", fake_run_reflection_loop)
+    monkeypatch.setattr(loop, "resolve_dependent_query",
+                        lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not resolve")))
+
+    merged = loop._run_decomposed(
+        ["Which vendor supplies Atlas?", "Renewal date of {1}?", "Is {2} before the audit?"],
+        store=None, intent="qa", force_model=None,
+    )
+
+    # Only step 1 ever hits retrieval; 2 is skipped, and 3 is skipped because
+    # step 2 (which it depends on) was itself skipped.
+    assert calls == ["Which vendor supplies Atlas?"]
+    assert "depends on step 1" in merged["answer"]
+    assert "depends on step 2" in merged["answer"]
+
+
+def test_run_decomposed_independent_step_still_runs_after_failed_unrelated_step(monkeypatch):
+    calls = []
+
+    def fake_run_reflection_loop(query, store, intent, force_model, _allow_decompose=True):
+        calls.append(query)
+        answer = loop._NOT_FOUND_ANSWER if "Atlas" in query else "20 days."
+        return _result(answer, [], confidence=0.5)
+
+    monkeypatch.setattr(loop, "run_reflection_loop", fake_run_reflection_loop)
+
+    loop._run_decomposed(
+        ["Which vendor supplies Atlas?", "What is the vacation policy?"],
+        store=None, intent="qa", force_model=None,
+    )
+    assert calls == ["Which vendor supplies Atlas?", "What is the vacation policy?"]
+
+
 # ── Top-level run_reflection_loop wiring ────────────────────────────────────────
 
 def test_run_reflection_loop_routes_to_decomposition_when_split(monkeypatch):
@@ -235,7 +330,7 @@ def test_run_reflection_loop_routes_to_decomposition_when_split(monkeypatch):
     sentinel = {"answer": "merged", "reflection_reason": "decomposed_2_subquestions"}
     recorded = {}
 
-    def fake_run_decomposed(sub_queries, store, intent, force_model):
+    def fake_run_decomposed(sub_queries, store, intent, force_model, original_query=None):
         recorded["sub_queries"] = sub_queries
         return sentinel
 

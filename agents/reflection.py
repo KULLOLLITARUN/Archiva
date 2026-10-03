@@ -34,11 +34,11 @@ _CONF_SCALE:          float = 3.0
 _CONF_RETRY_PENALTY:  float = 0.2
 _CONF_MIN:            float = 0.1
 
-_NEGATION_PHRASES: tuple = (
-    "there is no",
-    "does not",
-    "never",
-    "not mentioned",
+# Words that negate whatever they govern, matched on word boundaries (so "no"
+# never fires inside "know"/"note", nor "not" inside "another"). Contractions
+# ("doesn't", "isn't", ...) are covered by the n't alternative.
+_NEGATION_WORD_RE: re.Pattern = re.compile(
+    r"\b(?:no|not|never|none|neither|nor|without|cannot|\w+n't)\b"
 )
 
 _NUMBER_PATTERN: re.Pattern = re.compile(r"\b\d[\d,\.%/-]*\b")
@@ -173,61 +173,120 @@ def _numbers_are_grounded(answer: str, chunk_text: str) -> bool:
     return True
 
 
-_NEGATION_WINDOW: int = 50   # chars — how close a negation phrase must be to
-                              # a keyword to count as actually negating it
+# How far BEFORE a keyword a negation word may sit and still be said to
+# negate it: at most this many words between the two, all in the same clause.
+# "There is no warranty coverage" -> negates "warranty"; "no coverage for
+# accidental damage" -> negates "accidental". But "it never modifies the
+# original VM" does NOT negate "vm" (3 words in between): that negation
+# belongs to "modifies", and the sentence still asserts the VM exists.
+_NEGATION_REACH_WORDS: int = 2
+_NEGATION_LOOKBACK_CHARS: int = 60   # cap on text scanned before a keyword
+
+# Words/punctuation that end a clause. A negation never reaches across these,
+# so "...specialized VM -> approach is safer because it never modifies..."
+# can't smuggle "never" back onto a keyword in an earlier clause.
+_CLAUSE_BREAK_RE: re.Pattern = re.compile(
+    r"[.;:!?\n()\[\]\u2192\u2014\u2013]|,|\b(?:because|but|so|which|while|whereas|however|although)\b"
+)
+
+_TRAILING_NEGATION_RE: re.Pattern = re.compile(r"\bnot (?:mentioned|stated|specified|provided|covered)\b")
+_TRAILING_REACH_WORDS: int = 3      # "X is not mentioned": negation FOLLOWS the keyword
+
+
+def _is_negated_at(text: str, idx: int, end: int) -> bool:
+    """
+    True if the keyword occurrence text[idx:end] is negated BY a negation
+    word that governs it: one from _NEGATION_WORD_RE within
+    _NEGATION_REACH_WORDS words before it in the same clause, or
+    "not mentioned" (and similar) within a few words after it in the same clause.
+    """
+    before = text[max(0, idx - _NEGATION_LOOKBACK_CHARS):idx]
+    breaks = list(_CLAUSE_BREAK_RE.finditer(before))
+    if breaks:
+        before = before[breaks[-1].end():]
+
+    negations = list(_NEGATION_WORD_RE.finditer(before))
+    if negations:
+        gap_words = before[negations[-1].end():].split()
+        if len(gap_words) <= _NEGATION_REACH_WORDS:
+            return True
+
+    after = text[end: end + _NEGATION_LOOKBACK_CHARS]
+    clause_end = _CLAUSE_BREAK_RE.search(after)
+    if clause_end:
+        after = after[:clause_end.start()]
+    leading = " ".join(after.split()[: _TRAILING_REACH_WORDS + 2])
+    return _TRAILING_NEGATION_RE.search(leading) is not None
+
+
+_STEM_SUFFIXES = ("ing", "ed", "es", "s", "e")
+
+
+def _stem(word: str) -> str:
+    """Strip one common English ending: deallocated/deallocate -> deallocat."""
+    for suffix in _STEM_SUFFIXES:
+        if word.endswith(suffix) and len(word) - len(suffix) >= 3:
+            return word[: -len(suffix)]
+    return word
+
+
+def _occurrences(text: str, kw: str):
+    """
+    (start, end) of every whole-word occurrence of *kw* or a simple inflection
+    of it. Whole-word: the query word "run" must not match inside "runbook"
+    (seen live - the source title "VM Cloning Runbook" counted as the source
+    asserting "run", and a correct "does not run Sysprep" was flagged).
+    Inflections: "deallocated" in the answer and "does not deallocate" in the
+    source are the same word; exact matching missed that the source negates
+    it and flagged a correct "it is not deallocated".
+    """
+    pattern = re.compile(r"\b" + re.escape(_stem(kw)) + r"(?:e|es|ed|ing|s|d)?\b")
+    for match in pattern.finditer(text):
+        yield match.start(), match.end()
 
 
 def _has_contradiction(query: str, answer: str, chunk_text: str) -> bool:
     """
-    Return True only when the answer appears to contradict a positive
-    assertion in the source chunks.
+    Return True only when the answer appears to contradict the source about
+    a query keyword.
 
-    Requires, symmetrically on BOTH sides:
-      - The answer negates a query keyword NEAR that keyword — not just
-        "the answer contains a negation phrase somewhere". An honest,
-        correctly-hedged answer like "X mentions Y but does not define Z"
-        contains "does not" without contradicting anything about Y; the
-        old version treated any negation phrase anywhere in the whole
-        answer as evidence, so a query keyword like "engineer" that's
-        simply the document's topic (and therefore appears "positively"
-        dozens of times in the source) would false-positive against an
-        unrelated "does not" three sentences away.
-      - The chunk text positively asserts that SAME keyword outside of
-        any negation context (i.e. the source says it exists/happened,
-        the answer says it doesn't).
+    For a keyword to count, ALL of these must hold:
+      - The answer negates it: a negation phrase GOVERNS the keyword (same
+        clause, a few words before it - see _is_negated_at), not merely
+        sits somewhere near it. An honest answer like "...the specialized VM
+        approach is safer because it never modifies the original" contains
+        "never" right next to "specialized" without denying anything about
+        it; proximity alone used to flag that as a contradiction.
+      - The question itself doesn't negate it. "What happens if the zones
+        don't match?" answered with "...if the zones do not match, creation
+        fails" merely repeats the question's own condition.
+      - The source asserts the same keyword and NEVER negates it anywhere.
+        If the source itself uses the keyword in a negated sense somewhere
+        ("safe, no sysprep" / "does not run sysprep"), an answer negating it
+        is faithful to the source, not contradicting it - and documents that
+        contrast an old and a new approach do this constantly.
+
+    Still a cheap heuristic, not entailment: it can miss subtle
+    contradictions. It is tuned to avoid flagging correct answers, because a
+    false flag triggers a retry and a "possible contradiction / 0%
+    confident" badge on a right answer, which is worse than a miss here.
     """
     answer_lower = answer.lower()
     chunk_lower  = chunk_text.lower()
+    query_lower  = query.lower()
 
-    query_keywords = _filter_stopwords(query)
-    if not query_keywords:
-        return False
-
-    for kw in query_keywords:
-        # ── Answer side: is THIS keyword actually negated nearby, not just
-        #    present somewhere alongside an unrelated negation phrase? ──
-        kw_idx = answer_lower.find(kw)
-        keyword_is_negated_in_answer = False
-        while kw_idx != -1:
-            window_start = max(0, kw_idx - _NEGATION_WINDOW)
-            window = answer_lower[window_start : kw_idx + len(kw) + _NEGATION_WINDOW]
-            if any(phrase in window for phrase in _NEGATION_PHRASES):
-                keyword_is_negated_in_answer = True
-                break
-            kw_idx = answer_lower.find(kw, kw_idx + 1)
-
-        if not keyword_is_negated_in_answer:
+    for kw in _filter_stopwords(query):
+        if not any(_is_negated_at(answer_lower, s, e) for s, e in _occurrences(answer_lower, kw)):
             continue
+        if any(_is_negated_at(query_lower, s, e) for s, e in _occurrences(query_lower, kw)):
+            continue   # the QUESTION negates it ("...if they don't match"); echoing that is not a contradiction
 
-        # ── Chunk side: does the source positively assert this same keyword? ──
-        kw_idx = chunk_lower.find(kw)
-        while kw_idx != -1:
-            window_start = max(0, kw_idx - _NEGATION_WINDOW)
-            window = chunk_lower[window_start : kw_idx + len(kw) + _NEGATION_WINDOW]
-            if not any(phrase in window for phrase in _NEGATION_PHRASES):
-                # Chunk positively asserts this keyword → real contradiction
-                return True
-            kw_idx = chunk_lower.find(kw, kw_idx + 1)
+        source_positions = list(_occurrences(chunk_lower, kw))
+        if not source_positions:
+            continue
+        if any(_is_negated_at(chunk_lower, s, e) for s, e in source_positions):
+            continue   # the source negates it somewhere too: consistent, not contradictory
+        return True
 
     return False
 

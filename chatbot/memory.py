@@ -17,6 +17,16 @@ Multi-tenant upgrade (v4):
          string key is passed to add() / get_history() / clear().
          This guarantees that two users with the same session_id value
          will NEVER share conversation context.
+
+Multi-process (v5):
+         PostgresConversationMemory keeps sessions in the chat_sessions table
+         instead of sessions.json. The file was rewritten whole on every
+         message, so with several worker processes each one's write silently
+         erased the others' turns (and each kept a stale in-memory copy).
+         Rows are appended under a row lock, so no turn is lost and any
+         worker sees any session's latest history. make_memory() picks the
+         implementation; ConversationMemory (file-backed) is kept as-is for
+         the simple single-process case and for tests.
 """
 
 import json
@@ -167,3 +177,96 @@ class ConversationMemory:
                     os.remove(path)
                 except FileNotFoundError:
                     pass
+
+
+# ── Postgres-backed implementation (multi-process safe) ─────────────────────────
+
+class PostgresConversationMemory(ConversationMemory):
+    """
+    Same interface as ConversationMemory, but every session lives in the
+    chat_sessions table, so several worker processes share one consistent
+    history.
+
+    If Postgres is unreachable, calls fall back to an in-process dict for
+    that call (with a warning) rather than failing the chat request - the
+    conversation keeps working, just without cross-process sharing until
+    the database is back.
+    """
+
+    def __init__(self):
+        self.sessions: Dict[str, List[MemoryEntry]] = {}   # degraded-mode fallback only
+        self._import_legacy_sessions_file()
+
+    # ── One-time migration from sessions.json ──────────────────────────────────
+
+    def _import_legacy_sessions_file(self) -> None:
+        """
+        Move sessions.json into Postgres once, then rename it so it is not
+        re-imported. Existing rows win (ON CONFLICT DO NOTHING), and losing a
+        race to another worker doing the same import is harmless.
+        """
+        if not os.path.exists(_SESSIONS_FILE):
+            return
+        try:
+            from db import postgres as pg
+            with open(_SESSIONS_FILE, "r", encoding="utf-8") as f:
+                raw: dict = json.load(f)
+            for sid, entries in raw.items():
+                pg.db_import_session(sid, entries[-self.MAX_TURNS:])
+            os.replace(_SESSIONS_FILE, _SESSIONS_FILE + ".migrated")
+            print(f"[OK] Migrated {len(raw)} session(s) from {_SESSIONS_FILE} to Postgres")
+        except Exception as exc:
+            print(f"  [WARN]  Could not migrate {_SESSIONS_FILE} to Postgres ({exc}) - leaving it in place.")
+
+    # ── Public API ─────────────────────────────────────────────────────────────
+
+    def add(self, session_id, query, answer, sources, intent) -> None:
+        entry = MemoryEntry(
+            query=query, answer=answer, sources=sources, intent=intent,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+        try:
+            from db import postgres as pg
+            pg.db_append_session_entry(session_id, _serialize_entry(entry), self.MAX_TURNS)
+        except Exception as exc:
+            print(f"  [WARN]  Could not persist session {session_id!r} to Postgres ({exc}) - kept in this process only.")
+            history = self.sessions.setdefault(session_id, [])
+            history.append(entry)
+            self.sessions[session_id] = history[-self.MAX_TURNS:]
+
+    def get_history(self, session_id: str) -> List[MemoryEntry]:
+        try:
+            from db import postgres as pg
+            return [_deserialize_entry(e) for e in pg.db_get_session_entries(session_id)]
+        except Exception as exc:
+            print(f"  [WARN]  Could not read session {session_id!r} from Postgres ({exc}) - using this process's copy.")
+            return list(self.sessions.get(session_id, []))
+
+    def get_last(self, session_id: str) -> Optional[MemoryEntry]:
+        history = self.get_history(session_id)
+        return history[-1] if history else None
+
+    def clear(self, session_id: str) -> None:
+        self.sessions.pop(session_id, None)
+        try:
+            from db import postgres as pg
+            pg.db_clear_session(session_id)
+        except Exception as exc:
+            print(f"  [WARN]  Could not clear session {session_id!r} in Postgres ({exc})")
+
+    def clear_all(self) -> None:
+        self.sessions = {}
+        try:
+            from db import postgres as pg
+            pg.db_clear_all_sessions()
+        except Exception as exc:
+            print(f"  [WARN]  Could not clear sessions in Postgres ({exc})")
+
+
+def make_memory() -> ConversationMemory:
+    """
+    Session store for the running app: Postgres-backed when PERSIST_MEMORY is
+    on (the default; shared correctly across worker processes), otherwise
+    plain in-process memory that vanishes on restart.
+    """
+    return PostgresConversationMemory() if PERSIST_MEMORY else ConversationMemory()

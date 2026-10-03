@@ -29,6 +29,11 @@ from llm.groq_manager import groq_manager
 # ── Retry configuration ────────────────────────────────────────────────────────
 
 _MAX_RETRIES    = 3
+
+# What call_groq() returns when every retry failed (rate limit, quota, outage).
+# agents/loop.py recognises this exact text so an outage is reported as an
+# outage instead of being scored as a bad answer and ending in "Not found".
+SERVICE_UNAVAILABLE_ANSWER = "Service temporarily unavailable. Please try again."
 _BACKOFF_BASE_S = 1  # seconds; doubles each attempt (1 → 2 → 4)
 
 
@@ -176,7 +181,7 @@ def call_groq(model_id: str, prompt: str, query: str) -> str:
             time.sleep(wait)
 
     print(f"  [ERR]  [worker] Groq permanently failed after {_MAX_RETRIES} attempts: {last_exc}")
-    return "Service temporarily unavailable. Please try again."
+    return SERVICE_UNAVAILABLE_ANSWER
 
 
 # ── Streaming LLM call ─────────────────────────────────────────────────────────

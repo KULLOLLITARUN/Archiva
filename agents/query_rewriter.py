@@ -12,7 +12,7 @@ SonarQube notes:
 """
 
 from config import GROQ_FAST
-from llm.groq_manager import groq_manager
+from llm.groq_manager import groq_manager, light_completion_params
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -65,7 +65,7 @@ def rewrite_for_retry(
                 {"role": "user",   "content": user_message},
             ],
             temperature=_TEMPERATURE,
-            max_tokens=_MAX_TOKENS,
+            **light_completion_params(GROQ_FAST, _MAX_TOKENS),
         )
         raw_query: str = response.choices[0].message.content or ""
         new_query = raw_query.strip()[:_QUERY_MAX_CHARS]

@@ -25,11 +25,17 @@ export default function DocsStrip({ docsInfo, onManage }) {
           role="listitem"
           className="docs-strip-chip"
           onClick={onManage}
-          title={`${f.filename} — ${f.chunk_count} chunk${f.chunk_count !== 1 ? 's' : ''}`}
+          title={
+            f.status === 'processing' ? `${f.filename} — OCR in progress, not searchable yet`
+              : f.status === 'failed' ? `${f.filename} — ${f.message || 'processing failed'}`
+              : `${f.filename} — ${f.chunk_count} chunk${f.chunk_count !== 1 ? 's' : ''}`
+          }
         >
           <FileText size={13} />
           <span className="docs-strip-chip-name">{f.filename}</span>
-          <span className="docs-strip-chip-count">{f.chunk_count}</span>
+          <span className="docs-strip-chip-count">
+            {f.status === 'processing' ? 'OCR…' : f.status === 'failed' ? '!' : f.chunk_count}
+          </span>
         </button>
       ))}
       <button type="button" className="docs-strip-add" onClick={onManage} title="Add or manage documents">

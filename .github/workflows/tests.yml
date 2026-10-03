@@ -53,6 +53,9 @@ jobs:
         # deliberate exception to that rule and why it's out of scope here).
         env:
           DATABASE_URL: postgresql://archiva:archiva_ci_password@localhost:5432/archiva
+          # This Postgres is a throwaway service container, so the
+          # table-truncating DB tests are safe to run against it.
+          ARCHIVA_ALLOW_DESTRUCTIVE_TESTS: "1"
         run: pytest -v
 
       - name: Run retrieval-quality eval

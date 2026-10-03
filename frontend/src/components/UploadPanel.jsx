@@ -30,11 +30,23 @@ function StatusPill({ status }) {
     ok: { label: 'indexed', cls: 'pill--ok' },
     duplicate: { label: 'duplicate', cls: 'pill--skip' },
     uploading: { label: 'uploading', cls: 'pill--busy' },
+    processing: { label: 'OCR running', cls: 'pill--busy' },
+    failed: { label: 'failed', cls: 'pill--err' },
     error: { label: 'error', cls: 'pill--err' },
     limit: { label: 'limit', cls: 'pill--err' },
   }
   const { label, cls } = map[status] || { label: status, cls: '' }
   return <span className={`up-pill ${cls}`}>{label}</span>
+}
+
+/** One-line description of a listed document's state. */
+export function fileMeta(f) {
+  if (f.status === 'processing') {
+    const [done, total] = f.progress || []
+    return total ? `OCR in progress · page ${done}/${total}` : 'Queued for OCR'
+  }
+  if (f.status === 'failed') return f.message || 'Processing failed'
+  return `${f.chunk_count} chunks`
 }
 
 const TOAST_ICON = { ok: <Check size={14} />, info: <Info size={14} />, err: <X size={14} /> }
@@ -90,6 +102,9 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
       ))
       if (res.status === 'ok') {
         toast(`${file.name} — ${res.chunk_count} chunks indexed`, 'ok')
+        onDocsChanged?.()
+      } else if (res.status === 'processing') {
+        toast(`${file.name} — scanned PDF, running OCR in the background`, 'info')
         onDocsChanged?.()
       } else if (res.status === 'duplicate') {
         toast(`${file.name} already indexed`, 'info')
@@ -234,7 +249,7 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
             <p className="up-dropzone-primary">
               {dragging ? 'Drop to upload' : 'Drop files or click to browse'}
             </p>
-            <p className="up-dropzone-secondary">.txt · .pdf · .docx</p>
+            <p className="up-dropzone-secondary">.txt · .pdf · .docx · scanned PDFs are OCR'd</p>
           </div>
 
           {/* ── Recent uploads ───────────────────────────────────── */}
@@ -307,12 +322,15 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
                     <span className="up-file-icon">{fileIcon(f.filename)}</span>
                     <div className="up-file-info">
                       <span className="up-file-name">{f.filename}</span>
-                      <span className="up-file-meta">{f.chunk_count} chunks</span>
+                      <span className="up-file-meta">{fileMeta(f)}</span>
                     </div>
+                    {(f.status === 'processing' || f.status === 'failed') && (
+                      <StatusPill status={f.status} />
+                    )}
                     {f.file_id && (
                       <button
                         className="up-delete-btn"
-                        title={`Remove ${f.filename}`}
+                        title={f.status === 'processing' ? `Cancel and remove ${f.filename}` : `Remove ${f.filename}`}
                         onClick={() => handleDelete(f.file_id, f.filename)}
                         aria-label={`Delete ${f.filename}`}
                       ><X size={12} /></button>

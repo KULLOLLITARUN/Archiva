@@ -1901,4 +1901,16 @@ body::before {
   .hdr-btn {
     padding: 8px;
   }
+
+  /* MD/PDF export buttons both use the same Download icon - hiding their
+     text label on mobile like other header buttons would leave two
+     identical-looking icons with no way to tell them apart (the title
+     tooltip doesn't work on touchscreens). Keep the short label visible. */
+  .hdr-btn--keep-label span:not(.icon) {
+    display: inline;
+  }
+
+  .hdr-btn--keep-label {
+    padding: 8px 10px;
+  }
 }

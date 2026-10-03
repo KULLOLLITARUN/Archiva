@@ -33,12 +33,22 @@ from config import (
     FINAL_K,
     GROQ_STRONG,
     JUDGE_CONFIDENCE_THRESHOLD,
+    MAX_CHUNKS_PER_DOC,
     MAX_CONTEXT_TOKENS,
     MAX_REFLECTION_ATTEMPTS,
     MIN_REFLECTION_CONFIDENCE,
+    NOT_FOUND_RECHECK_MIN_CE_SCORE,
 )
 from cache.semantic_cache import semantic_cache
-from agents.decomposer import anchor_to_prior_answer, decompose_query, should_decompose
+from agents.decomposer import (
+    anchor_to_prior_answer,
+    decompose_query,
+    dependencies_of,
+    display_query,
+    resolve_dependent_query,
+    should_decompose,
+    step_heading,
+)
 from agents.state import AgentState
 from agents.root_cause import analyze_failure
 from agents.healer import apply_healing
@@ -46,7 +56,7 @@ from agents.context_optimizer import optimize_context
 from retrieval.search import apply_threshold, balanced_retrieval, hybrid_retrieve
 from retrieval.reranker import rerank
 from agents.router import route
-from agents.worker import build_prompt, call_groq
+from agents.worker import SERVICE_UNAVAILABLE_ANSWER, build_prompt, call_groq
 from agents.reflection import reflect, should_force_strong_model
 from agents.query_rewriter import rewrite_for_retry
 from agents.judge import judge_faithfulness
@@ -56,6 +66,28 @@ from agents.judge import judge_faithfulness
 MAX_ATTEMPTS: int = MAX_REFLECTION_ATTEMPTS
 
 _NOT_FOUND_ANSWER = "Not found in the document."
+
+# Shown when the LLM provider is down or out of quota. Starts with the worker's
+# own wording so anything that already recognises it (the answer eval, logs)
+# still does, then says plainly that this is not a statement about the documents.
+_PROVIDER_UNAVAILABLE_ANSWER = (
+    "Service temporarily unavailable: the AI provider could not be reached or its "
+    "rate limit / daily quota was reached. This is not an answer about your "
+    "documents - please try again in a few minutes."
+)
+
+
+def _is_provider_unavailable(answer: str) -> bool:
+    return (answer or "").strip().startswith("Service temporarily unavailable")
+
+
+def _provider_unavailable_result(attempt: int, search_queries: List[str]) -> Dict:
+    result = _not_found_result(
+        attempt, reflected=attempt > 0, reason="provider_unavailable",
+        search_queries=search_queries, failure_type="PROVIDER_UNAVAILABLE",
+    )
+    result["answer"] = _PROVIDER_UNAVAILABLE_ANSWER
+    return result
 
 
 # ── Context builder (self-contained; used by main.py /chat/stream) ────────────
@@ -84,6 +116,50 @@ def build_labeled_context(chunks: List[dict]) -> str:
     context = "\n".join(labeled_parts)
     words = context.split()
     return " ".join(words[:MAX_CONTEXT_TOKENS])
+
+
+# ── Context chunk selection ───────────────────────────────────────────────────
+
+def _select_context_chunks(
+    chunks: List[dict],
+    max_per_doc: int = MAX_CHUNKS_PER_DOC,
+    limit: int = FINAL_K,
+) -> List[dict]:
+    """
+    Choose which retrieved chunks go into the LLM context (input is in rank order).
+
+      1. A parent section is only included once (child chunks of the same
+         parent would repeat the same text).
+      2. Diversity first: at most *max_per_doc* chunks per document, so one
+         document doesn't crowd out the others.
+      3. Then backfill: slots still free (up to *limit*) are filled, in rank
+         order, with chunks step 2 skipped. The per-document cap is a
+         preference, never a reason to leave room unused - it used to drop
+         the one chunk naming the thing asked about whenever a single
+         document supplied the whole top-5.
+    """
+    seen_parents: set = set()
+    per_doc: dict = {}
+    picked: List[dict] = []
+    skipped: List[dict] = []
+
+    for chunk in chunks:
+        pid   = chunk["metadata"].get("parent_id") or chunk.get("chunk_id", "")
+        fname = chunk["metadata"].get("filename", "")
+        if pid in seen_parents:
+            continue
+        seen_parents.add(pid)
+        if per_doc.get(fname, 0) >= max_per_doc:
+            skipped.append(chunk)
+            continue
+        per_doc[fname] = per_doc.get(fname, 0) + 1
+        picked.append(chunk)
+
+    for chunk in skipped:
+        if len(picked) >= limit:
+            break
+        picked.append(chunk)
+    return picked
 
 
 # ── "No result" fast-path ─────────────────────────────────────────────────────
@@ -172,27 +248,14 @@ def _single_attempt(
     # 4. Context optimization — MMR + compression + citations
     optimized = optimize_context(top_chunks, query=current_query, top_k=FINAL_K)
 
-    # 5. Build context — two-stage diversity filter:
-    #    a) Deduplicate by parent_id (same section can't appear twice)
-    #    b) Cap at MAX_CHUNKS_PER_DOC per file (stops one doc dominating context)
-    MAX_CHUNKS_PER_DOC = 2
+    # 5. Build context - see _select_context_chunks (parent dedupe, per-document
+    #    diversity preference, then backfill to FINAL_K).
     if optimized:
-        seen_parents: set = set()
-        doc_counts: dict  = {}
-        unique_by_parent: list = []
-
-        for chunk in optimized:
-            pid   = chunk["metadata"].get("parent_id") or chunk.get("chunk_id", "")
+        unique_by_parent = _select_context_chunks(optimized)
+        doc_counts: dict = {}
+        for chunk in unique_by_parent:
             fname = chunk["metadata"].get("filename", "")
-
-            if pid in seen_parents:
-                continue
-            if doc_counts.get(fname, 0) >= MAX_CHUNKS_PER_DOC:
-                continue
-
-            seen_parents.add(pid)
             doc_counts[fname] = doc_counts.get(fname, 0) + 1
-            unique_by_parent.append(chunk)
 
         context_chunks = unique_by_parent if unique_by_parent else optimized
 
@@ -366,31 +429,105 @@ def _merge_sub_results(sub_results: List[tuple]) -> Dict:
     }
 
 
+def _should_recheck_not_found(
+    result: Dict,
+    already_rechecked: bool,
+    force_model: Optional[str],
+    attempt: int,
+) -> bool:
+    """
+    True if a "not found" answer deserves one more try with the strong model:
+    retrieval found strongly relevant text (best cross-encoder score at or
+    above NOT_FOUND_RECHECK_MIN_CE_SCORE), we haven't already re-asked, the
+    strong model wasn't the one that just said it, nobody pinned the model,
+    and an attempt is still available.
+    """
+    if already_rechecked or force_model or attempt >= MAX_ATTEMPTS - 1:
+        return False
+    if result.get("model_used") == GROQ_STRONG:
+        return False
+    scores = result.get("reranker_scores") or []
+    return bool(scores) and max(scores) >= NOT_FOUND_RECHECK_MIN_CE_SCORE
+
+
 def _run_decomposed(
     sub_queries: List[str],
     store,
     intent: str,
     force_model: Optional[str],
+    original_query: Optional[str] = None,
 ) -> Dict:
     """
     Run each sub-question through its own full loop, then merge.
 
-    Sequential, not parallel: sub-question N is anchored to sub-question
-    N-1's answer when it contains an unresolved pronoun (see
-    agents/decomposer.py's anchor_to_prior_answer()), so a dependent chain
-    like "who manages the roadmap team, and what's THEIR vacation policy"
-    resolves "their" via the prior answer instead of retrieving for it
-    literally. The merged result's per-question header still shows the
-    ORIGINAL sub-question text, not the anchored version — the anchor is
-    an internal retrieval/generation aid, not user-facing phrasing.
+    Sequential, not parallel, because later steps can depend on earlier
+    answers in two ways (see agents/decomposer.py):
+
+      * "{N}" placeholders — a genuine dependency chain. The step is first
+        rewritten into a standalone question from the real answers it
+        depends on (resolve_dependent_query). If any prerequisite step could
+        not be answered, the step is SKIPPED with an explicit reason instead
+        of retrieving for a question that still has an unresolved reference
+        — and that skip propagates down the rest of the chain.
+      * A loose pronoun ("their", "it") with no placeholder — anchored to
+        the previous answer as before (anchor_to_prior_answer).
+
+    The merged result's per-question header shows user-facing text, not the
+    internal retrieval query: original wording for plain/anchored steps, the
+    cleanly rewritten standalone question for placeholder steps (or "the
+    answer to step N" if the rewrite fell back to pasting answers in).
     """
     sub_results = []
     prior_answer = ""
-    for sub_query in sub_queries:
-        resolved_query = anchor_to_prior_answer(sub_query, prior_answer)
+    answers: Dict[int, str] = {}      # 1-based step -> its answer
+    questions: Dict[int, str] = {}    # 1-based step -> resolved question text
+    unanswered: set = set()           # 1-based steps with no usable answer
+
+    for step, sub_query in enumerate(sub_queries, start=1):
+        deps = dependencies_of(sub_query)
+        blocked_by = sorted(d for d in deps if d in unanswered)
+        header = display_query(sub_query) if deps else sub_query
+
+        if blocked_by:
+            print(f"  [DECOMPOSE]  [loop] Skipping step {step}: depends on unanswered step(s) {blocked_by}")
+            result = _not_found_result(
+                attempt=0,
+                reflected=False,
+                reason="dependency_unresolved",
+                search_queries=[],
+            )
+            result["answer"] = (
+                "Could not answer this step because it depends on step "
+                + ", ".join(str(d) for d in blocked_by)
+                + ", which was not found in the documents."
+            )
+            unanswered.add(step)
+            sub_results.append((header, result))
+            questions[step] = header
+            prior_answer = ""
+            continue
+
+        if deps:
+            resolved_query = resolve_dependent_query(sub_query, answers, questions, original_query)
+            header = step_heading(sub_query, resolved_query, answers)
+            print(f"  [DECOMPOSE]  [loop] Step {step} resolved: {resolved_query!r}")
+        else:
+            resolved_query = anchor_to_prior_answer(sub_query, prior_answer)
+
         result = run_reflection_loop(resolved_query, store, intent, force_model, _allow_decompose=False)
-        sub_results.append((sub_query, result))
-        prior_answer = result.get("answer", "")
+        if _is_provider_unavailable(result.get("answer", "")):
+            # No point asking the remaining steps: the provider is down for all of them.
+            print(f"  [ERR]  [loop] Provider unavailable at step {step} - abandoning the chain")
+            return result
+        sub_results.append((header, result))
+
+        answer = result.get("answer", "")
+        answers[step] = answer
+        questions[step] = resolved_query if deps else sub_query
+        if not answer or answer.strip() == _NOT_FOUND_ANSWER:
+            unanswered.add(step)
+        prior_answer = answer
+
     return _merge_sub_results(sub_results)
 
 
@@ -425,7 +562,7 @@ def run_reflection_loop(
     sub_queries = _maybe_decompose(query, _allow_decompose)
     if sub_queries:
         print(f"  [DECOMPOSE]  [loop] Split into {len(sub_queries)} sub-question(s): {sub_queries}")
-        return _run_decomposed(sub_queries, store, intent, force_model)
+        return _run_decomposed(sub_queries, store, intent, force_model, original_query=query)
 
     state = AgentState(
         original_query = query,
@@ -440,6 +577,7 @@ def run_reflection_loop(
         return cached
 
     force_strong: bool      = False
+    rechecked_not_found     = False   # at most one strong-model second look per query
     best_result: Optional[Dict] = None
 
     try:
@@ -448,6 +586,17 @@ def run_reflection_loop(
 
             # ── One full attempt ──────────────────────────────────────────────
             result = _single_attempt(state, store, intent, force_strong, force_model)
+
+            # ── Provider outage / quota: stop, and say so ─────────────────────
+            # Retrying just burns more of an exhausted quota, and the old path
+            # (too-short answer -> retries -> hard refuse) ended in "Not found
+            # in the document", telling the user the documents lack an answer
+            # when the real problem was the AI service. Never cached.
+            if result is not None and result.get("answer") == SERVICE_UNAVAILABLE_ANSWER:
+                print("  [ERR]  [loop] LLM provider unavailable - stopping without retries")
+                unavailable = _provider_unavailable_result(attempt, list(state.search_queries))
+                unavailable["healing_action"] = state.last_healing_action
+                return unavailable
 
             # ── No results from retrieval ─────────────────────────────────────
             if result is None:
@@ -477,6 +626,21 @@ def run_reflection_loop(
             best_result = result
 
             decision: Dict = result.pop("_decision")
+
+            # ── "Not found" despite strong retrieval: second look, strong model ─
+            if (
+                decision["reason"] == "explicit_not_found"
+                and _should_recheck_not_found(
+                    result, rechecked_not_found, force_model, attempt,
+                )
+            ):
+                rechecked_not_found = True
+                force_strong = True
+                print(
+                    f"  [RECHECK]  [loop] Model said not-found but retrieval is strong "
+                    f"(top CE {max(result['reranker_scores']):.2f}) -> re-asking {GROQ_STRONG}"
+                )
+                continue
 
             # ── Hard refuse: answer explicitly says not found ─────────────────
             if decision["reason"] in (

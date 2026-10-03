@@ -201,3 +201,142 @@ def test_no_negation_in_answer_is_never_a_contradiction():
     chunk = "The warranty covers accidental damage for two years."
     answer = "The warranty covers accidental damage for two years, per the policy."
     assert _has_contradiction("warranty accidental damage", answer, chunk) is False
+
+
+# Regression: found live on an Azure VM cloning document. The query asked why
+# one method is "safer"; the (correct) answer said the "specialized VM approach
+# is safer because it never modifies ...". "never" negates "modifies", but the
+# old check saw it within 50 characters of the query keyword "specialized" and,
+# since the source asserts "specialized VM" positively, flagged a correct answer
+# as a contradiction (retry, then a "possible contradiction / 0% confident" badge).
+
+CLONING_CHUNK = (
+    "Method: snapshot -> managed disk -> specialized vm (safe, no sysprep). "
+    "The previous approach ran sysprep and generalized the source vm, which wiped "
+    "the user profile. Generalized capture is used only for clean templates."
+)
+
+
+def test_negation_that_belongs_to_another_verb_is_not_a_contradiction():
+    answer = (
+        "The Snapshot → Managed Disk → Specialized VM approach is safer "
+        "because it never modifies or touches the original VM."
+    )
+    query = "Why is the Snapshot Managed Disk Specialized VM method safer than Generalized Capture?"
+    assert _has_contradiction(query, answer, CLONING_CHUNK) is False
+
+
+def test_answer_negating_what_the_source_also_negates_is_not_a_contradiction():
+    # The source says "no sysprep" for the new method (and "ran sysprep" for the
+    # old one). An answer saying the new method does not run sysprep agrees with it.
+    answer = "The specialized approach does not run sysprep, so the user profile is preserved."
+    assert _has_contradiction("does the specialized method use sysprep", answer, CLONING_CHUNK) is False
+
+
+def test_old_vs_new_comparison_with_many_negations_is_not_flagged():
+    answer = (
+        "It does not run Sysprep, so the user profile is preserved. "
+        "The Start/Stop buttons remain active. It avoids the Compute Gallery. "
+        "Changes in one clone do not affect the others."
+    )
+    query = "Why is the specialized VM method better than generalized capture for cloning VMs?"
+    assert _has_contradiction(query, answer, CLONING_CHUNK) is False
+
+
+def test_negation_directly_before_keyword_is_still_a_contradiction():
+    chunk = "The service offers weekend support for all premium customers."
+    answer = "The service does not offer weekend support."
+    assert _has_contradiction("weekend support", answer, chunk) is True
+
+
+def test_there_is_no_phrase_a_few_words_before_keyword_is_still_caught():
+    chunk = "The warranty covers accidental damage for the first two years."
+    answer = "There is no coverage for accidental damage."
+    assert _has_contradiction("accidental damage", answer, chunk) is True
+
+
+def test_not_mentioned_after_keyword_is_still_caught():
+    chunk = "Refunds are available within thirty days of purchase."
+    answer = "Refunds are not mentioned anywhere in the policy."
+    assert _has_contradiction("refunds", answer, chunk) is True
+
+
+def test_negation_does_not_cross_a_clause_boundary():
+    chunk = "The warranty covers accidental damage for two years."
+    answer = "The plan never expires early; warranty terms apply to accidental damage."
+    assert _has_contradiction("warranty accidental damage", answer, chunk) is False
+
+
+def test_reflect_accepts_the_cloning_answer_end_to_end():
+    answer = (
+        "The Snapshot → Managed Disk → Specialized VM approach is safer because it "
+        "never modifies the original VM and does not run sysprep, so the user profile "
+        "is preserved, unlike generalized capture which wiped it."
+    )
+    query = "Why is the Snapshot Managed Disk Specialized VM method considered safer than Generalized Capture?"
+    decision = reflect(query, answer, [{"text": CLONING_CHUNK}], attempt=0, model_used=WEAK_MODEL)
+    assert decision["reason"] != "possible_contradiction"
+
+
+# Regression: "What happens if Central India and Availability Zone 1 don't match
+# the original VM?" was correctly answered "...if the region or zone does not
+# exactly match the original VM, the VM creation step will fail" - and flagged
+# as a contradiction, because the answer negates "match" while the source says
+# "Must Match Exactly". The question itself negates "match", so the answer is
+# only restating the condition it was asked about.
+
+MATCH_CHUNK = (
+    "Region and Zone Must Match Exactly. The managed disk must be created in "
+    "Central India, Zone 1, exactly matching Win11-Recovered. If the region or zone "
+    "is different, the VM creation in Step 1.3 will fail."
+)
+
+
+def test_answer_echoing_a_negation_from_the_question_is_not_a_contradiction():
+    query = "What happens if Central India and Availability Zone 1 don't match the original VM?"
+    answer = (
+        "If the region or the availability zone does not exactly match the original "
+        "VM, the VM creation step will fail."
+    )
+    assert _has_contradiction(query, answer, MATCH_CHUNK.lower()) is False
+
+
+def test_same_answer_to_a_positive_question_is_still_judged_on_its_merits():
+    # Asked positively, an answer that denies the match against a source that
+    # asserts it IS worth flagging - the echo exemption must not swallow this.
+    query = "Does the disk region match the original VM?"
+    answer = "The disk region does not match the original VM."
+    assert _has_contradiction(query, answer, MATCH_CHUNK.lower()) is True
+
+
+# Regressions found by the answer-quality eval (eval/run_answer_eval.py):
+# keywords were matched as raw substrings with exact spelling.
+
+RUNBOOK_CHUNK = (
+    "vm cloning runbook - build server clones. method: snapshot -> managed disk -> "
+    "specialized vm (safe, no sysprep). the previous approach, generalized capture, "
+    "ran sysprep on the source vm."
+)
+
+
+def test_keyword_inside_a_longer_word_is_not_a_source_assertion():
+    # "run" (from the question) matched inside "runbook", so the source looked
+    # like it asserted "run" and a correct "does not run Sysprep" was flagged.
+    answer = "No. The Specialized VM method does not run Sysprep."
+    assert _has_contradiction("Does the Specialized VM method run Sysprep?", answer, RUNBOOK_CHUNK) is False
+
+
+def test_inflected_form_in_the_source_counts_as_the_same_word():
+    # Answer: "not deallocated"; source: "does not deallocate" - the source
+    # negates the same word, so the answer agrees with it.
+    chunk = ("a vm that is stopped (deallocated) in the portal does not incur compute charges. "
+             "shutting down from inside the operating system does not deallocate the vm.")
+    answer = "If you only shut it down from inside the OS, it is not deallocated and charges continue."
+    query = "Does a VM that is stopped and deallocated still incur compute charges?"
+    assert _has_contradiction(query, answer, chunk) is False
+
+
+def test_whole_word_matching_still_catches_a_real_contradiction():
+    chunk = "the backup job runs every night at 2am."
+    answer = "The backup job does not run at night."
+    assert _has_contradiction("when does the backup job run", answer, chunk) is True

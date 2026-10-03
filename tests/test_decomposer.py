@@ -4,7 +4,15 @@ behind multi-hop query decomposition."""
 import json
 
 import agents.decomposer as decomposer
-from agents.decomposer import anchor_to_prior_answer, decompose_query, should_decompose
+from agents.decomposer import (
+    anchor_to_prior_answer,
+    decompose_query,
+    dependencies_of,
+    display_query,
+    resolve_dependent_query,
+    sanitize_plan,
+    should_decompose,
+)
 
 
 # ── should_decompose (pure, no LLM) ────────────────────────────────────────────
@@ -165,3 +173,110 @@ def test_anchor_catches_they_them_its_variants():
     assert "(referring to:" in anchor_to_prior_answer("How can I contact them?", prior)
     assert "(referring to:" in anchor_to_prior_answer("What is its main goal?", prior)
     assert "(referring to:" in anchor_to_prior_answer("What is their budget?", prior)
+
+
+# ── Dependent chains ({N} placeholders) ────────────────────────────────────────
+
+def test_then_connector_flags_a_sequential_query():
+    query = "Find the vendor for Project Atlas then tell me when that vendor contract renews"
+    assert should_decompose(query) is True
+
+
+def test_dependencies_of_extracts_step_numbers():
+    assert dependencies_of("Is {2} before the audit, given {1}?") == {1, 2}
+    assert dependencies_of("What is the vacation policy?") == set()
+
+
+def test_sanitize_plan_keeps_valid_backward_references():
+    plan = ["Which vendor supplies Atlas?", "Renewal date of {1}?", "Is {2} before the audit?"]
+    assert sanitize_plan(plan) == plan
+
+
+def test_sanitize_plan_neutralises_self_forward_and_out_of_range_references():
+    plan = ["What is {1}?", "Compare with {3}", "Look at {9} and {0}"]
+    assert sanitize_plan(plan) == [
+        "What is the previous result?",
+        "Compare with the previous result",
+        "Look at the previous result and the previous result",
+    ]
+
+
+def test_decompose_query_sanitises_bad_placeholders(monkeypatch):
+    _mock_llm_response(monkeypatch, json.dumps(["Who leads it? {2}", "Ok {1}"]))
+    assert decompose_query("who leads it and then ok") == ["Who leads it? the previous result", "Ok {1}"]
+
+
+def test_display_query_makes_placeholders_readable():
+    assert display_query("Renewal date of {1}?") == "Renewal date of the answer to step 1?"
+
+
+def test_resolve_returns_query_unchanged_without_placeholders_and_makes_no_llm_call(monkeypatch):
+    monkeypatch.setattr(decomposer.groq_manager, "get_client",
+                        lambda: (_ for _ in ()).throw(AssertionError("no LLM call expected")))
+    assert resolve_dependent_query("What is the policy?", {1: "x"}, {1: "q"}) == "What is the policy?"
+
+
+def test_resolve_uses_llm_rewrite(monkeypatch):
+    _mock_llm_response(monkeypatch, "  What is the renewal date of Acme Corp?  ")
+    result = resolve_dependent_query(
+        "What is the renewal date of {1}?", {1: "Acme Corp supplies Atlas."}, {1: "Who supplies Atlas?"}
+    )
+    assert result == "What is the renewal date of Acme Corp?"
+
+
+def test_resolve_falls_back_to_inlined_answer_on_llm_error(monkeypatch):
+    def _raise():
+        raise RuntimeError("no keys configured")
+    monkeypatch.setattr(decomposer.groq_manager, "get_client", _raise)
+
+    result = resolve_dependent_query(
+        "What is the renewal date of {1}?", {1: "Acme Corp"}, {1: "Who supplies Atlas?"}
+    )
+    assert result == "What is the renewal date of (Acme Corp)?"
+
+
+def test_resolve_falls_back_when_llm_leaves_a_placeholder(monkeypatch):
+    _mock_llm_response(monkeypatch, "What is the renewal date of {1}?")
+    result = resolve_dependent_query("When does {1} renew?", {1: "Acme Corp"}, {1: "Who?"})
+    assert "{1}" not in result and "Acme Corp" in result
+
+
+# ── promote_back_references (found by the answer-quality eval) ──────────────────
+from agents.decomposer import promote_back_references
+
+
+def test_demonstrative_noun_from_an_earlier_step_becomes_a_placeholder():
+    plan = ["Which vendor supplies Project Atlas?", "When does that vendor's contract renew?"]
+    assert promote_back_references(plan)[1] == "When does {1}'s contract renew?"
+
+
+def test_bare_subject_pronoun_links_to_the_previous_step():
+    plan = ["Which vendor supplies Atlas?", "When does {1}'s contract renew?", "Is that before the audit?"]
+    assert promote_back_references(plan)[2] == "Is {2} before the audit?"
+
+
+def test_plural_nouns_match_their_singular():
+    plan = ["Which vendors supply Atlas?", "Who manages those vendors?"]
+    assert promote_back_references(plan)[1] == "Who manages {1}?"
+
+
+def test_most_recent_matching_step_wins():
+    plan = ["Which disk is used?", "Which disk backs the second clone?", "What zone must that disk be in?"]
+    assert promote_back_references(plan)[2] == "What zone must {2} be in?"
+
+
+def test_relative_clause_that_is_left_alone():
+    plan = ["What is the vacation policy?", "Who is on the team that manages the roadmap?"]
+    assert promote_back_references(plan) == plan
+
+
+def test_steps_with_placeholders_and_the_first_step_are_untouched():
+    plan = ["Is that the first step?", "What zone must {1} be in?"]
+    assert promote_back_references(plan) == plan
+
+
+def test_decompose_query_applies_back_reference_linking(monkeypatch):
+    _mock_llm_response(monkeypatch, json.dumps(
+        ["Which vendor supplies Project Atlas?", "When does that vendor's contract renew?"]))
+    assert decompose_query("which vendor supplies atlas and when does that vendor renew") == [
+        "Which vendor supplies Project Atlas?", "When does {1}'s contract renew?"]

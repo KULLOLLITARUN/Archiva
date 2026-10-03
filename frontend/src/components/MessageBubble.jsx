@@ -41,6 +41,34 @@ function badgeVariant(attempts, reason) {
   return { bg: 'rgba(139,74,18,0.10)', color: '#8b4a12', border: 'rgba(139,74,18,0.3)' }
 }
 
+// ── Inline citations ─────────────────────────────────────────────────────────
+// The model writes "[Source: file.docx, page 1]" after every claim, and the
+// same provenance is already shown as source pills under the answer - so the
+// text version just repeats it (five bullets, five identical tags). When
+// pills are present the inline tags are hidden for display only; the stored
+// answer and exports keep them, and an answer with no pills keeps them too,
+// since then they are the only provenance shown.
+const INLINE_CITATION_RE = /[ \t]*[\[【]\s*Source:[^\]】]*[\]】]/gi
+
+// A citation still streaming in ("[Sou", "[Source: Azu") has no closing
+// bracket yet and would flash on screen before being removed.
+const OPEN_CITATION_TAIL_RE = /[ \t]*[\[【]\s*([A-Za-z]{0,6}:?[^\]】]{0,200})$/
+
+export function stripInlineCitations(text, streaming = false) {
+  let out = (text || '').replace(INLINE_CITATION_RE, '')
+  if (streaming) {
+    const tail = out.match(OPEN_CITATION_TAIL_RE)
+    // Only drop it if what follows the bracket is (the start of) "source:".
+    if (tail) {
+      const inside = tail[1].toLowerCase()
+      if ('source:'.startsWith(inside) || inside.startsWith('source:')) {
+        out = out.slice(0, tail.index)
+      }
+    }
+  }
+  return out.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 function isNotFound(text) {
   return text?.toLowerCase().includes('not found in the document')
 }
@@ -92,6 +120,8 @@ export default function MessageBubble({ message }) {
   const variant = badgeVariant(attempts, reflection_reason)
   const reasonText = REASON_LABELS[reflection_reason] ?? (reflection_reason || '').replace(/_/g, ' ')
   const groupedSources = sources?.length ? groupSourcesByFile(sources) : []
+  // Pills carry the provenance, so the repeated inline tags are hidden (see stripInlineCitations).
+  const displayContent = groupedSources.length ? stripInlineCitations(content, streaming) : content
 
   // ── Model display: always use branded label, never the raw id ──────────────
   const { label: modelLabel, tier: modelTier } = maskModel(model_used)
@@ -114,7 +144,7 @@ export default function MessageBubble({ message }) {
           <div
             className="bubble-text markdown-body"
             dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(marked.parse(content + (streaming ? ' ▋' : '')))
+              __html: DOMPurify.sanitize(marked.parse(displayContent + (streaming ? ' ▋' : '')))
             }}
           />
 
