@@ -75,6 +75,11 @@ function citeButton(nums, answerId) {
   return `<button type="button" class="cite" data-a="${answerId}" data-ns="${nums.join(' ')}" aria-label="${label}">${nums[0]}</button>`
 }
 
+// Models write look-alike spaces (no-break, narrow no-break, thin...) where a
+// plain one belongs, e.g. "token t" for "token t". Browsers draw a narrow
+// no-break space almost invisibly, so the words read as "tokent".
+const ODD_SPACES_RE = /[      　]/g
+
 /**
  * Sanitised HTML for an answer: markdown rendered, each source tag replaced
  * by a numbered citation. With no sources to point at, tags stay as text,
@@ -82,7 +87,7 @@ function citeButton(nums, answerId) {
  * citation back to back ("…[1] [1]") collapses to one.
  */
 export function answerHtml(content = '', sources = [], { answerId = '', streaming = false } = {}) {
-  let text = streaming ? dropOpenTag(content) : content
+  let text = (streaming ? dropOpenTag(content) : content).replace(ODD_SPACES_RE, ' ')
   if (sources.length) {
     text = foldSourceLines(text)
     text = text.replace(TAG_RE, (_, inner) => {

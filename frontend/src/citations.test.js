@@ -98,3 +98,18 @@ describe('model-written source lines', () => {
     expect(cites(html)).toEqual([{ n: '3', ns: '3' }])
   })
 })
+
+describe('answerHtml look-alike spaces', () => {
+  it('draws a narrow no-break space between words as a normal space', () => {
+    // Seen live: "the hidden state for token t" rendered as "tokent".
+    const html = answerHtml('The hidden state for token t is built from token t-1.', [])
+    expect(html).toContain('token t is built from token t-1')
+    expect(html).not.toMatch(/[  ]/)
+  })
+
+  it('still matches a citation whose file name has look-alike characters', () => {
+    const sources = [{ filename: 'A4-S1-Invoice.pdf', page: 1, text: 't', score: 1 }]
+    const html = answerHtml('Total is 5. [Source: A4‑S1‑Invoice.pdf, page 1]', sources, { answerId: 'a1' })
+    expect(html).toContain('class="cite"')
+  })
+})
