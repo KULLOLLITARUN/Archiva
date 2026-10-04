@@ -10,7 +10,7 @@ failures before ever returning an answer.
 > service. See [Known Limitations](#known-limitations-deliberate-not-oversights)
 > before deploying it anywhere other endpoints can reach.
 
-CI: the full test suite (517 tests) runs on every push/PR via
+CI: the full test suite (523 tests) runs on every push/PR via
 `.github/workflows/tests.yml`, including a real Postgres service — no
 Groq API key required, every LLM call in the suite is mocked.
 
@@ -244,7 +244,7 @@ rag_agentic/
 │   ├── run_answer_eval.py      end-to-end answer quality (live Groq calls)
 │   ├── golden_queries.json, answer_baseline.json, fixtures/
 │
-├── tests/                  ← 517 tests, unit + HTTP integration + Postgres
+├── tests/                  ← 523 tests, unit + HTTP integration + Postgres
 ├── .github/workflows/       ← CI (runs a Postgres service too)
 │
 └── frontend/                ← React + Vite UI
@@ -337,7 +337,7 @@ explanations. The most commonly tuned:
 
 ```bash
 pip install -r requirements.txt   # includes pytest
-pytest -v                          # 517 tests, no API key needed
+pytest -v                          # 523 tests, no API key needed
 python eval/run_eval.py            # retrieval-quality report (BM25 + hybrid/dense)
 ```
 
