@@ -351,3 +351,73 @@ def test_whole_word_matching_still_catches_a_real_contradiction():
     chunk = "the backup job runs every night at 2am."
     answer = "The backup job does not run at night."
     assert _has_contradiction("when does the backup job run", answer, chunk) is True
+
+
+# ── Structural numbers (list ordinals, step labels) aren't facts ──────────────
+
+from agents.reflection import strip_structural_numbers  # noqa: E402
+from agents.validator import validate  # noqa: E402
+
+# Retrieved text of a how-to document: it names the steps, but not every
+# step label the model ends up writing appears in the retrieved chunks.
+_PLAN_CHUNKS = [{"text": (
+    "Azure VM Cloning Plan. Method: Snapshot -> Managed Disk -> Specialized VM. "
+    "STEP 2.3 - Create VM from Managed Disk=1. In the Azure Portal search bar, type: Disks. "
+    "Create a snapshot of the OS disk, create a managed disk from that snapshot, then create "
+    "the VM from that disk. Username: devuser2. Public inbound ports: RDP (3389). "
+    "Region: Central India, Zone 1. Phase 3 verifies RDP access to each clone."
+)}]
+
+# Shapes taken from real answers that were wrongly refused as "Not found".
+_LIST_ANSWER = (
+    "Steps to clone the VM:\n"
+    "1. **Step 1.2** – Create a managed disk from that snapshot.\n"
+    "2. Create the VM from that disk with username devuser2 and RDP (3389).\n"
+    "5. **Phase 4 – Final checklist**: verify RDP access to each clone in Zone 1."
+)
+_TABLE_ANSWER = (
+    "| Phase | What is done |\n|---|---|\n"
+    "| **1 – Clone 1** | 1.1 Create a snapshot.<br>1.2 Create a managed disk from it.<br>"
+    "1.3 Create the VM from that disk. |\n"
+    "Region: Central India, Zone 1; RDP on port 3389."
+)
+
+
+def test_list_ordinals_and_step_labels_are_not_checked_for_grounding():
+    assert _numbers_are_grounded(_LIST_ANSWER, _PLAN_CHUNKS[0]["text"])
+
+
+def test_outline_labels_in_table_cells_are_not_checked_for_grounding():
+    assert _numbers_are_grounded(_TABLE_ANSWER, _PLAN_CHUNKS[0]["text"])
+
+
+def test_strong_model_how_to_answer_is_accepted_not_refused():
+    # Before the fix: refuse / ungrounded_numbers_strong_model_failed, which
+    # the loop turned into "Not found in the document".
+    decision = reflect("What are the steps to clone the Azure VM?", _LIST_ANSWER,
+                       _PLAN_CHUNKS, attempt=0, model_used=GROQ_STRONG)
+    assert decision["reason"] != "ungrounded_numbers_strong_model_failed"
+    assert decision["decision"] == "accept"
+
+
+def test_fabricated_fact_numbers_are_still_caught():
+    # Only labels are exempt: a wrong port, a made-up size, or a number next to
+    # a step label are all still checked.
+    text = _PLAN_CHUNKS[0]["text"]
+    assert not _numbers_are_grounded("Open RDP on port 8080.", text)
+    assert not _numbers_are_grounded("1.5 GB of disk is needed.", text)
+    assert not _numbers_are_grounded("1. The VM needs 64 GB of RAM.", text)
+    assert not _numbers_are_grounded("Step 2 takes 45 minutes.", text)
+
+
+def test_strip_structural_numbers_keeps_values_and_units():
+    stripped = strip_structural_numbers("1.5 GB at line start\n| 2.5 hours |\nversion 1.2.3 and Step 7")
+    assert "1.5" in stripped and "2.5" in stripped and "1.2.3" in stripped
+    assert "7" not in stripped
+
+
+def test_validator_does_not_flag_step_labels():
+    assert validate(_LIST_ANSWER, _PLAN_CHUNKS)["flagged"] is False
+    assert "ungrounded_numbers" in validate("Open RDP on port 8080 for devuser2 in Central India "
+                                            "after you create the managed disk snapshot.",
+                                            _PLAN_CHUNKS)["reason"]

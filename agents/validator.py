@@ -13,6 +13,7 @@ Fix #14: Added ungrounded_numbers check: if the answer contains
 import re
 from typing import Dict, List
 
+from agents.reflection import strip_structural_numbers
 from config import STOPWORDS
 
 # Matches standalone numbers, percentages, dates, and version numbers
@@ -69,7 +70,8 @@ def validate(answer: str, chunks: List[dict]) -> Dict:
     # Check 4 (Fix #14): ungrounded numbers/dates
     # If the answer contains any numeric value not present in any chunk,
     # it is likely hallucinated — models commonly fabricate specific figures.
-    answer_numbers = _extract_numbers(answer)
+    # List ordinals and step/section labels aren't facts (see reflection.py).
+    answer_numbers = _extract_numbers(strip_structural_numbers(answer))
     chunk_numbers  = _extract_numbers(all_chunk_text)
     ungrounded     = answer_numbers - chunk_numbers
     if ungrounded:

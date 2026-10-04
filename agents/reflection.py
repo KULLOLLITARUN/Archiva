@@ -43,6 +43,33 @@ _NEGATION_WORD_RE: re.Pattern = re.compile(
 
 _NUMBER_PATTERN: re.Pattern = re.compile(r"\b\d[\d,\.%/-]*\b")
 
+# Numbers that label a document's structure rather than state a fact. The
+# grounding checks require every number in an answer to appear verbatim in the
+# retrieved text, and these failed it whenever the model numbered its own list
+# ("5. **Phase 4**") or named a step the retrieved chunks spell differently
+# ("Step 1.2" vs "STEP 1.2 — ..."), so a correct, cited how-to answer was
+# replaced with "Not found in the document". They are removed from the answer
+# before the check; every other number (amounts, dates, ports, versions) must
+# still be in the source.
+#   "Step 1.2", "Phase 4", "Section 3.1.2"
+_LABEL_WORD_NUMBER_RE: re.Pattern = re.compile(
+    r"\b(?:step|phase|section|part|stage|chapter|clause|article|appendix|item|task)s?"
+    r"\s*#?\s*\d+(?:\.\d+)*",
+    re.IGNORECASE,
+)
+#   "5. Do this" / "- 2) Do that" at the start of a line
+_LIST_ORDINAL_RE: re.Pattern = re.compile(
+    r"^\s*(?:[-*•]\s+)?\d{1,2}[.)](?=\s)", re.MULTILINE,
+)
+#   "1.1 Create a snapshot" at the start of a line, a table cell, or after <br>,
+#   unless a unit follows ("1.5 GB" is a fact, not a label).
+_OUTLINE_LABEL_RE: re.Pattern = re.compile(
+    r"(?:^|\||<br\s*/?>)\s*(?:[-*•]\s+)?(\d{1,2}(?:\.\d{1,2})+)"
+    r"(?=\s+(?!(?:[kmgt]i?b|bytes?|ms|s|sec|seconds?|min|minutes?|h|hrs?|hours?|days?"
+    r"|weeks?|months?|years?|x|percent|ghz|mhz|cores?|vcpus?|users?)\b)[A-Za-z])",
+    re.IGNORECASE | re.MULTILINE,
+)
+
 # ── Failure type constants ────────────────────────────────────────────────────
 
 _FT_RETRIEVAL     = "RETRIEVAL_FAILURE"
@@ -84,6 +111,13 @@ def _compute_overlap(answer: str, chunks: List[dict]) -> float:
 
 def _extract_numbers(text: str) -> List[str]:
     return _NUMBER_PATTERN.findall(text)
+
+
+def strip_structural_numbers(text: str) -> str:
+    """*text* with list ordinals and step/section labels blanked out (see above)."""
+    text = _LABEL_WORD_NUMBER_RE.sub(" ", text)
+    text = _LIST_ORDINAL_RE.sub(" ", text)
+    return _OUTLINE_LABEL_RE.sub(lambda m: m.group(0).replace(m.group(1), " "), text)
 
 
 def _normalize_number_text(text: str) -> str:
@@ -150,7 +184,7 @@ def _numbers_are_grounded(answer: str, chunk_text: str) -> bool:
     numbers" rule: a number that doesn't match any subset sum of the
     grounded values is still rejected, same as before.
     """
-    normalized_answer = _normalize_number_text(answer)
+    normalized_answer = _normalize_number_text(strip_structural_numbers(answer))
     normalized_chunk  = _normalize_number_text(chunk_text)
 
     ungrounded = [n for n in _extract_numbers(normalized_answer) if n not in normalized_chunk]
