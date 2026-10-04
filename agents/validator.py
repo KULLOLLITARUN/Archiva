@@ -13,7 +13,7 @@ Fix #14: Added ungrounded_numbers check: if the answer contains
 import re
 from typing import Dict, List
 
-from agents.reflection import _filter_stopwords, strip_structural_numbers
+from agents.reflection import CITATION_RE, _filter_stopwords, strip_structural_numbers
 
 # Matches standalone numbers, percentages, dates, and version numbers
 # e.g. "42", "3.14", "99%", "2024-04-10", "v1.2.3", "10ms"
@@ -22,12 +22,6 @@ _NUMBER_RE = re.compile(
     re.IGNORECASE,
 )
 
-
-# Inline citations, "[Source: file.pdf, page 1]" (or 【...】), name the file
-# and page an answer came from. They're provenance, not claims: a file
-# name like "Invoice_page-0001.pdf" was being read as the ungrounded
-# number "0001", flagging correct answers. Same pattern as main.py's.
-_CITATION_RE = re.compile(r"[\[【]\s*Source:[^\]】]*[\]】]", re.IGNORECASE)
 
 # Meaningful words an answer must share with its sources. Short answers
 # can't reach 8 distinct words however well grounded they are ("The bank
@@ -57,7 +51,7 @@ def validate(answer: str, chunks: List[dict]) -> Dict:
     # copied correctly from that wider section ("3-8 minutes") isn't in the
     # child chunk's own text and was flagged as made up.
     all_chunk_text = " ".join(c.get("_context_text") or c.get("text", "") for c in chunks)
-    claims = _CITATION_RE.sub(" ", answer)
+    claims = CITATION_RE.sub(" ", answer)
 
     # Letters-only words, as reflection counts them: splitting on whitespace
     # kept markdown and punctuation attached ("**ICICI**", "bank,"), so

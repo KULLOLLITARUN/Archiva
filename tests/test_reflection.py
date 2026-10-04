@@ -460,3 +460,40 @@ def test_validator_checks_against_the_parent_section_the_model_saw():
     answer = "Create the VM from the managed disk and wait for deployment (3-8 minutes)."
     assert "ungrounded_numbers" not in validate(answer, [chunk])["reason"]
     assert "ungrounded_numbers" in validate("Deployment takes 3-12 minutes.", [chunk])["reason"]
+
+
+# ── Reflection checks the text the model was shown ─────────────────────────────
+# The loop prompts with each chunk's parent section (_context_text), and the
+# optimizer prefixes `text` with a "[Source: ...]" header. Reflection used to
+# check the child text (header included), so a figure copied from the parent
+# section failed, and only the header kept cited file names "grounded".
+
+_PARENT_CHUNKS = [{
+    "text": "[Source: Azure_VM_Plan_v2.docx | Page 4]\nSTEP 1.3 - Create the VM from the managed disk in the portal.",
+    "_context_text": (
+        "STEP 1.3 - Create the VM from the managed disk in the portal. Deployment "
+        "will take 3-8 minutes, and the VM starts automatically once it completes."
+    ),
+}]
+
+
+def test_a_figure_from_the_parent_section_is_grounded():
+    answer = ("Create the VM from the managed disk in the portal; deployment will take "
+              "3-8 minutes and the VM starts automatically. [Source: Azure_VM_Plan_v2.docx | Page 4]")
+    decision = reflect("How long does deployment take?", answer, _PARENT_CHUNKS, attempt=0, model_used=WEAK_MODEL)
+    assert decision["decision"] == "accept", decision["reason"]
+
+
+def test_a_cited_file_name_is_not_read_as_a_claim():
+    # "2" and "4" appear only in the citation, which the parent text lacks;
+    # without stripping citations this answer reads as two made-up numbers.
+    answer = ("Create the VM from the managed disk in the portal, and it starts automatically "
+              "once it completes. [Source: Azure_VM_Plan_v2.docx | Page 4]")
+    assert reflect("How do I create the VM?", answer, _PARENT_CHUNKS, 0, WEAK_MODEL)["decision"] == "accept"
+
+
+def test_a_made_up_figure_is_still_rejected():
+    answer = ("Create the VM from the managed disk in the portal; deployment will take "
+              "25-40 minutes and the VM starts automatically. [Source: Azure_VM_Plan_v2.docx | Page 4]")
+    decision = reflect("How long does deployment take?", answer, _PARENT_CHUNKS, attempt=0, model_used=WEAK_MODEL)
+    assert decision["reason"] == "ungrounded_numbers"

@@ -43,6 +43,14 @@ _NEGATION_WORD_RE: re.Pattern = re.compile(
 
 _NUMBER_PATTERN: re.Pattern = re.compile(r"\b\d[\d,\.%/-]*\b")
 
+# Inline citations, "[Source: file.pdf | Page 1]" (or 【...】), name the file
+# and page an answer came from. They're provenance, not claims, so they're
+# removed before checking: "Invoice_page-0001.pdf" would otherwise be read
+# as the ungrounded number "0001". (Reflection used to get away without
+# this because each chunk's text carried the same citation header.)
+# Same pattern as main.py's; validator.py imports it from here.
+CITATION_RE: re.Pattern = re.compile(r"[\[【]\s*Source:[^\]】]*[\]】]", re.IGNORECASE)
+
 # Numbers that label a document's structure rather than state a fact. The
 # grounding checks require every number in an answer to appear verbatim in the
 # retrieved text, and these failed it whenever the model numbered its own list
@@ -99,7 +107,12 @@ def _filter_stopwords(text: str) -> Set[str]:
 
 
 def _all_chunk_text(chunks: List[dict]) -> str:
-    return " ".join(c.get("text", "") for c in chunks).lower()
+    # The text the model was shown: the loop prompts with each chunk's parent
+    # section (_context_text, see agents/loop.py "Parent-context expansion"),
+    # not the chunk's own text. Checking against the shorter child text
+    # flagged facts copied correctly from the section as ungrounded and
+    # retried or refused right answers. Same source text validator.py uses.
+    return " ".join(c.get("_context_text") or c.get("text", "") for c in chunks).lower()
 
 
 def _compute_overlap(answer: str, chunks: List[dict]) -> float:
@@ -410,7 +423,8 @@ def reflect(
         return _decision("refuse", "no_chunks_retrieved", 0.0, attempt)
 
     # ── Pre-compute overlap ────────────────────────────────────────────────────
-    overlap_ratio = _compute_overlap(answer_stripped, chunks)
+    claims        = CITATION_RE.sub(" ", answer_stripped)
+    overlap_ratio = _compute_overlap(claims, chunks)
     chunk_text    = _all_chunk_text(chunks)
 
     # ── Check 4: Low word overlap ──────────────────────────────────────────────
@@ -420,7 +434,7 @@ def reflect(
         return _decision("retry_model", "low_overlap_retry_model", 0.0, attempt)
 
     # ── Check 5: Hallucinated numbers ─────────────────────────────────────────
-    if not _numbers_are_grounded(answer_stripped, chunk_text):
+    if not _numbers_are_grounded(claims, chunk_text):
         if model_used != GROQ_STRONG:
             return _decision("retry_model", "ungrounded_numbers", 0.0, attempt)
         return _decision("refuse", "ungrounded_numbers_strong_model_failed", 0.0, attempt)
@@ -430,7 +444,7 @@ def reflect(
         return _decision("retry_model", "answer_too_long", 0.0, attempt)
 
     # ── Check 7: Simple contradiction detection ────────────────────────────────
-    if _has_contradiction(query, answer_stripped, chunk_text):
+    if _has_contradiction(query, claims, chunk_text):
         return _decision("retry_model", "possible_contradiction", 0.0, attempt)
 
     # ── Check 8: All checks passed ────────────────────────────────────────────
