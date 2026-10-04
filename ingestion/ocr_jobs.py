@@ -200,7 +200,7 @@ async def _run_job_inner(store, file_id: str, content: Optional[bytes]) -> None:
     with synchronizer.write_guard():
         _, add_status = store.add_file(
             file_id=file_id, filename=filename, content_hash=record["hash"],
-            chunks=chunks, file_type=file_type,
+            chunks=chunks, file_type=file_type, uploaded_at=record.get("uploaded_at"), ocr=True,
         )
         if add_status != "ok":
             reason = "the store is full" if add_status == "limit" else "an identical document already exists"

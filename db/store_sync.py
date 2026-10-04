@@ -55,6 +55,7 @@ def load_store_from_postgres() -> MultiDocStore:
                 file_type=doc["file_type"],
                 status=doc["status"],
                 message=doc.get("status_message") or "",
+                uploaded_at=_iso(doc.get("upload_time")),
             )
             continue
 
@@ -75,9 +76,16 @@ def load_store_from_postgres() -> MultiDocStore:
             content_hash=doc["content_hash"] or "",
             chunks=chunks,
             file_type=doc["file_type"],
+            uploaded_at=_iso(doc.get("upload_time")),
+            ocr=bool(doc.get("ocr")),
         )
 
     return store
+
+
+def _iso(ts) -> Optional[str]:
+    """The stored upload time as ISO text (what add_file() records), or None."""
+    return ts.isoformat() if ts is not None else None
 
 
 def sync_file_to_postgres(store: MultiDocStore, file_id: str) -> None:
@@ -100,7 +108,7 @@ def sync_file_to_postgres(store: MultiDocStore, file_id: str) -> None:
 
     version = pg.db_replace_document(
         file_id, record["filename"], record["file_type"], record.get("hash"),
-        store.get_file_chunks(file_id),
+        store.get_file_chunks(file_id), ocr=record.get("ocr", False),
     )
     synchronizer.note_local_write(version)
 

@@ -26,11 +26,12 @@ export function fileType(filename = '') {
 
 /**
  * Badge for a library row. Only scans go through background OCR, so a
- * processing or failed document is a scan; once indexed, /docs-loaded no
- * longer says how a PDF was read, so a finished scan shows as PDF.
+ * processing or failed document is a scan, and /docs-loaded marks an
+ * indexed one with `ocr`. (Scans indexed before that flag existed show
+ * as PDF; nothing recorded how they were read.)
  */
 export function docBadge(f) {
-  if (f.status === 'processing' || f.status === 'failed') return { type: 'ocr', label: 'OCR' }
+  if (f.ocr || f.status === 'processing' || f.status === 'failed') return { type: 'ocr', label: 'OCR' }
   const ext = extensionOf(f.filename)
   const label = { '.pdf': 'PDF', '.docx': 'DOC', '.doc': 'DOC', '.md': 'MD', '.csv': 'CSV', '.html': 'HTML', '.htm': 'HTML' }[ext] || 'TXT'
   return { type: fileType(f.filename), label }

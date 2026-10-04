@@ -255,3 +255,36 @@ def test_adopt_drops_pending_documents_that_finished_elsewhere():
 
     assert local.pending == {}
     assert "p1" in local.files
+
+
+# ── Hydration keeps what Postgres recorded ───────────────────────────────────
+
+def test_load_keeps_the_stored_upload_time_and_ocr_flag(monkeypatch):
+    # Before: add_file() stamped "now", so every restart reset uploaded_at,
+    # and nothing said a finished scan had been read with OCR.
+    from datetime import datetime, timezone
+    uploaded = datetime(2026, 9, 25, 8, 30, tzinfo=timezone.utc)
+    docs = [
+        {"id": "scan", "filename": "scan.pdf", "file_type": "pdf", "content_hash": "h1",
+         "upload_time": uploaded, "is_deleted": False, "status": "ready", "status_message": None, "ocr": True},
+        {"id": "plain", "filename": "plain.txt", "file_type": "txt", "content_hash": "h2",
+         "upload_time": uploaded, "is_deleted": False, "status": "ready", "status_message": None, "ocr": False},
+        {"id": "queued", "filename": "queued.pdf", "file_type": "pdf", "content_hash": "h3",
+         "upload_time": uploaded, "is_deleted": False, "status": "processing", "status_message": None, "ocr": False},
+    ]
+    monkeypatch.setattr(store_sync.pg, "db_list_all_documents", lambda: docs)
+    monkeypatch.setattr(store_sync.pg, "db_get_chunks_for_file",
+                        lambda fid: [{"chunk_id": f"{fid}_c0", "text": "t", "metadata": {"content_hash": fid}, "embedding": None}])
+
+    store = store_sync.load_store_from_postgres()
+
+    assert store.files["scan"]["uploaded_at"] == uploaded.isoformat()
+    assert store.files["scan"]["ocr"] is True
+    assert store.files["plain"]["ocr"] is False
+    assert store.pending["queued"]["uploaded_at"] == uploaded.isoformat()
+
+
+def test_add_file_defaults_to_now_and_not_ocr():
+    store = _store_with("a")
+    assert store.files["a"]["ocr"] is False
+    assert store.files["a"]["uploaded_at"]

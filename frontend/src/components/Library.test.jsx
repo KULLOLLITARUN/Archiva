@@ -34,6 +34,7 @@ describe('docs helpers', () => {
     expect(docBadge(ready)).toEqual({ type: 'doc', label: 'DOC' })
     expect(docBadge({ filename: 'notes.md', status: 'ready' })).toEqual({ type: 'txt', label: 'MD' })
     expect(docBadge(reading)).toEqual({ type: 'ocr', label: 'OCR' })
+    expect(docBadge({ filename: 'scan.pdf', status: 'ready', ocr: true })).toEqual({ type: 'ocr', label: 'OCR' })
   })
 
   it('accepts the types the backend parses', () => {

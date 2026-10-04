@@ -668,6 +668,7 @@ async def docs_loaded() -> DocsLoadedResponse:
                 "chunk_count": f["chunk_count"],
                 "uploaded_at": f["uploaded_at"],
                 "status":      "ready",
+                "ocr":         f.get("ocr", False),   # read from a scan
             }
             for f in store_files if f.get("status") == "active"
         ]
@@ -681,6 +682,7 @@ async def docs_loaded() -> DocsLoadedResponse:
                 "chunk_count": row["chunk_count"],
                 "uploaded_at": row["upload_time"],
                 "status":      "ready",
+                "ocr":         row["ocr"],
             }
             for row in live_rows if row["status"] == "ready"
         ]

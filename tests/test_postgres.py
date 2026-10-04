@@ -197,3 +197,15 @@ def test_log_feedback_and_system_stats():
     assert stats["total_chunks"] == 3
     assert stats["total_queries"] == 2
     assert stats["success_rate"] == 50.0
+
+
+def test_replace_document_records_ocr_and_never_clears_it():
+    pg.db_replace_document("scan", "scan.pdf", "pdf", "h-scan", _sample_chunks(), ocr=True)
+    assert {d["id"]: d["ocr"] for d in pg.db_list_all_documents()}["scan"] is True
+
+    # A later refresh (reingest) doesn't know how the text was first read.
+    pg.db_replace_document("scan", "scan.pdf", "pdf", "h-scan", _sample_chunks())
+    assert {d["id"]: d["ocr"] for d in pg.db_list_all_documents()}["scan"] is True
+
+    pg.db_replace_document("plain", "plain.pdf", "pdf", "h-plain", [])
+    assert {d["id"]: d["ocr"] for d in pg.db_list_all_documents()}["plain"] is False

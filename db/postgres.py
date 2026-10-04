@@ -159,6 +159,7 @@ def db_upsert_document(
 def db_replace_document(
     doc_id: str, filename: str, file_type: str, content_hash: Optional[str],
     chunks: List[dict], status: str = "ready", status_message: Optional[str] = None,
+    ocr: bool = False,
 ) -> int:
     """
     Make the stored copy of a document exactly (row + chunks) what the
@@ -173,9 +174,11 @@ def db_replace_document(
     """
     with get_db() as db:
         db.execute(
+            # ocr only ever turns on: a later refresh of the same document
+            # (reingest) doesn't know how it was first read.
             """INSERT INTO documents (id, filename, file_type, chunk_count, content_hash,
-                                      status, status_message)
-               VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                      status, status_message, ocr)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                ON CONFLICT (id) DO UPDATE SET
                    filename       = EXCLUDED.filename,
                    file_type      = EXCLUDED.file_type,
@@ -183,11 +186,12 @@ def db_replace_document(
                    content_hash   = EXCLUDED.content_hash,
                    status         = EXCLUDED.status,
                    status_message = EXCLUDED.status_message,
+                   ocr            = documents.ocr OR EXCLUDED.ocr,
                    ocr_worker     = NULL,
                    ocr_heartbeat  = NULL,
                    is_deleted     = false,
                    deleted_at     = NULL""",
-            (doc_id, filename, file_type, len(chunks), content_hash, status, status_message),
+            (doc_id, filename, file_type, len(chunks), content_hash, status, status_message, ocr),
         )
         db.execute("DELETE FROM chunks WHERE file_id = %s", (doc_id,))
         _insert_chunks(db, doc_id, chunks)
@@ -250,7 +254,7 @@ def db_list_all_documents() -> List[dict]:
     with get_db() as db:
         return db.execute(
             """SELECT id, filename, file_type, chunk_count, content_hash,
-                      upload_time, is_deleted, status, status_message
+                      upload_time, is_deleted, status, status_message, ocr
                FROM documents ORDER BY upload_time DESC"""
         ).fetchall()
 

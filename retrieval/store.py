@@ -103,9 +103,15 @@ class MultiDocStore:
         content_hash: str,
         chunks: List[dict],
         file_type: str = "txt",
+        uploaded_at: Optional[str] = None,
+        ocr: bool = False,
     ) -> Tuple[Optional[str], str]:
         """
         Add a file and its chunks; rebuild BM25 index; trigger embedding precompute.
+
+        uploaded_at defaults to now; reloading from Postgres passes the stored
+        upload time so it doesn't reset on every restart. ocr marks text that
+        came from OCR (a scanned PDF).
 
         Returns:
             (file_id, "ok")         – success
@@ -118,7 +124,7 @@ class MultiDocStore:
         if len(self.chunks) + len(chunks) > MAX_TOTAL_CHUNKS:
             return None, "limit"
 
-        uploaded_at = datetime.now(timezone.utc).isoformat()
+        uploaded_at = uploaded_at or datetime.now(timezone.utc).isoformat()
 
         file_record = {
             "file_id":     file_id,
@@ -128,6 +134,7 @@ class MultiDocStore:
             "chunk_count": len(chunks),
             "uploaded_at": uploaded_at,
             "status":      "active",
+            "ocr":         ocr,
         }
 
         self.files[file_id] = file_record
@@ -205,6 +212,7 @@ class MultiDocStore:
         file_type: str,
         status: str = "processing",
         message: str = "",
+        uploaded_at: Optional[str] = None,
     ) -> dict:
         """
         Register a document whose text isn't extracted yet (a scanned PDF
@@ -218,7 +226,7 @@ class MultiDocStore:
             "file_type":   file_type,
             "hash":        content_hash,
             "chunk_count": 0,
-            "uploaded_at": datetime.now(timezone.utc).isoformat(),
+            "uploaded_at": uploaded_at or datetime.now(timezone.utc).isoformat(),
             "status":      status,
             "message":     message,
             "progress":    None,   # (pages_done, pages_total) while processing

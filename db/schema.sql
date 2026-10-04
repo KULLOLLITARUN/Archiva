@@ -95,6 +95,11 @@ INSERT INTO store_version (id, version) VALUES (1, 0) ON CONFLICT (id) DO NOTHIN
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS ocr_worker TEXT;
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS ocr_heartbeat TIMESTAMPTZ;
 
+-- Whether the text came from OCR (a scanned PDF). Once a scan is indexed
+-- nothing else records that, so the UI badged finished scans as plain PDFs.
+-- Documents indexed before this column existed default to false.
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS ocr BOOLEAN NOT NULL DEFAULT false;
+
 -- ── Chat sessions ───────────────────────────────────────────────────────────────
 -- Replaces sessions.json. That file was rewritten whole on every message, so
 -- two processes silently overwrote each other's turns; a row per session
