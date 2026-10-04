@@ -421,3 +421,42 @@ def test_validator_does_not_flag_step_labels():
     assert "ungrounded_numbers" in validate("Open RDP on port 8080 for devuser2 in Central India "
                                             "after you create the managed disk snapshot.",
                                             _PLAN_CHUNKS)["reason"]
+
+
+# ── Validator: citations and short answers ────────────────────────────────────
+
+_INVOICE_CHUNKS = [{"text": (
+    "Total Amount After Tax 4,490.00. Bank Details: Name ICICI, Branch Surat, "
+    "Acc. Number 2715500356, IFSC ICIC045F, UPI ID ifox@icici. Pay using UPI."
+)}]
+
+
+def test_validator_ignores_numbers_in_citation_file_names():
+    # "0001" is part of the cited file's name, not a claim the answer makes.
+    answer = ("The invoice lists **ICICI** as the bank and **ifox@icici** as the UPI ID. "
+              "[Source: A4-S1-GST-Invoice-Format_page-0001-scaled.pdf, page 1]")
+    assert validate(answer, _INVOICE_CHUNKS)["flagged"] is False
+
+
+def test_validator_accepts_a_short_grounded_answer():
+    # Fewer than 8 meaningful words in total; half of them are in the source.
+    assert validate("The bank is ICICI, branch Surat.", _INVOICE_CHUNKS)["flagged"] is False
+
+
+def test_validator_still_flags_short_answers_unrelated_to_the_source():
+    assert "low_overlap" in validate("The capital of Peru is Lima, beside mountains.",
+                                     _INVOICE_CHUNKS)["reason"]
+
+
+def test_validator_still_flags_a_fabricated_number_next_to_a_citation():
+    answer = "The total after tax is 5,120.00. [Source: invoice.pdf, page 1]"
+    assert "ungrounded_numbers" in validate(answer, _INVOICE_CHUNKS)["reason"]
+
+
+def test_validator_checks_against_the_parent_section_the_model_saw():
+    # The loop prompts with the parent section, not the child chunk's text.
+    chunk = {"text": "STEP 1.3 - Create VM from Managed Disk.",
+             "_context_text": "STEP 1.3 - Create VM from Managed Disk. Deployment will take 3-8 minutes."}
+    answer = "Create the VM from the managed disk and wait for deployment (3-8 minutes)."
+    assert "ungrounded_numbers" not in validate(answer, [chunk])["reason"]
+    assert "ungrounded_numbers" in validate("Deployment takes 3-12 minutes.", [chunk])["reason"]
