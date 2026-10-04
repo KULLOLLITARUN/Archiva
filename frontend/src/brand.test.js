@@ -18,20 +18,24 @@ describe('maskModel', () => {
   })
 
   it('maps small/fast models to the Swift tier', () => {
-    // Deliberately avoids "llama" — the Pro rule's `/llama/i` matches
-    // before Swift's `/8b|.../` ever gets checked (first-match-wins), so
-    // GROQ_FAST's actual default id ("llama-3.1-8b-instant") is Pro, not
-    // Swift, despite being the "fast" model. See the dedicated test below.
     expect(maskModel('some-fast-mini-model')).toEqual({ label: 'Archiva Swift', tier: 'swift' })
   })
 
-  it('documents that an 8b llama id resolves to Pro, not Swift, due to rule order', () => {
-    // GROQ_FAST defaults to "llama-3.1-8b-instant" (config.py). The Pro
-    // rule's bare `/llama/i` match fires before the Swift rule's `/8b/`
-    // ever runs, so the "fast" model is badged as "Archiva Pro" in the
-    // UI. Not necessarily wrong, but worth knowing — pinned here so a
-    // future MODEL_RULES reorder is a deliberate choice, not a surprise.
-    expect(maskModel('llama-3.1-8b-instant')).toEqual({ label: 'Archiva Pro', tier: 'pro' })
+  it('maps the default Groq models by size, not by vendor name', () => {
+    // GROQ_FAST / GROQ_STRONG defaults (config.py). "gpt" is a Pro family
+    // name, but the parameter count decides: 20b is Swift, 120b Ultra.
+    expect(maskModel('openai/gpt-oss-20b')).toEqual({ label: 'Archiva Swift', tier: 'swift' })
+    expect(maskModel('openai/gpt-oss-120b')).toEqual({ label: 'Archiva Ultra', tier: 'ultra' })
+  })
+
+  it('ranks a small parameter count above a Pro family name', () => {
+    expect(maskModel('llama-3.1-8b-instant')).toEqual({ label: 'Archiva Swift', tier: 'swift' })
+  })
+
+  it('does not read a version number as a parameter count', () => {
+    // "3.1-8b" is 8b; the "1" of "3.1" must not combine into something else,
+    // and "llama-3.3-70b" stays Pro rather than tripping the 7b/8b rule.
+    expect(maskModel('llama-3.3-70b-versatile')).toEqual({ label: 'Archiva Pro', tier: 'pro' })
   })
 
   it('falls back to the base label for null, undefined, or "none"', () => {

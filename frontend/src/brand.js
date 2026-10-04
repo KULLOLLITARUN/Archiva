@@ -44,15 +44,24 @@ const MODEL_RULES = [
     label: 'Archiva Ultra',
     tier: 'ultra',
   },
+  // Swift tier by parameter count. Checked before the family names below:
+  // the size says more about the tier than the vendor does, and family
+  // names are too broad — "gpt" matched openai/gpt-oss-20b (the default
+  // fast model) and badged it Pro.
+  {
+    test: id => /(^|[^\d.])(7|8|13|20)b\b/i.test(id),
+    label: 'Archiva Swift',
+    tier: 'swift',
+  },
   // Pro tier — default quality models
   {
     test: id => /70b|pro|strong|gpt|claude|gemini|llama/i.test(id),
     label: 'Archiva Pro',
     tier: 'pro',
   },
-  // Swift tier — fast / small models
+  // Swift tier — fast / small models named without a size
   {
-    test: id => /8b|13b|7b|mini|swift|fast|small|turbo|20b/i.test(id),
+    test: id => /mini|swift|fast|small|turbo/i.test(id),
     label: 'Archiva Swift',
     tier: 'swift',
   },
