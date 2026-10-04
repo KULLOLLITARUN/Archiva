@@ -194,6 +194,16 @@ def test_clear_all_documents(client):
     assert client.get("/docs-loaded").json()["total_files"] == 0
 
 
+def test_clear_all_counts_only_documents_that_were_live(client):
+    # The response used to report every row ever stored, removed ones too.
+    main.limiter.reset()
+    first = client.post("/upload", files={"file": ("one.txt", SAMPLE_TXT, "text/plain")}).json()
+    client.post("/upload", files={"file": ("two.txt", SAMPLE_TXT + b" two", "text/plain")})
+    client.delete(f"/files/{first['file_id']}")
+
+    assert client.delete("/documents/clear-all").json()["count"] == 1
+
+
 def test_clear_all_documents_is_rate_limited(client):
     # This is the single most destructive endpoint in an otherwise
     # no-auth app — @limiter.limit("5/minute") is the only thing

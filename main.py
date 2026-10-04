@@ -1121,17 +1121,18 @@ async def clear_all_documents(request: Request):
 
     # Catch any documents that exist in Postgres but weren't in the
     # in-memory store (e.g. a prior sync failure) so clear-all is thorough.
-    rows = db_list_all_documents()
-    for d in rows:
-        if not d["is_deleted"]:
-            try:
-                delete_file_from_postgres(d["id"])
-            except Exception as exc:
-                print(f"[WARN] Failed to persist deletion of {d['id']!r}: {exc}")
+    stray = [d for d in db_list_all_documents() if not d["is_deleted"]]
+    for d in stray:
+        try:
+            delete_file_from_postgres(d["id"])
+        except Exception as exc:
+            print(f"[WARN] Failed to persist deletion of {d['id']!r}: {exc}")
 
+    # Only documents that were live: the full row list also holds every
+    # document removed earlier, which used to inflate this number.
     return {
         "deleted": True,
-        "count": max(count, len(rows)),
+        "count": count + len(stray),
         "message": f"Cleared all documents and chunks. Ready for fresh document ingestion!"
     }
 
