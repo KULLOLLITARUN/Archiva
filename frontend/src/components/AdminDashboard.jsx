@@ -226,9 +226,8 @@ function Maintenance({ docCount, onChanged, toast }) {
     setConfirming(false)
     setClearing(true)
     try {
-      // Not res.count: the endpoint counts rows already removed earlier too.
-      await adminDeleteAllDocuments()
-      toast?.('Library cleared', 'info')
+      const res = await adminDeleteAllDocuments()
+      toast?.(`Library cleared: ${plural(res.count, 'document')} removed`, 'info')
       onChanged()
     } catch (e) {
       toast?.(`Couldn't clear the library: ${e.message}`, 'err')

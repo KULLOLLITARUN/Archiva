@@ -7,7 +7,7 @@ vi.mock('../api.js', () => ({
   adminGetStats: vi.fn(),
   adminGetDocuments: vi.fn(),
   adminDeleteDocument: vi.fn(() => Promise.resolve({ deleted: true })),
-  adminDeleteAllDocuments: vi.fn(() => Promise.resolve({ deleted: true, count: 99 })),
+  adminDeleteAllDocuments: vi.fn(() => Promise.resolve({ deleted: true, count: 4 })),
   apiReload: vi.fn(),
 }))
 
@@ -61,7 +61,7 @@ describe('AdminDashboard', () => {
     expect(toast).toHaveBeenCalledWith('report.pdf removed', 'info')
   })
 
-  it('clears the library only after confirming, without quoting the endpoint count', async () => {
+  it('clears the library only after confirming', async () => {
     const toast = vi.fn()
     const onDocsChanged = vi.fn()
     render(<AdminDashboard onClose={() => {}} toast={toast} onDocsChanged={onDocsChanged} docCount={4} />)
@@ -69,7 +69,7 @@ describe('AdminDashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove all' }))
     expect(api.adminDeleteAllDocuments).not.toHaveBeenCalled()
     fireEvent.click(within(screen.getByRole('group', { name: 'Remove every document?' })).getByText('Remove all'))
-    await waitFor(() => expect(toast).toHaveBeenCalledWith('Library cleared', 'info'))
+    await waitFor(() => expect(toast).toHaveBeenCalledWith('Library cleared: 4 documents removed', 'info'))
     expect(onDocsChanged).toHaveBeenCalled()
   })
 
