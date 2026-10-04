@@ -10,7 +10,7 @@ failures before ever returning an answer.
 > service. See [Known Limitations](#known-limitations-deliberate-not-oversights)
 > before deploying it anywhere other endpoints can reach.
 
-CI: the full test suite (405 tests) runs on every push/PR via
+CI: the full test suite (517 tests) runs on every push/PR via
 `.github/workflows/tests.yml`, including a real Postgres service — no
 Groq API key required, every LLM call in the suite is mocked.
 
@@ -160,6 +160,9 @@ superuser:
 ```sql
 CREATE ROLE archiva LOGIN PASSWORD 'choose_a_password';
 CREATE DATABASE archiva OWNER archiva;
+-- Optional: lets the Postgres tests run locally (they TRUNCATE, so they
+-- only accept a database named *_test). Run as the superuser.
+CREATE DATABASE archiva_test OWNER archiva;
 ```
 
 Then set `DATABASE_URL` in `.env`:
@@ -241,7 +244,7 @@ rag_agentic/
 │   ├── run_answer_eval.py      end-to-end answer quality (live Groq calls)
 │   ├── golden_queries.json, answer_baseline.json, fixtures/
 │
-├── tests/                  ← 405 tests, unit + HTTP integration + Postgres
+├── tests/                  ← 517 tests, unit + HTTP integration + Postgres
 ├── .github/workflows/       ← CI (runs a Postgres service too)
 │
 └── frontend/                ← React + Vite UI
@@ -257,11 +260,15 @@ rag_agentic/
 | POST   | `/chat/stream` | Same, streamed via SSE |
 | POST   | `/upload` | Upload a document (`.txt/.pdf/.docx/.md/.csv/.html`) |
 | DELETE | `/files/{file_id}` | Remove a file and its chunks |
-| GET    | `/docs-loaded` | List loaded files + chunk counts |
+| GET    | `/docs-loaded` | List loaded files + chunk counts (`ocr: true` for scans) |
 | POST   | `/reload` | Re-index everything in `test_docs/` |
 | GET    | `/suggestions` | LLM-generated topic cards from loaded documents |
 | GET    | `/stats` | Pipeline stats (model usage, latency, failure types) |
 | GET    | `/health` | System status + configured models |
+| GET    | `/conversations` | Recent conversations, newest first (each keeps its last 10 turns) |
+| GET    | `/conversations/{session_id}` | One conversation's turns, with each answer's saved checks |
+| DELETE | `/conversations/{session_id}` | Delete a conversation |
+| GET    | `/conversations/{session_id}/export` | Export as Markdown or PDF (`?format=pdf`) |
 | GET    | `/admin/documents` | List all documents (including soft-deleted) |
 | GET    | `/admin/reingestion-queue` | View the healer's REINGEST signal queue |
 | POST   | `/admin/reingestion-queue/process` | Reprocess queued documents from persisted uploads, then clear the queue |
@@ -330,7 +337,7 @@ explanations. The most commonly tuned:
 
 ```bash
 pip install -r requirements.txt   # includes pytest
-pytest -v                          # 405 tests, no API key needed
+pytest -v                          # 517 tests, no API key needed
 python eval/run_eval.py            # retrieval-quality report (BM25 + hybrid/dense)
 ```
 
