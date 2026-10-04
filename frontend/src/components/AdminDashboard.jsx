@@ -1,6 +1,7 @@
 /**
- * AdminDashboard.jsx — "Pipeline stats", opened from the library footer:
- * what is indexed, and how questions went.
+ * AdminDashboard.jsx — "Stats & maintenance", opened from the library
+ * footer: what is indexed, how questions went, and library upkeep
+ * (re-index the server's test_docs/ folder, remove every document).
  *
  * /admin/stats mixes two scopes, and the labels say which is which:
  *   - in-memory counters (monitor/logger.py) cover only the time since the
@@ -11,12 +12,13 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { FileText, Gauge, RefreshCw } from 'lucide-react'
+import { FileText, Gauge, RefreshCw, Wrench } from 'lucide-react'
 import Modal from './Modal.jsx'
-import { adminDeleteAllDocuments, adminDeleteDocument, adminGetDocuments, adminGetStats } from '../api.js'
+import { adminDeleteAllDocuments, adminDeleteDocument, adminGetDocuments, adminGetStats, apiReload } from '../api.js'
 import { docBadge } from '../docs.js'
 
-const TABS = ['Overview', 'Documents']
+const TABS = ['Overview', 'Documents', 'Maintenance']
+const TAB_ICON = { Documents: FileText, Maintenance: Wrench }
 const n = v => (typeof v === 'number' ? v.toLocaleString() : '—')
 const plural = (k, word) => `${n(k)} ${word}${k === 1 ? '' : 's'}`
 
@@ -138,9 +140,8 @@ function DocRow({ d, confirming, onAsk, onCancel, onDelete }) {
 }
 
 function Documents({ docs, onDeleted, toast }) {
-  const [confirming, setConfirming] = useState(null)   // a doc id, or 'all'
+  const [confirming, setConfirming] = useState(null)
   const [showRemoved, setShowRemoved] = useState(false)
-  const [clearing, setClearing] = useState(false)
   const removed = docs.filter(d => d.is_deleted).length
   const shown = showRemoved ? docs : docs.filter(d => !d.is_deleted)
 
@@ -152,21 +153,6 @@ function Documents({ docs, onDeleted, toast }) {
       onDeleted()
     } catch (e) {
       toast?.(`Couldn't remove ${d.filename}: ${e.message}`, 'err')
-    }
-  }
-
-  const removeAll = async () => {
-    setConfirming(null)
-    setClearing(true)
-    try {
-      // Not res.count: the endpoint counts rows already removed earlier too.
-      await adminDeleteAllDocuments()
-      toast?.('Library cleared', 'info')
-      onDeleted()
-    } catch (e) {
-      toast?.(`Couldn't clear the library: ${e.message}`, 'err')
-    } finally {
-      setClearing(false)
     }
   }
 
@@ -192,30 +178,100 @@ function Documents({ docs, onDeleted, toast }) {
           </tbody>
         </table>
       ) : <p className="st-empty">No documents yet.</p>}
+    </div>
+  )
+}
 
-      {docs.length - removed > 0 && (
-        <div className="danger">
-          <div>
-            <b>Remove every document</b>
-            <span>Empties the library and stops any OCR in progress. This can&rsquo;t be undone.</span>
-          </div>
-          {confirming === 'all' ? (
-            <span className="doc-confirm" role="group" aria-label="Remove every document?">
-              <button type="button" className="doc-confirm-yes" onClick={removeAll}>Remove all</button>
-              <button type="button" onClick={() => setConfirming(null)}>Keep</button>
-            </span>
-          ) : (
-            <button type="button" className="dt-del" onClick={() => setConfirming('all')} disabled={clearing}>
-              {clearing ? 'Removing…' : 'Remove all'}
-            </button>
-          )}
-        </div>
+/** What the last re-index did, from POST /reload's own counts and log. */
+function ReloadResult({ r }) {
+  if (r.status === 'no_docs') {
+    return <p className="mt-res" role="status">The server had no test_docs/ folder. It has been created, and is empty.</p>
+  }
+  const problems = (r.log || []).filter(e => e.status === 'error' || e.status === 'limit')
+  return (
+    <div className="mt-res" role="status">
+      <p>
+        {r.loaded ? <><b>{plural(r.loaded, 'new file')}</b> indexed</> : 'No new files'}
+        {r.skipped > 0 && <>, {n(r.skipped)} already in the library</>}
+        {r.failed > 0 && <>, <b className="mt-bad">{n(r.failed)} failed</b></>}.
+      </p>
+      {problems.length > 0 && (
+        <ul>{problems.map(e => <li key={e.file}><b>{e.file}</b> {e.msg || 'the library is full'}</li>)}</ul>
       )}
     </div>
   )
 }
 
-export default function AdminDashboard({ onClose, onDocsChanged, toast }) {
+function Maintenance({ docCount, onChanged, toast }) {
+  const [reloading, setReloading] = useState(false)
+  const [result, setResult] = useState(null)
+  const [confirming, setConfirming] = useState(false)
+  const [clearing, setClearing] = useState(false)
+
+  const reindex = async () => {
+    setReloading(true)
+    setResult(null)
+    try {
+      const r = await apiReload()
+      setResult(r)
+      if (r.loaded) onChanged()
+    } catch (e) {
+      toast?.(`Re-index failed: ${e.message}`, 'err')
+    } finally {
+      setReloading(false)
+    }
+  }
+
+  const removeAll = async () => {
+    setConfirming(false)
+    setClearing(true)
+    try {
+      // Not res.count: the endpoint counts rows already removed earlier too.
+      await adminDeleteAllDocuments()
+      toast?.('Library cleared', 'info')
+      onChanged()
+    } catch (e) {
+      toast?.(`Couldn't clear the library: ${e.message}`, 'err')
+    } finally {
+      setClearing(false)
+    }
+  }
+
+  return (
+    <div className="mt">
+      <div className="mt-row">
+        <div>
+          <b>Re-index the server folder</b>
+          <span>Adds files placed in <code>test_docs/</code> on the server. Files already in the library are skipped.</span>
+        </div>
+        <button type="button" className="dt-del mt-go" onClick={reindex} disabled={reloading}>
+          <RefreshCw size={14} strokeWidth={1.75} className={`ico${reloading ? ' spin' : ''}`} aria-hidden="true" />
+          {reloading ? 'Indexing…' : 'Re-index'}
+        </button>
+      </div>
+      {result && <ReloadResult r={result} />}
+
+      <div className="mt-row danger">
+        <div>
+          <b>Remove every document</b>
+          <span>Empties the library and stops any OCR in progress. This can&rsquo;t be undone.</span>
+        </div>
+        {confirming ? (
+          <span className="doc-confirm" role="group" aria-label="Remove every document?">
+            <button type="button" className="doc-confirm-yes" onClick={removeAll}>Remove all</button>
+            <button type="button" onClick={() => setConfirming(false)}>Keep</button>
+          </span>
+        ) : (
+          <button type="button" className="dt-del" onClick={() => setConfirming(true)} disabled={clearing || !docCount}>
+            {clearing ? 'Removing…' : 'Remove all'}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function AdminDashboard({ onClose, onDocsChanged, toast, docCount = 0 }) {
   const [tab, setTab] = useState('Overview')
   const [stats, setStats] = useState(null)
   const [docs, setDocs] = useState(null)
@@ -223,6 +279,7 @@ export default function AdminDashboard({ onClose, onDocsChanged, toast }) {
   const [error, setError] = useState('')
 
   const fetchTab = useCallback(async t => {
+    if (t === 'Maintenance') return
     setBusy(true)
     setError('')
     try {
@@ -237,30 +294,42 @@ export default function AdminDashboard({ onClose, onDocsChanged, toast }) {
 
   useEffect(() => { fetchTab(tab) }, [tab, fetchTab])
 
-  // A removal here bypasses the library, so refresh it as well as this list.
-  const onDeleted = () => { fetchTab('Documents'); onDocsChanged?.() }
+  // Changes made here bypass the library, so refresh it as well as this
+  // dialog's own data (the other tabs refetch when opened).
+  const onChanged = () => { setDocs(null); setStats(null); fetchTab(tab); onDocsChanged?.() }
 
   const data = tab === 'Overview' ? stats : docs
   return (
-    <Modal title="Pipeline stats" sub="What is indexed, and how questions went" icon={Gauge} wide onClose={onClose} className="adm">
+    <Modal title="Stats & maintenance" sub="What is indexed, how questions went, and library upkeep" icon={Gauge} wide onClose={onClose} className="adm">
       <div className="adm-bar">
-        <div className="seg" role="tablist" aria-label="Pipeline stats">
-          {TABS.map(t => (
-            <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
-              {t === 'Documents' && <FileText size={14} strokeWidth={1.75} className="ico" aria-hidden="true" />}{t}
-            </button>
-          ))}
+        <div className="seg" role="tablist" aria-label="Stats and maintenance">
+          {TABS.map(t => {
+            const Icon = TAB_ICON[t]
+            return (
+              <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
+                {Icon && <Icon size={14} strokeWidth={1.75} className="ico" aria-hidden="true" />}{t}
+              </button>
+            )
+          })}
         </div>
-        <button type="button" className="ibtn" onClick={() => fetchTab(tab)} disabled={busy} aria-label="Refresh">
-          <RefreshCw size={16} strokeWidth={1.75} className={`ico${busy ? ' spin' : ''}`} aria-hidden="true" />
-        </button>
+        {tab !== 'Maintenance' && (
+          <button type="button" className="ibtn" onClick={() => fetchTab(tab)} disabled={busy} aria-label="Refresh">
+            <RefreshCw size={16} strokeWidth={1.75} className={`ico${busy ? ' spin' : ''}`} aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       <div role="tabpanel" aria-busy={busy || undefined}>
-        {error && <p className="st-err" role="alert">Couldn&rsquo;t load {tab.toLowerCase()}: {error}</p>}
-        {!data && !error && <p className="st-empty">Loading…</p>}
-        {data && tab === 'Overview' && <Overview s={data} />}
-        {data && tab === 'Documents' && <Documents docs={data} onDeleted={onDeleted} toast={toast} />}
+        {tab === 'Maintenance' ? (
+          <Maintenance docCount={docCount} onChanged={onChanged} toast={toast} />
+        ) : (
+          <>
+            {error && <p className="st-err" role="alert">Couldn&rsquo;t load {tab.toLowerCase()}: {error}</p>}
+            {!data && !error && <p className="st-empty">Loading…</p>}
+            {data && tab === 'Overview' && <Overview s={data} />}
+            {data && tab === 'Documents' && <Documents docs={data} onDeleted={onChanged} toast={toast} />}
+          </>
+        )}
       </div>
     </Modal>
   )

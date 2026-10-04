@@ -1,6 +1,6 @@
 /**
- * Modal.jsx — the Reading Room dialog shared by the Playbook, Pipeline stats
- * and library maintenance: a centred panel on desktop, a bottom sheet on
+ * Modal.jsx — the Reading Room dialog shared by the Playbook and Stats &
+ * maintenance: a centred panel on desktop, a bottom sheet on
  * phones (drag the header down to dismiss, like the Evidence sheet).
  *
  * Mount it only while open. It takes focus, keeps Tab inside, closes on

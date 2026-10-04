@@ -12,7 +12,6 @@ import { ToastStack, useToasts } from './components/Toasts.jsx'
 import ChatWindow      from './components/ChatWindow.jsx'
 import InputBar        from './components/InputBar.jsx'
 import { useCiteLinking } from './useCiteLinking.js'
-import UploadPanel     from './components/UploadPanel.jsx'
 import PlaybookPanel   from './components/PlaybookPanel.jsx'
 import AdminDashboard  from './components/AdminDashboard.jsx'
 import {
@@ -29,7 +28,6 @@ export default function App() {
   const [messages,     setMessages]    = useState([])
   const [isLoading,    setIsLoading]   = useState(false)
   const [streamStatus, setStreamStatus]= useState('')
-  const [showPanel,    setShowPanel]   = useState(false)
   const [showPlaybook, setShowPlaybook]= useState(false)
   const [showAdmin,    setShowAdmin]   = useState(false)
   const [docsInfo,     setDocsInfo]    = useState({ files: [], total_files: 0, total_chunks: 0 })
@@ -235,9 +233,8 @@ export default function App() {
     return refreshDocs()
   }, [refreshDocs, refreshSuggestions])
 
-  const openPanel = () => { setShowPanel(true);   setShowPlaybook(false); setShowAdmin(false); setSideOpen(false) }
-  const openPlay  = () => { setShowPlaybook(true); setShowPanel(false);   setShowAdmin(false); setSideOpen(false) }
-  const openStats = () => { setShowAdmin(true); setSideOpen(false) }
+  const openPlay  = () => { setShowPlaybook(true); setShowAdmin(false); setSideOpen(false) }
+  const openStats = () => { setShowAdmin(true); setShowPlaybook(false); setSideOpen(false) }
 
   // Clicking an answer always reveals its evidence, on every screen size.
   const selectAnswer = useCallback((id) => {
@@ -287,7 +284,6 @@ export default function App() {
           onDocsChanged={docsChanged}
           toast={toast}
           uploadRef={uploadRef}
-          onManage={openPanel}
           onPlaybook={openPlay}
           onStats={openStats}
           theme={theme}
@@ -336,13 +332,6 @@ export default function App() {
       </div>
       <div className={`scrim${scrimOn ? ' on' : ''}`} onClick={closeOverlays} aria-hidden="true" />
 
-      <UploadPanel
-        isOpen={showPanel}
-        docsInfo={docsInfo}
-        onClose={() => setShowPanel(false)}
-        onClearChat={handleClearChat}
-        onDocsChanged={docsChanged}
-      />
       <ToastStack toasts={toasts} />
       {showPlaybook && <PlaybookPanel onClose={() => setShowPlaybook(false)} />}
       {showAdmin && (
@@ -350,6 +339,7 @@ export default function App() {
           onClose={() => setShowAdmin(false)}
           onDocsChanged={docsChanged}
           toast={toast}
+          docCount={total}
         />
       )}
     </>

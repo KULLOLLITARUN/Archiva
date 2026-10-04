@@ -8,6 +8,7 @@ vi.mock('../api.js', () => ({
   adminGetDocuments: vi.fn(),
   adminDeleteDocument: vi.fn(() => Promise.resolve({ deleted: true })),
   adminDeleteAllDocuments: vi.fn(() => Promise.resolve({ deleted: true, count: 99 })),
+  apiReload: vi.fn(),
 }))
 
 const STATS = {
@@ -62,12 +63,45 @@ describe('AdminDashboard', () => {
 
   it('clears the library only after confirming, without quoting the endpoint count', async () => {
     const toast = vi.fn()
-    render(<AdminDashboard onClose={() => {}} toast={toast} />)
-    fireEvent.click(screen.getByRole('tab', { name: /Documents/ }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Remove all' }))
+    const onDocsChanged = vi.fn()
+    render(<AdminDashboard onClose={() => {}} toast={toast} onDocsChanged={onDocsChanged} docCount={4} />)
+    fireEvent.click(screen.getByRole('tab', { name: /Maintenance/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove all' }))
     expect(api.adminDeleteAllDocuments).not.toHaveBeenCalled()
     fireEvent.click(within(screen.getByRole('group', { name: 'Remove every document?' })).getByText('Remove all'))
     await waitFor(() => expect(toast).toHaveBeenCalledWith('Library cleared', 'info'))
+    expect(onDocsChanged).toHaveBeenCalled()
+  })
+
+  it('cannot clear an empty library', () => {
+    render(<AdminDashboard onClose={() => {}} docCount={0} />)
+    fireEvent.click(screen.getByRole('tab', { name: /Maintenance/ }))
+    expect(screen.getByRole('button', { name: 'Remove all' })).toBeDisabled()
+  })
+
+  it('re-indexes the server folder and reports what /reload did', async () => {
+    api.apiReload.mockResolvedValue({
+      status: 'done', loaded: 1, skipped: 4, failed: 1, total_files: 5, total_chunks: 1050,
+      log: [{ file: 'new.md', status: 'ok', chunks: 2 }, { file: 'broken.pdf', status: 'error', msg: 'parse: bad xref' }],
+    })
+    const onDocsChanged = vi.fn()
+    render(<AdminDashboard onClose={() => {}} onDocsChanged={onDocsChanged} docCount={4} />)
+    fireEvent.click(screen.getByRole('tab', { name: /Maintenance/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Re-index/ }))
+    const res = await screen.findByRole('status')
+    expect(res).toHaveTextContent('1 new file indexed, 4 already in the library, 1 failed.')
+    expect(res).toHaveTextContent('broken.pdf parse: bad xref')
+    expect(onDocsChanged).toHaveBeenCalled()
+  })
+
+  it('does not refresh the library when a re-index adds nothing', async () => {
+    api.apiReload.mockResolvedValue({ status: 'done', loaded: 0, skipped: 4, failed: 0, log: [] })
+    const onDocsChanged = vi.fn()
+    render(<AdminDashboard onClose={() => {}} onDocsChanged={onDocsChanged} docCount={4} />)
+    fireEvent.click(screen.getByRole('tab', { name: /Maintenance/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Re-index/ }))
+    expect(await screen.findByRole('status')).toHaveTextContent('No new files, 4 already in the library.')
+    expect(onDocsChanged).not.toHaveBeenCalled()
   })
 
   it('says when stats fail to load', async () => {

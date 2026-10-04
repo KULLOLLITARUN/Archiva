@@ -72,8 +72,8 @@ const FAQ = [
     a: 'Click the × on its row in the library (it appears on hover; touch screens always show it), then confirm. Removing a scan that is still being read stops its OCR.',
   },
   {
-    q: 'What are Pipeline stats and Manage library?',
-    a: 'Pipeline stats shows what is indexed, how questions went since the server started (attempts, response time, confidence), and the share of all answers the output validator didn’t flag. Manage library re-indexes files placed in the server’s test_docs/ folder, or clears the whole library.',
+    q: 'What is in Stats & maintenance?',
+    a: 'What is indexed, how questions went since the server started (attempts, response time, confidence), and the share of all answers the output validator didn’t flag. Its Maintenance tab re-indexes files placed in the server’s test_docs/ folder, or removes every document.',
   },
   {
     q: 'Can I change the colours?',

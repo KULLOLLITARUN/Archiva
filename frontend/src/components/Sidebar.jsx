@@ -1,14 +1,14 @@
 /**
  * Sidebar.jsx — the Library column: brand, new conversation, documents,
- * and the low-frequency tools (Playbook, pipeline stats, re-index / clear
- * all under "Manage library", theme).
+ * and the low-frequency tools (Playbook, stats and library maintenance,
+ * theme).
  *
  * A fixed column from 900px up; below that it is a slide-in menu, `open`
  * controlled by App.
  */
 
 import { useLayoutEffect, useRef } from 'react'
-import { BookOpen, FolderCog, Gauge, Moon, Plus, Sun, X } from 'lucide-react'
+import { BookOpen, Gauge, Moon, Plus, Sun, X } from 'lucide-react'
 import { stagger } from 'animejs'
 import BrandMark from './BrandMark.jsx'
 import Library from './Library.jsx'
@@ -19,7 +19,7 @@ import { matches, NARROW } from '../useMedia.js'
 const ICON = { size: 16, strokeWidth: 1.75, className: 'ico', 'aria-hidden': true }
 
 export default function Sidebar({
-  docsInfo, open, inert, onClose, onNewChat, onDocsChanged, toast, uploadRef, onManage, onPlaybook, onStats, theme, onTheme,
+  docsInfo, open, inert, onClose, onNewChat, onDocsChanged, toast, uploadRef, onPlaybook, onStats, theme, onTheme,
 }) {
   const { total_files = 0, total_chunks = 0 } = docsInfo
   const ref = useRef(null)
@@ -63,8 +63,7 @@ export default function Sidebar({
 
       <div className="side-foot">
         <button type="button" className="side-link" onClick={onPlaybook}><BookOpen {...ICON} />Playbook</button>
-        <button type="button" className="side-link" onClick={onStats}><Gauge {...ICON} />Pipeline stats</button>
-        <button type="button" className="side-link" onClick={onManage}><FolderCog {...ICON} />Manage library</button>
+        <button type="button" className="side-link" onClick={onStats}><Gauge {...ICON} />Stats &amp; maintenance</button>
         <div className="theme" role="group" aria-label="Theme">
           <button type="button" aria-pressed={theme === 'paper'} onClick={() => onTheme('paper')}>
             <Sun {...ICON} size={14} />Paper
