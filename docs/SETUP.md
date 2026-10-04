@@ -23,7 +23,12 @@ Don't have Postgres installed yet?
 - **macOS:** `brew install postgresql@16 && brew services start postgresql@16`
 - **Linux (Debian/Ubuntu):** `sudo apt install postgresql && sudo systemctl start postgresql`
 
-You do **not** need Docker, and you do **not** need pgvector — Archiva
+**Or, with Docker:** `docker compose up -d` starts Postgres with the
+`archiva` role and database already created (plus `archiva_test` for the
+test suite). Skip step 2 and use the `DATABASE_URL` from the comment at the
+top of `docker-compose.yml`.
+
+Docker is optional, and you do **not** need pgvector — Archiva
 deliberately stores embeddings as a plain array column and does similarity
 search in Python (see `db/schema.sql`'s header comment for why).
 

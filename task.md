@@ -8,9 +8,9 @@
 
 ## Phase 2: Ingestion & Verification
 - [x] Multi-format document parser — PDF, DOCX, TXT support with layout/table extraction
-- [x] Document store & SQLite database sync (`/docs-loaded` accuracy)
+- [x] Document store & database sync (`/docs-loaded` accuracy) — SQLite then, Postgres now
 - [x] Direct store purging for fresh document re-chunking (`/documents/clear-all`)
-- [x] SQLite schema backward-compatibility for document management
+- [x] Schema backward-compatibility for document management (since replaced by Postgres, `db/schema.sql`)
 
 ## Phase 3: UI & Telemetry Refinement
 - [x] Clean message UI — telemetry metadata hidden from chat bubbles

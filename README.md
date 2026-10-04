@@ -10,7 +10,7 @@ failures before ever returning an answer.
 > service. See [Known Limitations](#known-limitations-deliberate-not-oversights)
 > before deploying it anywhere other endpoints can reach.
 
-CI: the full test suite (365 tests) runs on every push/PR via
+CI: the full test suite (405 tests) runs on every push/PR via
 `.github/workflows/tests.yml`, including a real Postgres service — no
 Groq API key required, every LLM call in the suite is mocked.
 
@@ -117,7 +117,7 @@ bash start.sh
 ```
 
 This installs dependencies, starts the FastAPI backend on port 8000, and the
-React frontend (usually http://localhost:5173).
+React frontend on http://localhost:3000.
 
 ### 4. Add Documents
 
@@ -147,8 +147,15 @@ npm run dev
 ## Database Setup
 
 Archiva persists documents, chunks (+ embeddings), and feedback logs in
-Postgres — no SQLite, no pickle file. Use a dedicated role/database, not
-your Postgres superuser:
+Postgres — no SQLite, no pickle file.
+
+**Quickest:** `docker compose up -d` runs Postgres 16 with the role and
+database below already created, plus an `archiva_test` database for the
+Postgres tests. The connection strings are in the comment at the top of
+`docker-compose.yml`.
+
+**Native install:** use a dedicated role/database, not your Postgres
+superuser:
 
 ```sql
 CREATE ROLE archiva LOGIN PASSWORD 'choose_a_password';
@@ -229,10 +236,12 @@ rag_agentic/
 ├── models/
 │   └── schemas.py            Pydantic request/response models
 │
-├── eval/                   ← Offline retrieval-quality regression harness
-│   ├── run_eval.py, golden_queries.json, fixtures/
+├── eval/                   ← Offline quality regression harnesses
+│   ├── run_eval.py             retrieval quality (no API key)
+│   ├── run_answer_eval.py      end-to-end answer quality (live Groq calls)
+│   ├── golden_queries.json, answer_baseline.json, fixtures/
 │
-├── tests/                  ← 365 tests, unit + HTTP integration + Postgres
+├── tests/                  ← 405 tests, unit + HTTP integration + Postgres
 ├── .github/workflows/       ← CI (runs a Postgres service too)
 │
 └── frontend/                ← React + Vite UI
@@ -282,7 +291,7 @@ curl -X POST http://localhost:8000/chat \
     }
   ],
   "intent": "qa",
-  "model_used": "llama-3.3-70b-versatile",
+  "model_used": "openai/gpt-oss-120b",
   "latency_ms": 890,
   "flagged": false,
   "attempts": 1,
@@ -321,9 +330,24 @@ explanations. The most commonly tuned:
 
 ```bash
 pip install -r requirements.txt   # includes pytest
-pytest -v                          # 365 tests, no API key needed
+pytest -v                          # 405 tests, no API key needed
 python eval/run_eval.py            # retrieval-quality report (BM25 + hybrid/dense)
 ```
+
+### Answer-quality eval (live)
+
+```bash
+PYTHONIOENCODING=utf-8 python eval/run_answer_eval.py
+```
+
+Runs every case in the answer suite through the full pipeline against the
+real Groq API and compares the result with `eval/answer_baseline.json`
+(pass rate, tokens and latency per case, newly failing / passing cases).
+It needs `GROQ_API_KEY`, so CI doesn't run it. It takes 10-15 minutes on
+Groq's free tier (8000 tokens/min); short rate-limit waits are absorbed by
+the worker's retry. `--only` / `--case` run a subset, and
+`--save-baseline` refuses to save a run that was partial or hit provider
+errors.
 
 `tests/` covers the deterministic core (reflection, healing, chunking, fusion,
 caching, decomposition) as unit tests, plus HTTP-layer integration tests
@@ -350,14 +374,18 @@ throwaway container). Otherwise they skip with a message saying why.
 
 | Role | Config Variable | Default | Provider |
 |------|------------------|---------|----------|
-| Fast worker (simple queries, query rewriting, decomposition check) | `GROQ_FAST` | `llama-3.1-8b-instant` | Groq |
-| Strong worker (complex queries, healing escalation) | `GROQ_STRONG` | `llama-3.3-70b-versatile` | Groq |
-| Safety classifier / suggestions / faithfulness judge | `GROQ_QWEN` | `llama-3.3-70b-versatile`* | Groq |
+| Fast worker (simple queries, query rewriting, decomposition, faithfulness judge) | `GROQ_FAST` | `openai/gpt-oss-20b` | Groq |
+| Strong worker (complex queries, healing escalation) | `GROQ_STRONG` | `openai/gpt-oss-120b` | Groq |
+| Safety classifier / suggestions | `GROQ_QWEN` | `qwen/qwen3.8-27b` | Groq |
 | Dense embeddings | `DENSE_MODEL` | `sentence-transformers/all-MiniLM-L6-v2` | Local |
 | Cross-encoder reranker | `CROSS_ENCODER_MODEL` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Local |
 | Keyword retrieval | — | BM25 (`rank-bm25`) | Local / offline |
 
-\* Override with an actual Qwen model ID in `.env` if available on your Groq plan.
+Any chat model on your Groq plan works: reasoning models (gpt-oss, Qwen3)
+get the request parameters they need automatically (see
+`light_completion_params()` in `llm/groq_manager.py`). Groq retires models
+from time to time; if requests fail with `model_not_found`, pick current
+ones from https://console.groq.com/docs/models and set them in `.env`.
 
 ---
 

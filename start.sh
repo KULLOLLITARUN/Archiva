@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# DocChat — convenience startup script (BM25 mode, no embedding server required)
+# Archiva — convenience startup script
 # Usage: bash start.sh
 
 set -e
 
 echo ""
 echo "============================================"
-echo "        DocChat - Startup (BM25 mode)       "
+echo "             Archiva - Startup              "
 echo "============================================"
 echo ""
 
@@ -58,7 +58,7 @@ cd ..
 
 echo ""
 echo "============================================"
-echo "[OK] DocChat is running"
+echo "[OK] Archiva is running"
 echo "   Backend  -> http://localhost:8000"
 echo "   Frontend -> http://localhost:3000"
 echo "   Press Ctrl+C to stop both servers"
