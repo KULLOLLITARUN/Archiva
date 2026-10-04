@@ -87,6 +87,14 @@ function Overview({ s }) {
           <>
             <h4 className="st-sub">Attempts per question</h4>
             <Attempts counts={ref.accepted_attempt} />
+            <h4 className="st-sub">How questions ended</h4>
+            {/* monitor/logger.py: retries are attributed by the LAST healing step. */}
+            <ul className="st-list">
+              <li>Retried with a new search<b className="tabular">{n(ref.retry_search)}</b></li>
+              <li>Retried with a stricter prompt<b className="tabular">{n(ref.retry_model)}</b></li>
+              <li>Best effort, not fully verified<b className="tabular">{n(ref.best_effort)}</b></li>
+              <li>Refused: not in the documents<b className="tabular">{n(ref.refused)}</b></li>
+            </ul>
             <h4 className="st-sub">Model used</h4>
             <ul className="st-list">
               <li>Fast model<b className="tabular">{n(usage.fast)}</b></li>

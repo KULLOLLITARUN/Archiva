@@ -39,6 +39,7 @@ _stats: Dict = {
         "retry_search":     0,
         "retry_model":      0,
         "refused":          0,
+        "best_effort":      0,
         "accepted_attempt": {"1": 0, "2": 0, "3": 0},
         "avg_confidence":   0.0,
         "_confidence_sum":  0.0,
@@ -90,6 +91,7 @@ def get_stats() -> dict:
         "retry_search":     ref["retry_search"],
         "retry_model":      ref["retry_model"],
         "refused":          ref["refused"],
+        "best_effort":      ref["best_effort"],
         "accepted_attempt": dict(ref["accepted_attempt"]),
         "avg_confidence":   round(ref["avg_confidence"], 4),
     }
@@ -144,6 +146,13 @@ def _update_latency(log_data: dict) -> None:
         _stats["total_tokens_used"] += int(tokens)
 
 
+# The loop's final reasons for answering "Not found in the document."
+_REFUSED_REASONS = frozenset({
+    "explicit_not_found", "no_chunks_retrieved", "answer_too_short_max_attempts",
+    "ungrounded_numbers_strong_model_failed", "no_results_after_retry",
+})
+
+
 def _update_reflection_stats(log_data: dict) -> None:
     ref     = _stats["reflection_stats"]
     reason  = log_data.get("reflection_reason", "") or ""
@@ -152,18 +161,21 @@ def _update_reflection_stats(log_data: dict) -> None:
     if log_data.get("reflected"):
         ref["total_reflected"] += 1
 
-    if "retry_search" in reason or reason in ("low_overlap", "answer_too_short"):
-        ref["retry_search"] += 1
-    elif "retry_model" in reason or reason in (
-        "low_overlap_retry_model", "ungrounded_numbers", "possible_contradiction", "answer_too_long"
-    ):
-        ref["retry_model"] += 1
-    elif "refused" in reason or reason in (
-        "explicit_not_found", "no_chunks_retrieved",
-        "answer_too_short_max_attempts", "ungrounded_numbers_strong_model_failed",
-        "no_results_after_retry", "max_attempts_no_result",
-    ):
+    # reflection_reason is the loop's FINAL outcome (agents/loop.py), never an
+    # intermediate one like "low_overlap" - matching those left these buckets
+    # near zero. Outcome: refused (the answer became "Not found"), or the best
+    # of several attempts returned without passing every check.
+    if reason in _REFUSED_REASONS:
         ref["refused"] += 1
+    elif reason.endswith("_max_attempts_reached"):
+        ref["best_effort"] += 1
+
+    # Which kind of retry got there: healing_action is the LAST healing step.
+    action = log_data.get("healing_action") or "NONE"
+    if attempts > 1 and action in ("REWRITE_QUERY", "INCREASE_TOP_K"):
+        ref["retry_search"] += 1
+    elif attempts > 1 and action == "STRICT_PROMPT":
+        ref["retry_model"] += 1
 
     attempt_key = str(min(attempts, 3))
     if attempt_key in ref["accepted_attempt"]:

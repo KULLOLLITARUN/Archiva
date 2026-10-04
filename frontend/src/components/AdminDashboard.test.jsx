@@ -15,7 +15,7 @@ const STATS = {
   store_files: 4, store_chunks: 1048, total_queries: 5, blocked_queries: 0, flagged_responses: 1,
   avg_latency_ms: 4200, latency_samples: 5,
   model_usage: { fast: 3, strong: 1, none: 1 },
-  reflection_stats: { avg_confidence: 0.82, accepted_attempt: { 1: 3, 2: 2, 3: 0 } },
+  reflection_stats: { avg_confidence: 0.82, accepted_attempt: { 1: 3, 2: 2, 3: 0 }, retry_search: 2, retry_model: 0, best_effort: 1, refused: 1 },
   answers_logged: 0, success_rate: 0,
 }
 
@@ -38,6 +38,8 @@ describe('AdminDashboard', () => {
     expect(screen.getByText('4.2 s')).toBeInTheDocument()
     expect(screen.getByText('82%')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: '1st attempt: 3, 2nd attempt: 2, 3rd attempt: 0' })).toBeInTheDocument()
+    expect(screen.getByText('Best effort, not fully verified').querySelector('b')).toHaveTextContent('1')
+    expect(screen.getByText('Retried with a new search').querySelector('b')).toHaveTextContent('2')
     // No logged answers yet: a dash, not a misleading "0%".
     const tile = screen.getByText('Not flagged by validator').closest('.st-tile')
     expect(within(tile).getByText('—')).toBeInTheDocument()
