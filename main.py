@@ -7,6 +7,7 @@ Auth fully removed. All endpoints are open — no login, register, or tokens.
 import asyncio
 import json
 import os
+import re
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -157,7 +158,38 @@ app.add_middleware(
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
-def _build_sources(chunks: list) -> list:
+# The model cites inline as "[Source: file.pdf, page 1]" (or 【...】).
+_CITATION_RE = re.compile(r"[\[【]\s*Source:([^\]】]*)[\]】]", re.IGNORECASE)
+# Models swap in look-alike characters when they copy a filename: non-breaking
+# hyphens ("A4‑S1‑GST‑Invoice") and narrow/no-break spaces.
+_DASH_LIKE_RE  = re.compile(r"[‐-―−]")
+_SPACE_LIKE_RE = re.compile(r"[\s  ]+")
+
+
+def _normalize_citation_text(text: str) -> str:
+    return _SPACE_LIKE_RE.sub(" ", _DASH_LIKE_RE.sub("-", text)).lower()
+
+
+def _cited_chunks(answer: str, chunks: list) -> list:
+    """
+    The chunks whose file the answer actually cites.
+
+    Every chunk sent to the model used to be returned as a source, so an
+    answer drawn from one invoice showed chips for two unrelated PDFs that
+    merely sat in the context. An answer with no citation we can match keeps
+    the full list, so a source is never silently lost.
+    """
+    citations = [_normalize_citation_text(c) for c in _CITATION_RE.findall(answer or "")]
+    if not citations:
+        return chunks
+    cited = [
+        c for c in chunks
+        if any(_normalize_citation_text(c["metadata"]["filename"]) in cit for cit in citations)
+    ]
+    return cited or chunks
+
+
+def _build_sources(chunks: list, answer: str = "") -> list:
     return [
         {
             "filename": c["metadata"]["filename"],
@@ -165,7 +197,7 @@ def _build_sources(chunks: list) -> list:
             "text":     c["text"][:200],
             "score":    round(c["score"], 4),
         }
-        for c in chunks
+        for c in _cited_chunks(answer, chunks)
     ]
 
 
@@ -298,7 +330,7 @@ async def chat(
 
     validation = validate(answer, top_chunks)
     flagged    = validation["flagged"]
-    sources    = [SourceRef(**s) for s in _build_sources(top_chunks)]
+    sources    = [SourceRef(**s) for s in _build_sources(top_chunks, answer)]
 
     # Store the ORIGINAL query, not the rewritten/anchored one - otherwise
     # each follow-up's anchor text (which already embeds the prior question
@@ -379,7 +411,7 @@ async def chat_stream(
     answer     = loop_result["answer"]
     top_chunks = loop_result["chunks"]
     model_id   = loop_result["model_used"]
-    sources    = _build_sources(top_chunks)
+    sources    = _build_sources(top_chunks, answer)
 
     async def event_generator():
         # ── Stream the already-computed answer token-by-token ─────────────
