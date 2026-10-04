@@ -25,6 +25,9 @@ import './styles.css'
 import './auth-admin.css'
 
 
+const SUGGEST_RETRIES = 4
+const SUGGEST_RETRY_MS = 20_000   // a few tries span the 1-minute rate-limit window
+
 export default function App() {
   // The server keeps each session's turns (follow-ups read them, and they
   // can be reopened from Conversations), so a new conversation needs a new id.
@@ -60,17 +63,27 @@ export default function App() {
       .catch(() => setDocsInfo({ files: [], total_files: 0, total_chunks: 0 }))
   }, [])
 
-  const refreshSuggestions = useCallback(() => {
+  // A failed request (usually 429 - /suggestions allows 10 a minute) keeps
+  // the cards already shown and tries again; it used to clear them, so one
+  // rate-limited load hid the starter cards until the page was reloaded.
+  const suggestRetry = useRef({ timer: null, left: 0 })
+  const refreshSuggestions = useCallback((retries = SUGGEST_RETRIES) => {
+    clearTimeout(suggestRetry.current.timer)
+    suggestRetry.current.left = retries
     apiGetSuggestions()
       // Always sync from the response, even when generated is false (e.g.
       // the store is now empty after a delete) — gating this on `generated`
       // meant deleting all documents left the old topic pills stuck on
       // screen forever, since there was never a fresh `true` response to
       // replace them with.
-      .then(data => setDynTopics(data.topics || []))
-      .catch(() => {})
-      .finally(() => setTopicsLoaded(true))
+      .then(data => { setDynTopics(data.topics || []); setTopicsLoaded(true) })
+      .catch(() => {
+        const left = suggestRetry.current.left
+        if (left > 0) suggestRetry.current.timer = setTimeout(() => refreshSuggestions(left - 1), SUGGEST_RETRY_MS)
+        else setTopicsLoaded(true)
+      })
   }, [])
+  useEffect(() => () => clearTimeout(suggestRetry.current.timer), [])
 
   // Wait for backend, then load initial data
   useEffect(() => {

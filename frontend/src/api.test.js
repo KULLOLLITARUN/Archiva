@@ -130,11 +130,10 @@ describe('apiGetSuggestions', () => {
     expect(result).toEqual({ topics: [{ label: 'Pricing' }], generated: true })
   })
 
-  it('fails open to an empty, ungenerated result on a non-ok response', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })))
+  it('throws on a non-ok response instead of reporting no topics', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 429 })))
 
-    const result = await apiGetSuggestions()
-    expect(result).toEqual({ topics: [], generated: false })
+    await expect(apiGetSuggestions()).rejects.toThrow('Suggestions failed (429)')
   })
 })
 

@@ -113,7 +113,9 @@ export async function apiReload() {
 
 export async function apiGetSuggestions() {
   const res = await fetch(`${BASE}/suggestions`)
-  if (!res.ok) return { topics: [], generated: false }
+  // A failure (often 429: the endpoint allows 10 a minute) is not "the
+  // documents have no topics"; throw so the caller keeps what it has and retries.
+  if (!res.ok) throw new Error(`Suggestions failed (${res.status})`)
   const data = await res.json()
   return { topics: data.topics || [], generated: data.generated || false }
 }
