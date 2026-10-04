@@ -24,7 +24,7 @@ from groq import Groq
 from groq import RateLimitError, APIStatusError
 
 from config import MAX_CONTEXT_TOKENS
-from llm.groq_manager import groq_manager
+from llm.groq_manager import groq_manager, retry_after_seconds
 
 # ── Retry configuration ────────────────────────────────────────────────────────
 
@@ -35,6 +35,15 @@ _MAX_RETRIES    = 3
 # outage instead of being scored as a bad answer and ending in "Not found".
 SERVICE_UNAVAILABLE_ANSWER = "Service temporarily unavailable. Please try again."
 _BACKOFF_BASE_S = 1  # seconds; doubles each attempt (1 → 2 → 4)
+
+# A per-minute 429 ("Please try again in 2.55s") clears in seconds. Waiting it
+# out beats failing the request, but only up to a point: past this cap the
+# hint is a daily/hourly limit (or a very busy minute) and the user is better
+# served by the friendly "unavailable" answer than by a long silent hang.
+_MAX_HINT_WAIT_S = 12.0
+# Groq's hint is when the window *starts* to free up; a little slack avoids
+# landing a hair early and burning an attempt on a second 429.
+_HINT_MARGIN_S   = 0.5
 
 
 # ── Prompt builder ─────────────────────────────────────────────────────────────
@@ -120,9 +129,12 @@ def call_groq(model_id: str, prompt: str, query: str) -> str:
 
     Attempt order:
       1. Try with the current healthy key.
-      2. On RateLimitError / APIStatusError → mark key failed, try next key.
-      3. On transient error → exponential back-off, same key.
-      4. After _MAX_RETRIES persistent failures → return friendly error string.
+      2. On RateLimitError with a short "try again in Xs" hint → cool the key
+         down for just that long; if no other key is healthy, sleep it out and
+         retry the same key.
+      3. On other RateLimitError / APIStatusError → mark key failed, try next key.
+      4. On transient error → exponential back-off, same key.
+      5. After _MAX_RETRIES persistent failures → return friendly error string.
     """
     last_exc: Optional[Exception] = None
     # We allow up to _MAX_RETRIES total attempts across any keys.
@@ -141,14 +153,29 @@ def call_groq(model_id: str, prompt: str, query: str) -> str:
             return response.choices[0].message.content
 
         except RateLimitError as exc:
-            # Genuine rate-limit — blacklist this key and rotate to the next one.
-            groq_manager.mark_failed(current_key)
             last_exc = exc
+            hint = retry_after_seconds(exc)
             print(
                 f"  [WARN]  [worker] Key …{current_key[-6:]} rate-limited "
                 f"(attempt {attempt + 1}/{_MAX_RETRIES}): {exc}"
             )
-            # No sleep — rotate to next key immediately.
+            if hint is None or hint > _MAX_HINT_WAIT_S:
+                # Outage, or a long (daily) limit — blacklist this key for the
+                # full backoff and rotate to the next one without sleeping.
+                groq_manager.mark_failed(current_key)
+                continue
+
+            # Short per-minute limit: the key works again in `hint` seconds,
+            # so don't sideline it for the full backoff. Another healthy key
+            # is used straight away; with none (the single-key setup), wait
+            # the hint out, and get_client() hands this same key back. The
+            # margin goes on the sleep only, so the cooldown has surely expired
+            # when we wake (Windows sleep can return a few ms early).
+            wait = hint + _HINT_MARGIN_S
+            groq_manager.mark_failed(current_key, backoff_s=hint)
+            if attempt + 1 < _MAX_RETRIES and groq_manager.healthy_count() == 0:
+                print(f"  [INFO]  [worker] Waiting {wait:.2f}s as Groq suggested, then retrying.")
+                time.sleep(wait)
 
         except APIStatusError as exc:
             # Check if this is a permanent model error (not a key/rate issue).

@@ -12,6 +12,7 @@ Features:
   - Returns a ready-to-use Groq client, not just a key string.
 """
 
+import re
 import threading
 import time
 from typing import List, Optional
@@ -54,6 +55,43 @@ def light_completion_params(model: str, max_tokens: int) -> dict:
     return {"max_tokens": max_tokens}
 
 
+# ── Rate-limit retry hint ─────────────────────────────────────────────────────
+
+# A per-minute 429 from Groq says exactly when the window frees up:
+#   "... on tokens per minute (TPM): Limit 8000, Used 7000, Requested 1500.
+#    Please try again in 2.55s. ..."
+# Daily limits use the same wording with larger units ("in 7m12.5s", "in 1h2m").
+# The retry-after header carries the same wait rounded up to whole seconds, so
+# the message is preferred and the header is only a fallback.
+_RETRY_HINT_RE = re.compile(r"try again in\s+((?:\d+(?:\.\d+)?(?:ms|h|m|s))+)", re.IGNORECASE)
+_RETRY_PART_RE = re.compile(r"(\d+(?:\.\d+)?)(ms|h|m|s)")
+_UNIT_SECONDS  = {"ms": 0.001, "s": 1.0, "m": 60.0, "h": 3600.0}
+
+
+def retry_after_seconds(exc: Exception) -> Optional[float]:
+    """
+    How long Groq asked us to wait before retrying, in seconds, or None if
+    the error carries no hint (outage, malformed body, non-HTTP error).
+    """
+    match = _RETRY_HINT_RE.search(str(exc))
+    if match:
+        return sum(
+            float(value) * _UNIT_SECONDS[unit]
+            for value, unit in _RETRY_PART_RE.findall(match.group(1))
+        )
+
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", None)
+    if headers is not None:
+        header = headers.get("retry-after")
+        if header is not None:
+            try:
+                return max(0.0, float(header))
+            except ValueError:
+                pass  # HTTP-date form; Groq doesn't send it, not worth parsing
+    return None
+
+
 # ── Manager ───────────────────────────────────────────────────────────────────
 
 class GroqKeyManager:
@@ -66,6 +104,7 @@ class GroqKeyManager:
         # ... use client ...
         # On failure:
         manager.mark_failed("key1")   # blacklist for BACKOFF_S seconds
+        manager.mark_failed("key1", backoff_s=3)   # short cooldown from a 429 hint
     """
 
     def __init__(self, keys: List[str], backoff_s: float = _BACKOFF_S) -> None:
@@ -74,7 +113,7 @@ class GroqKeyManager:
         self._keys: List[str]       = list(keys)
         self._backoff_s: float      = backoff_s
         self._index: int            = 0
-        self._failures: dict        = {}  # key → timestamp of failure
+        self._failures: dict        = {}  # key → monotonic time it becomes healthy again
         self._lock: threading.Lock  = threading.Lock()
 
     # ── Public API ─────────────────────────────────────────────────────────────
@@ -91,8 +130,8 @@ class GroqKeyManager:
             for _ in range(len(self._keys)):
                 key = self._keys[self._index]
                 self._index = (self._index + 1) % len(self._keys)
-                failed_at = self._failures.get(key)
-                if failed_at is None or (now - failed_at) >= self._backoff_s:
+                available_at = self._failures.get(key)
+                if available_at is None or now >= available_at:
                     # Key is healthy (or recovered from backoff)
                     if key in self._failures:
                         del self._failures[key]
@@ -100,19 +139,26 @@ class GroqKeyManager:
                     return key
 
             # All keys are blacklisted — return the one whose backoff expires
-            # soonest (least-recently-failed), even if still within backoff.
-            oldest_key = min(self._failures, key=lambda k: self._failures[k])
+            # soonest, even if still within backoff.
+            soonest_key = min(self._failures, key=lambda k: self._failures[k])
             print(
                 f"  [groq_manager] All keys blacklisted -- "
-                f"forcing key ...{oldest_key[-6:]} (may still be rate-limited)."
+                f"forcing key ...{soonest_key[-6:]} (may still be rate-limited)."
             )
-            return oldest_key
+            return soonest_key
 
-    def mark_failed(self, key: str) -> None:
-        """Blacklist *key* for BACKOFF_S seconds."""
+    def mark_failed(self, key: str, backoff_s: Optional[float] = None) -> None:
+        """
+        Blacklist *key* for *backoff_s* seconds (default BACKOFF_S).
+
+        A 429 with a short "try again in 2.55s" hint passes that wait, so the
+        key returns to rotation when Groq says it will work again rather than
+        sitting out the full default backoff.
+        """
+        duration = self._backoff_s if backoff_s is None else max(0.0, backoff_s)
         with self._lock:
-            self._failures[key] = time.monotonic()
-            print(f"  [groq_manager] Key ...{key[-6:]} blacklisted for {self._backoff_s}s.")
+            self._failures[key] = time.monotonic() + duration
+            print(f"  [groq_manager] Key ...{key[-6:]} blacklisted for {duration:g}s.")
 
     def get_client(self) -> tuple:
         """
@@ -135,8 +181,7 @@ class GroqKeyManager:
         with self._lock:
             return sum(
                 1 for k in self._keys
-                if k not in self._failures
-                or (now - self._failures[k]) >= self._backoff_s
+                if k not in self._failures or now >= self._failures[k]
             )
 
     def key_count(self) -> int:
@@ -164,7 +209,7 @@ except ValueError:
             raise RuntimeError(
                 "No Groq API key configured. Set GROQ_API_KEY in your .env file."
             )
-        def mark_failed(self, key):
+        def mark_failed(self, key, backoff_s=None):
             pass
         def healthy_count(self):
             return 0

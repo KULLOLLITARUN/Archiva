@@ -2,10 +2,13 @@
 multi-key rotation / retry behavior."""
 
 import httpx
+import pytest
 from groq import RateLimitError, APIStatusError
 
 import agents.worker as worker
+import llm.groq_manager as gm
 from agents.worker import build_prompt, call_groq
+from llm.groq_manager import GroqKeyManager
 
 
 def _http_response(status_code: int) -> httpx.Response:
@@ -103,7 +106,7 @@ class _FakeManager:
         self._i += 1
         return key, self._clients[key]
 
-    def mark_failed(self, key):
+    def mark_failed(self, key, backoff_s=None):
         self.failed.append(key)
 
 
@@ -153,3 +156,123 @@ def test_call_groq_reraises_on_permanent_model_error(monkeypatch):
     # Permanent model errors should NOT blacklist the key — it's a model
     # problem, not a key/rate-limit problem.
     assert manager.failed == []
+
+
+# ── call_groq honours Groq's "try again in Xs" hint ───────────────────────────
+
+def _hinted_rate_limit_error(wait: str) -> RateLimitError:
+    message = (
+        "Error code: 429 - {'error': {'message': 'Rate limit reached for model `m` "
+        "on tokens per minute (TPM): Limit 8000, Used 7000, Requested 1500. "
+        "Please try again in " + wait + ". Visit https://console.groq.com/docs/rate-limits'}}"
+    )
+    return RateLimitError(message, response=_http_response(429), body=None)
+
+
+class _RealManagerWithFakeClients(GroqKeyManager):
+    """Real key selection and cooldown logic; only the HTTP client is faked."""
+
+    def __init__(self, clients_by_key, backoff_s=60):
+        super().__init__(list(clients_by_key), backoff_s=backoff_s)
+        self._clients = clients_by_key
+        self.keys_used = []
+
+    def get_client(self):
+        key = self.get_key()
+        self.keys_used.append(key)
+        return key, self._clients[key]
+
+
+class _Clock:
+    """Fake monotonic clock that the worker's time.sleep() advances instead of blocking."""
+
+    def __init__(self, early_s=0.0):
+        self.now = 1000.0
+        self.sleeps = []
+        self._early_s = early_s
+
+    def monotonic(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.now += seconds - self._early_s
+
+
+def _install(monkeypatch, manager, early_s=0.0):
+    clock = _Clock(early_s)
+    monkeypatch.setattr(gm.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(worker.time, "sleep", clock.sleep)
+    monkeypatch.setattr(worker, "groq_manager", manager)
+    return clock
+
+
+def test_call_groq_waits_short_hint_and_retries_same_key(monkeypatch):
+    client = _FakeClient(plan=[_hinted_rate_limit_error("2.55s"), "answer after wait"])
+    manager = _RealManagerWithFakeClients({"only-key": client})
+    clock = _install(monkeypatch, manager)
+
+    assert call_groq("model-x", "system prompt", "user query") == "answer after wait"
+    assert manager.keys_used == ["only-key", "only-key"]
+    assert clock.sleeps == [pytest.approx(2.55 + worker._HINT_MARGIN_S)]
+    # The key came back as soon as the wait was over, not after the 60s backoff.
+    assert manager.healthy_count() == 1
+
+
+def test_call_groq_short_hint_key_is_healthy_even_if_sleep_wakes_early(monkeypatch, capsys):
+    # Windows time.sleep() can return a few ms before time.monotonic() has
+    # moved on that far; the key must still be healthy on waking, not handed
+    # back through the "all keys blacklisted -- forcing" fallback.
+    client = _FakeClient(plan=[_hinted_rate_limit_error("6.57s"), "ok"])
+    manager = _RealManagerWithFakeClients({"only-key": client})
+    _install(monkeypatch, manager, early_s=0.005)
+
+    assert call_groq("model-x", "system prompt", "user query") == "ok"
+    out = capsys.readouterr().out
+    assert "recovered from backoff" in out
+    assert "forcing" not in out
+
+
+def test_call_groq_handles_millisecond_hint(monkeypatch):
+    client = _FakeClient(plan=[_hinted_rate_limit_error("520ms"), "ok"])
+    manager = _RealManagerWithFakeClients({"only-key": client})
+    clock = _install(monkeypatch, manager)
+
+    assert call_groq("model-x", "system prompt", "user query") == "ok"
+    assert clock.sleeps == [pytest.approx(0.52 + worker._HINT_MARGIN_S)]
+
+
+def test_call_groq_rotates_without_waiting_when_another_key_is_healthy(monkeypatch):
+    client_a = _FakeClient(plan=[_hinted_rate_limit_error("2.55s")])
+    client_b = _FakeClient(plan=["answer from b"])
+    manager = _RealManagerWithFakeClients({"key-a": client_a, "key-b": client_b})
+    clock = _install(monkeypatch, manager)
+
+    assert call_groq("model-x", "system prompt", "user query") == "answer from b"
+    assert manager.keys_used == ["key-a", "key-b"]
+    assert clock.sleeps == []
+
+
+def test_call_groq_does_not_wait_out_long_hint(monkeypatch):
+    # A daily-limit style hint is beyond the cap: keep the old behaviour of
+    # blacklisting for the full backoff and giving up with the friendly
+    # answer, with no long sleep.
+    exc = _hinted_rate_limit_error("7m12s")
+    client = _FakeClient(plan=[exc, exc, exc])
+    manager = _RealManagerWithFakeClients({"only-key": client})
+    clock = _install(monkeypatch, manager)
+
+    assert call_groq("model-x", "system prompt", "user query") == worker.SERVICE_UNAVAILABLE_ANSWER
+    assert clock.sleeps == []
+    assert manager.healthy_count() == 0
+
+
+def test_call_groq_does_not_sleep_after_final_attempt(monkeypatch):
+    exc = _hinted_rate_limit_error("2s")
+    client = _FakeClient(plan=[exc, exc, exc])
+    manager = _RealManagerWithFakeClients({"only-key": client})
+    clock = _install(monkeypatch, manager)
+
+    assert call_groq("model-x", "system prompt", "user query") == worker.SERVICE_UNAVAILABLE_ANSWER
+    # Waits between attempts 1→2 and 2→3 only; nothing left to retry after the third.
+    assert len(clock.sleeps) == worker._MAX_RETRIES - 1
