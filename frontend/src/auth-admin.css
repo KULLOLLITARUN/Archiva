@@ -1,331 +1,109 @@
-/* ── Header admin button ─────────────────────────────────── */
-.hdr-btn--admin {
-  background: rgba(138, 93, 20, 0.12);
-  border-color: rgba(138, 93, 20, 0.3);
-  color: var(--yellow);
+/* ════════════════════════════════════════════════════════════════════════
+   Pipeline stats (AdminDashboard.jsx), inside the shared .dlg dialog.
+   Loaded after styles.css, so equal-specificity rules here win.
+   ════════════════════════════════════════════════════════════════════════ */
+
+.adm-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+.adm-bar .ibtn { margin-left: auto; }
+.adm-bar .ibtn:disabled { cursor: progress; }
+
+/* Segmented tabs, the same control as the theme switch. */
+.seg { display: inline-grid; grid-auto-flow: column; gap: 3px; padding: 3px; border-radius: 10px; background: var(--sunken); border: 1px solid var(--line); }
+.seg button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 30px; padding: 0 14px; border-radius: 7px;
+  font-size: 13px; font-weight: 500; color: var(--text-3); transition: background .2s, color .2s, box-shadow .2s; }
+.seg button .ico { width: 14px; height: 14px; }
+.seg button:hover { color: var(--text); }
+.seg button[aria-selected="true"] { background: var(--raised); color: var(--text); box-shadow: var(--shadow-sm); }
+
+/* ── Overview ──────────────────────────────────────────────────────────── */
+.st { display: grid; gap: 26px; }
+.st-h { display: flex; align-items: baseline; gap: 10px; margin: 0 2px 10px; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); }
+.st-h span { margin-left: auto; letter-spacing: 0; text-transform: none; font-weight: 500; }
+.st-sub { margin: 18px 2px 8px; font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.st-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.st-tile { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 13px 14px 12px; border-radius: var(--r); background: var(--raised); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+.st-l { font-size: 12px; color: var(--text-2); }
+.st-tile b { font: 500 26px/1.15 var(--f-display); letter-spacing: -.02em; color: var(--text); overflow-wrap: anywhere; }
+.st-note { font-size: 11.5px; color: var(--text-3); }
+
+/* Attempts: one proportion bar (2px surface gap between segments, rounded
+   ends) with a legend that carries the numbers, so colour is never alone. */
+.st-attempts { padding: 14px; border-radius: var(--r); background: var(--raised); border: 1px solid var(--line); }
+.st-bar { display: flex; gap: 2px; height: 10px; }
+.st-bar i { flex-basis: 0; min-width: 4px; border-radius: 4px; }
+.st-attempts .a1 { background: var(--ok); }
+.st-attempts .a2 { background: var(--warn); }
+.st-attempts .a3 { background: var(--bad); }
+.st-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 12px; font-size: 12.5px; color: var(--text-2); }
+.st-legend li { display: flex; align-items: center; gap: 7px; }
+.st-legend li i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.st-legend b { font-weight: 600; color: var(--text); }
+.st-legend span { color: var(--text-3); }
+.st-list { list-style: none; border-radius: var(--r); border: 1px solid var(--line); background: var(--line); display: grid; gap: 1px; overflow: hidden; }
+.st-list li { display: flex; align-items: center; gap: 8px; padding: 9px 14px; font-size: 13px; color: var(--text-2); background: var(--raised); }
+.st-list b { margin-left: auto; font-weight: 600; color: var(--text); }
+.st-empty { padding: 36px 0; text-align: center; font-size: 13px; color: var(--text-3); }
+.st-err { margin-bottom: 14px; padding: 10px 12px; border-radius: var(--r-sm); font-size: 13px; color: var(--bad); background: var(--bad-wash); }
+
+/* ── Documents ─────────────────────────────────────────────────────────── */
+.dt-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin: 0 2px 10px; font-size: 12.5px; color: var(--text-3); }
+.dt-toggle { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; color: var(--text-2); }
+.dt-toggle input { width: 15px; height: 15px; accent-color: var(--accent); }
+.dt { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; border: 1px solid var(--line); border-radius: var(--r); background: var(--raised); overflow: hidden; }
+.dt th { text-align: left; padding: 9px 12px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3);
+  background: var(--sunken); border-bottom: 1px solid var(--line); white-space: nowrap; }
+.dt td { padding: 9px 12px; color: var(--text-2); vertical-align: middle; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.dt tr:last-child td { border-bottom: 0; }
+.dt tbody tr:hover td { background: var(--accent-wash); }
+.dt .dt-name { max-width: 380px; color: var(--text); font-weight: 500; white-space: normal; }
+.dt-name > div { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dt-name > div > span:last-child { min-width: 0; overflow-wrap: anywhere; line-height: 1.35; }
+.dt .ftype { width: 22px; height: 26px; font-size: 6px; padding-bottom: 4px; }
+.dt .ftype::before { width: 7px; height: 7px; background: linear-gradient(225deg, var(--raised) 50%, rgba(255,255,255,.35) 50%); }
+.dt tr.is-del td { opacity: .5; }
+.dt-state { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 99px; font-size: 11.5px; font-weight: 600; color: var(--text-3); background: var(--sunken); }
+.dt-active { color: var(--ok); background: var(--ok-wash); }
+.dt-reading { color: var(--warn); background: var(--warn-wash); }
+.dt-failed { color: var(--bad); background: var(--bad-wash); }
+.dt-act { text-align: right; width: 1%; }
+.dt-act .doc-confirm { margin: 0; justify-content: flex-end; flex-wrap: nowrap; }
+.dt-del { height: 28px; padding: 0 11px; border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--text-2); border: 1px solid var(--line);
+  background: var(--raised); transition: color .15s, border-color .15s, background .15s; }
+.dt-del:hover { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); background: var(--bad-wash); }
+.dt-del:disabled { cursor: progress; opacity: .6; }
+
+.danger { display: flex; align-items: center; gap: 14px; margin-top: 22px; padding: 13px 14px; border-radius: var(--r);
+  border: 1px dashed color-mix(in srgb, var(--bad) 45%, transparent); }
+.danger > div { flex: 1; min-width: 0; }
+.danger b { display: block; font-size: 13px; font-weight: 600; }
+.danger span { font-size: 12px; color: var(--text-3); }
+.danger .doc-confirm { margin: 0; flex-wrap: nowrap; }
+
+/* ── Touch and phones ──────────────────────────────────────────────────── */
+@media (hover: none) {
+  .dt tbody tr:hover td { background: transparent; }
 }
-
-.hdr-btn--admin:hover {
-  background: rgba(138, 93, 20, 0.2);
-  border-color: var(--yellow);
-  color: var(--yellow);
+@media (pointer: coarse) {
+  .seg button { height: 40px; }
+  .dt-del { height: 44px; padding: 0 14px; }
+  .dt-toggle { min-height: 44px; }
 }
-
-
-/* ── Admin Dashboard ─────────────────────────────────────── */
-.admin-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(6px);
-  z-index: 200;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 20px;
-  animation: fade-in 0.2s ease;
-  overflow-y: auto;
-}
-
-.admin-panel {
-  width: 100%;
-  max-width: 900px;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  animation: fade-up 0.25s var(--trans) both;
-  margin-top: 20px;
-}
-
-.admin-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel) 90%, transparent);
-}
-
-.admin-header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.admin-badge {
-  display: inline-flex;
-  align-items: center;
-  background: rgba(138, 93, 20, 0.15);
-  color: var(--yellow);
-  border: 1px solid rgba(138, 93, 20, 0.3);
-  border-radius: 8px;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.admin-title {
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.admin-close-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text2);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
-
-.admin-close-btn:hover {
-  background: var(--red);
-  color: #fff;
-  border-color: var(--red);
-}
-
-.admin-tabs {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 12px 24px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.admin-tab-btn {
-  padding: 8px 18px;
-  border: none;
-  border-radius: 8px 8px 0 0;
-  background: none;
-  color: var(--text3);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  border-bottom: 2px solid transparent;
-}
-
-.admin-tab-btn--active {
-  color: var(--accent2);
-  border-bottom-color: var(--accent2);
-  background: var(--surface);
-}
-
-.admin-tab-btn:hover:not(.admin-tab-btn--active) {
-  color: var(--text);
-  background: var(--surface);
-}
-
-.admin-refresh-btn {
-  margin-left: auto;
-  padding: 6px 10px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text2);
-  cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.admin-refresh-btn:hover {
-  color: var(--accent2);
-}
-
-.admin-body {
-  padding: 24px;
-  min-height: 300px;
-}
-
-.admin-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.admin-stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.15s;
-}
-
-.admin-stat-card:hover {
-  border-color: var(--accent);
-}
-
-.admin-stat-icon {
-  display: flex;
-}
-
-.admin-stat-value {
-  font-size: 26px;
-  font-weight: 700;
-  font-family: var(--font-display);
-}
-
-.admin-stat-label {
-  font-size: 11px;
-  color: var(--text3);
-  text-align: center;
-}
-
-.admin-info-row {
-  font-size: 12px;
-  color: var(--text2);
-  padding: 8px 0;
-}
-
-.admin-table-wrap {
-  overflow-x: auto;
-}
-
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.admin-table th {
-  text-align: left;
-  padding: 10px 14px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.admin-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text2);
-  vertical-align: middle;
-}
-
-.admin-table tr:hover td {
-  background: var(--surface);
-}
-
-.admin-row--deleted td {
-  opacity: 0.45;
-}
-
-.admin-cell-main {
-  color: var(--text);
-  font-weight: 500;
-}
-
-.admin-cell-dim {
-  color: var(--text3);
-  font-size: 12px;
-}
-
-.admin-role-badge {
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.admin-role-badge--admin {
-  background: rgba(138, 93, 20, 0.15);
-  color: var(--yellow);
-  border: 1px solid rgba(138, 93, 20, 0.3);
-}
-
-.admin-role-badge--user {
-  background: var(--surface2);
-  color: var(--text3);
-  border: 1px solid var(--border);
-}
-
-.admin-status {
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.admin-status--ok {
-  color: var(--green);
-}
-
-.admin-status--del {
-  color: var(--text3);
-}
-
-.admin-del-btn {
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: rgba(161, 72, 58, 0.1);
-  border: 1px solid rgba(161, 72, 58, 0.3);
-  color: var(--red);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.admin-del-btn:hover {
-  background: var(--red);
-  color: #fff;
-}
-
-.admin-action-badge {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(139, 74, 18, 0.12);
-  border: 1px solid rgba(139, 74, 18, 0.25);
-  color: var(--accent2);
-  font-size: 10px;
-  font-weight: 600;
-  font-family: var(--font-mono);
-}
-
-.admin-empty {
-  padding: 40px;
-  text-align: center;
-  color: var(--text3);
-  font-size: 13px;
-}
-
-.admin-loading {
-  padding: 40px;
-  text-align: center;
-  color: var(--text3);
-  font-size: 13px;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.admin-toast {
-  position: sticky;
-  bottom: 12px;
-  background: var(--accent);
-  color: var(--on-accent);
-  padding: 8px 20px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  animation: toast-in 0.25s var(--trans);
-  white-space: nowrap;
-  width: fit-content;
-  margin: 12px auto 0;
+@media (max-width: 899px) {
+  .seg { flex: 1; grid-auto-columns: 1fr; }
+  .st-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .st-tile b { font-size: 22px; }
+  /* The table becomes one card per document: name on top, then labelled facts. */
+  .dt, .dt tbody { display: block; border: 0; background: none; overflow: visible; }
+  .dt thead { display: none; }
+  .dt tr { display: grid; grid-template-columns: max-content max-content 1fr auto; align-items: center; gap: 10px 22px; padding: 12px; margin-bottom: 8px;
+    border-radius: var(--r); background: var(--raised); border: 1px solid var(--line); }
+  .dt td { display: block; padding: 0; border: 0; white-space: normal; }
+  .dt tr:hover td, .dt tbody tr:hover td { background: none; }
+  .dt .dt-name { grid-column: 1 / 4; max-width: none; }
+  .dt td[data-l] { white-space: nowrap; }
+  .dt td[data-l]::before { content: attr(data-l); display: block; margin-bottom: 2px; font-size: 11px; color: var(--text-3); }
+  .dt-act { grid-column: 4; grid-row: 1; width: auto; }
+  .dt-act .doc-confirm { flex-wrap: wrap; }
+  .danger { flex-direction: column; align-items: stretch; }
+  .danger .dt-del, .danger .doc-confirm { align-self: flex-start; }
 }

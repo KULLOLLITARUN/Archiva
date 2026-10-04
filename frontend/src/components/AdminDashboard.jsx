@@ -1,44 +1,235 @@
 /**
- * AdminDashboard.jsx — Admin control panel for Archiva.
- * Tabs: Overview, Documents
- * Users and Audit Log tabs removed (no auth / user management).
+ * AdminDashboard.jsx — "Pipeline stats", opened from the library footer:
+ * what is indexed, and how questions went.
+ *
+ * /admin/stats mixes two scopes, and the labels say which is which:
+ *   - in-memory counters (monitor/logger.py) cover only the time since the
+ *     server started and reset on restart;
+ *   - Postgres feedback_logs is all time. Its success_rate is the share of
+ *     logged answers the OUTPUT VALIDATOR did not flag — not the reflection
+ *     checks — so it is labelled as exactly that.
  */
-import { useState, useEffect, useCallback } from 'react'
-import {
-  CheckCircle2, Database, FileText, MessageCircle,
-  Puzzle, RefreshCw, Settings, X,
-} from 'lucide-react'
-import {
-  adminGetStats, adminGetDocuments,
-  adminDeleteDocument, adminDeleteAllDocuments,
-} from '../api.js'
+
+import { useCallback, useEffect, useState } from 'react'
+import { FileText, Gauge, RefreshCw } from 'lucide-react'
+import Modal from './Modal.jsx'
+import { adminDeleteAllDocuments, adminDeleteDocument, adminGetDocuments, adminGetStats } from '../api.js'
+import { docBadge } from '../docs.js'
 
 const TABS = ['Overview', 'Documents']
+const n = v => (typeof v === 'number' ? v.toLocaleString() : '—')
+const plural = (k, word) => `${n(k)} ${word}${k === 1 ? '' : 's'}`
 
-export default function AdminDashboard({ onClose, onDocsChanged }) {
-  const [tab, setTab] = useState('Overview')
-  const [data, setData] = useState({})
-  const [busy, setBusy] = useState(false)
-  const [toast, setToast] = useState('')
+function Tile({ label, value, note }) {
+  return (
+    <div className="st-tile">
+      <span className="st-l">{label}</span>
+      <b className="tabular">{value}</b>
+      {note && <span className="st-note">{note}</span>}
+    </div>
+  )
+}
 
-  function showToast(msg) {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3000)
+/** Share of questions settled on attempt 1, 2 and 3: one bar, labelled. */
+function Attempts({ counts }) {
+  const parts = [
+    { key: '1', label: '1st attempt', cls: 'a1' },
+    { key: '2', label: '2nd attempt', cls: 'a2' },
+    { key: '3', label: '3rd attempt', cls: 'a3' },
+  ].map(p => ({ ...p, v: counts?.[p.key] || 0 }))
+  const total = parts.reduce((s, p) => s + p.v, 0)
+  if (!total) return null
+  return (
+    <div className="st-attempts">
+      <div className="st-bar" role="img"
+        aria-label={parts.map(p => `${p.label}: ${p.v}`).join(', ')}>
+        {parts.filter(p => p.v).map(p => (
+          <i key={p.key} className={p.cls} style={{ flexGrow: p.v }} title={`${p.label}: ${p.v}`} />
+        ))}
+      </div>
+      <ul className="st-legend">
+        {parts.map(p => (
+          <li key={p.key}><i className={p.cls} aria-hidden="true" />{p.label}
+            <b className="tabular">{p.v}</b><span className="tabular">{Math.round((p.v / total) * 100)}%</span></li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function Overview({ s }) {
+  const ref = s.reflection_stats || {}
+  const asked = s.total_queries || 0
+  const usage = s.model_usage || {}
+  return (
+    <div className="st">
+      <section>
+        <h3 className="st-h">Library</h3>
+        <div className="st-grid">
+          <Tile label="Documents" value={n(s.store_files)} />
+          <Tile label="Passages" value={n(s.store_chunks)} />
+        </div>
+      </section>
+
+      <section>
+        <h3 className="st-h">Since the server started <span>resets on restart</span></h3>
+        <div className="st-grid">
+          <Tile label="Questions" value={n(asked)} />
+          <Tile label="Average response" value={s.latency_samples ? `${(s.avg_latency_ms / 1000).toFixed(1)} s` : '—'}
+            note={s.latency_samples ? `last ${plural(s.latency_samples, 'answer')}` : null} />
+          <Tile label="Average confidence" value={asked ? `${Math.round((ref.avg_confidence || 0) * 100)}%` : '—'} />
+          <Tile label="Blocked by safety" value={n(s.blocked_queries)} />
+          <Tile label="Flagged by validator" value={n(s.flagged_responses)} />
+        </div>
+        {asked > 0 && (
+          <>
+            <h4 className="st-sub">Attempts per question</h4>
+            <Attempts counts={ref.accepted_attempt} />
+            <h4 className="st-sub">Model used</h4>
+            <ul className="st-list">
+              <li>Fast model<b className="tabular">{n(usage.fast)}</b></li>
+              <li>Strong model<b className="tabular">{n(usage.strong)}</b></li>
+              {/* logger.py counts anything that isn't the fast or strong model here,
+                  including no call at all (a refusal before generation). */}
+              <li>Other or no model<b className="tabular">{n(usage.none)}</b></li>
+            </ul>
+          </>
+        )}
+      </section>
+
+      <section>
+        <h3 className="st-h">All time</h3>
+        <div className="st-grid">
+          <Tile label="Answers logged" value={n(s.answers_logged)} />
+          <Tile label="Not flagged by validator" value={s.answers_logged ? `${s.success_rate}%` : '—'}
+            note="share of logged answers" />
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function DocRow({ d, confirming, onAsk, onCancel, onDelete }) {
+  const badge = docBadge(d)
+  const state = d.is_deleted ? 'Removed' : d.status === 'ready' ? 'Active' : d.status === 'processing' ? 'Reading' : 'Failed'
+  return (
+    <tr className={d.is_deleted ? 'is-del' : ''}>
+      <td className="dt-name">
+        <div>
+          <span className={`ftype ft-${badge.type}`} aria-hidden="true">{badge.label}</span>
+          <span title={d.filename}>{d.filename}</span>
+        </div>
+      </td>
+      <td className="tabular" data-l="Passages">{n(d.chunk_count)}</td>
+      <td className="tabular" data-l="Uploaded">{d.upload_time?.slice(0, 10) || '—'}</td>
+      <td data-l="Status"><span className={`dt-state dt-${state.toLowerCase()}`}>{state}</span></td>
+      <td className="dt-act">
+        {!d.is_deleted && (confirming ? (
+          <span className="doc-confirm" role="group" aria-label={`Remove ${d.filename}?`}>
+            <button type="button" className="doc-confirm-yes" onClick={onDelete}>Remove</button>
+            <button type="button" onClick={onCancel}>Keep</button>
+          </span>
+        ) : (
+          <button type="button" className="dt-del" onClick={onAsk} aria-label={`Remove ${d.filename}`}>Remove</button>
+        ))}
+      </td>
+    </tr>
+  )
+}
+
+function Documents({ docs, onDeleted, toast }) {
+  const [confirming, setConfirming] = useState(null)   // a doc id, or 'all'
+  const [showRemoved, setShowRemoved] = useState(false)
+  const [clearing, setClearing] = useState(false)
+  const removed = docs.filter(d => d.is_deleted).length
+  const shown = showRemoved ? docs : docs.filter(d => !d.is_deleted)
+
+  const remove = async d => {
+    setConfirming(null)
+    try {
+      await adminDeleteDocument(d.id)
+      toast?.(`${d.filename} removed`, 'info')
+      onDeleted()
+    } catch (e) {
+      toast?.(`Couldn't remove ${d.filename}: ${e.message}`, 'err')
+    }
   }
 
-  const fetchTab = useCallback(async (t) => {
-    setBusy(true)
+  const removeAll = async () => {
+    setConfirming(null)
+    setClearing(true)
     try {
-      if (t === 'Overview') {
-        const stats = await adminGetStats()
-        setData(prev => ({ ...prev, stats }))
-      }
-      if (t === 'Documents') {
-        const res = await adminGetDocuments()
-        setData(prev => ({ ...prev, docs: res.documents }))
-      }
+      // Not res.count: the endpoint counts rows already removed earlier too.
+      await adminDeleteAllDocuments()
+      toast?.('Library cleared', 'info')
+      onDeleted()
     } catch (e) {
-      showToast(`Error: ${e.message}`)
+      toast?.(`Couldn't clear the library: ${e.message}`, 'err')
+    } finally {
+      setClearing(false)
+    }
+  }
+
+  return (
+    <div className="dt-wrap">
+      <div className="dt-bar">
+        <span>{plural(docs.length - removed, 'active document')}</span>
+        {removed > 0 && (
+          <label className="dt-toggle">
+            <input type="checkbox" checked={showRemoved} onChange={e => setShowRemoved(e.target.checked)} />
+            Show {n(removed)} removed
+          </label>
+        )}
+      </div>
+      {shown.length ? (
+        <table className="dt">
+          <thead><tr><th>Document</th><th>Passages</th><th>Uploaded</th><th>Status</th><th><span className="sr">Actions</span></th></tr></thead>
+          <tbody>
+            {shown.map(d => (
+              <DocRow key={d.id} d={d} confirming={confirming === d.id}
+                onAsk={() => setConfirming(d.id)} onCancel={() => setConfirming(null)} onDelete={() => remove(d)} />
+            ))}
+          </tbody>
+        </table>
+      ) : <p className="st-empty">No documents yet.</p>}
+
+      {docs.length - removed > 0 && (
+        <div className="danger">
+          <div>
+            <b>Remove every document</b>
+            <span>Empties the library and stops any OCR in progress. This can&rsquo;t be undone.</span>
+          </div>
+          {confirming === 'all' ? (
+            <span className="doc-confirm" role="group" aria-label="Remove every document?">
+              <button type="button" className="doc-confirm-yes" onClick={removeAll}>Remove all</button>
+              <button type="button" onClick={() => setConfirming(null)}>Keep</button>
+            </span>
+          ) : (
+            <button type="button" className="dt-del" onClick={() => setConfirming('all')} disabled={clearing}>
+              {clearing ? 'Removing…' : 'Remove all'}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function AdminDashboard({ onClose, onDocsChanged, toast }) {
+  const [tab, setTab] = useState('Overview')
+  const [stats, setStats] = useState(null)
+  const [docs, setDocs] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const fetchTab = useCallback(async t => {
+    setBusy(true)
+    setError('')
+    try {
+      if (t === 'Overview') setStats(await adminGetStats())
+      else setDocs((await adminGetDocuments()).documents || [])
+    } catch (e) {
+      setError(e.message)
     } finally {
       setBusy(false)
     }
@@ -46,145 +237,31 @@ export default function AdminDashboard({ onClose, onDocsChanged }) {
 
   useEffect(() => { fetchTab(tab) }, [tab, fetchTab])
 
-  async function deleteDoc(id) {
-    if (!confirm('Delete this document?')) return
-    try {
-      await adminDeleteDocument(id)
-      showToast('Document deleted.')
-      fetchTab('Documents')
-      // Admin-panel deletes bypass UploadPanel's onDocsChanged path entirely —
-      // without this, the header pill / DocsStrip / Smart Suggestions on the
-      // main chat page stay stale (showing the deleted file) until something
-      // else happens to trigger a refresh, e.g. a full page reload.
-      onDocsChanged?.()
-    } catch (e) { showToast(`Error: ${e.message}`) }
-  }
+  // A removal here bypasses the library, so refresh it as well as this list.
+  const onDeleted = () => { fetchTab('Documents'); onDocsChanged?.() }
 
-  async function deleteAllDocs() {
-    if (!confirm('WARNING: This will delete ALL documents. Are you sure?')) return
-    try {
-      const res = await adminDeleteAllDocuments()
-      showToast(`Deleted ${res.count} documents.`)
-      fetchTab('Documents')
-      onDocsChanged?.()
-    } catch (e) { showToast(`Error: ${e.message}`) }
-  }
-
+  const data = tab === 'Overview' ? stats : docs
   return (
-    <div className="admin-overlay">
-      <div className="admin-panel">
-
-        {/* Header */}
-        <div className="admin-header">
-          <div className="admin-header-left">
-            <span className="admin-badge"><Settings size={11} style={{ display: 'inline', verticalAlign: -1, marginRight: 3 }} /> Admin</span>
-            <span className="admin-title">System Dashboard</span>
-          </div>
-          <button className="admin-close-btn" onClick={onClose} aria-label="Close admin"><X size={14} /></button>
-        </div>
-
-        {/* Tabs */}
-        <div className="admin-tabs">
+    <Modal title="Pipeline stats" sub="What is indexed, and how questions went" icon={Gauge} wide onClose={onClose} className="adm">
+      <div className="adm-bar">
+        <div className="seg" role="tablist" aria-label="Pipeline stats">
           {TABS.map(t => (
-            <button
-              key={t}
-              className={`admin-tab-btn ${tab === t ? 'admin-tab-btn--active' : ''}`}
-              onClick={() => setTab(t)}
-            >{t}</button>
+            <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
+              {t === 'Documents' && <FileText size={14} strokeWidth={1.75} className="ico" aria-hidden="true" />}{t}
+            </button>
           ))}
-          <button className="admin-refresh-btn" onClick={() => fetchTab(tab)} disabled={busy} title="Refresh">
-            <RefreshCw size={14} className={busy ? 'spin' : ''} />
-          </button>
         </div>
-
-        {/* Content */}
-        <div className="admin-body">
-
-          {/* ── Overview ───────────────────────────────────────────────── */}
-          {tab === 'Overview' && (
-            <div className="admin-overview">
-              {data.stats ? (
-                <>
-                  <div className="admin-stat-grid">
-                    {[
-                      { label: 'Total Documents', value: data.stats.total_docs, icon: <FileText size={20} />, color: 'var(--green)' },
-                      { label: 'Total Chunks', value: data.stats.total_chunks, icon: <Puzzle size={20} />, color: 'var(--yellow)' },
-                      { label: 'Total Queries', value: data.stats.total_queries, icon: <MessageCircle size={20} />, color: 'var(--orange)' },
-                      { label: 'Success Rate', value: `${data.stats.success_rate}%`, icon: <CheckCircle2 size={20} />, color: 'var(--green)' },
-                      { label: 'Live Chunks', value: data.stats.store_chunks, icon: <Database size={20} />, color: 'var(--accent)' },
-                    ].map(s => (
-                      <div className="admin-stat-card" key={s.label}>
-                        <span className="admin-stat-icon">{s.icon}</span>
-                        <span className="admin-stat-value" style={{ color: s.color }}>{s.value ?? '—'}</span>
-                        <span className="admin-stat-label">{s.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {data.stats.failure_rate != null && (
-                    <div className="admin-info-row">
-                      Failure rate: <strong style={{ color: 'var(--red)' }}>{data.stats.failure_rate}%</strong>
-                      &nbsp;·&nbsp; Avg latency: <strong style={{ color: 'var(--green)' }}>{data.stats.avg_latency_ms}ms</strong>
-                    </div>
-                  )}
-                </>
-              ) : <div className="admin-loading">Loading stats…</div>}
-            </div>
-          )}
-
-          {/* ── Documents ─────────────────────────────────────────────── */}
-          {tab === 'Documents' && (
-            <div className="admin-table-wrap">
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                <button
-                  className="admin-del-btn"
-                  style={{ background: 'var(--red)', color: 'white', padding: '6px 12px' }}
-                  onClick={deleteAllDocs}
-                  disabled={!data.docs || data.docs.length === 0}
-                >
-                  Delete All Documents
-                </button>
-              </div>
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Filename</th><th>Type</th><th>Chunks</th><th>Uploaded</th><th>Status</th><th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data.docs || []).map(d => (
-                    <tr key={d.id} className={d.is_deleted ? 'admin-row--deleted' : ''}>
-                      <td className="admin-cell-main">
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <FileText size={13} style={{ color: 'var(--text3)', flexShrink: 0 }} />
-                          {d.filename}
-                        </span>
-                      </td>
-                      <td className="admin-cell-dim">{d.file_type}</td>
-                      <td>{d.chunk_count}</td>
-                      <td className="admin-cell-dim">{d.upload_time?.slice(0, 10)}</td>
-                      <td>
-                        <span className={`admin-status ${d.is_deleted ? 'admin-status--del' : 'admin-status--ok'}`}>
-                          {d.is_deleted ? 'Deleted' : 'Active'}
-                        </span>
-                      </td>
-                      <td>
-                        {!d.is_deleted && (
-                          <button className="admin-del-btn" onClick={() => deleteDoc(d.id)}>Delete</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {(!data.docs || data.docs.length === 0) &&
-                <div className="admin-empty">No documents found.</div>}
-            </div>
-          )}
-        </div>
-
-        {/* Toast */}
-        {toast && <div className="admin-toast">{toast}</div>}
+        <button type="button" className="ibtn" onClick={() => fetchTab(tab)} disabled={busy} aria-label="Refresh">
+          <RefreshCw size={16} strokeWidth={1.75} className={`ico${busy ? ' spin' : ''}`} aria-hidden="true" />
+        </button>
       </div>
-    </div>
+
+      <div role="tabpanel" aria-busy={busy || undefined}>
+        {error && <p className="st-err" role="alert">Couldn&rsquo;t load {tab.toLowerCase()}: {error}</p>}
+        {!data && !error && <p className="st-empty">Loading…</p>}
+        {data && tab === 'Overview' && <Overview s={data} />}
+        {data && tab === 'Documents' && <Documents docs={data} onDeleted={onDeleted} toast={toast} />}
+      </div>
+    </Modal>
   )
 }

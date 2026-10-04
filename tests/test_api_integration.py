@@ -227,6 +227,17 @@ def test_admin_process_reingestion_queue_when_empty(client):
     assert "empty" in body["message"].lower()
 
 
+def test_admin_stats_keeps_all_time_answer_count(client):
+    # total_queries is the in-memory count since start; the logged-answer
+    # count behind success_rate must survive the merge under its own name.
+    import uuid
+    pg.db_log_feedback(str(uuid.uuid4()), "q1", "NONE", "NONE", True)
+    pg.db_log_feedback(str(uuid.uuid4()), "q2", "NONE", "NONE", False)
+    body = client.get("/admin/stats").json()
+    assert body["answers_logged"] == 2
+    assert body["success_rate"] == 50.0
+
+
 def test_admin_list_documents(client):
     client.post("/upload", files={"file": ("test.txt", SAMPLE_TXT, "text/plain")})
     resp = client.get("/admin/documents")

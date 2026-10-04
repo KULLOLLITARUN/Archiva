@@ -1064,7 +1064,11 @@ async def admin_process_reingestion_queue(request: Request) -> dict:
 async def admin_stats():
     sql_stats  = db_get_system_stats()
     live_stats = get_stats()
+    # Both carry "total_queries": the in-memory one (since this process
+    # started) wins the merge, so the all-time count of logged answers, the
+    # denominator of success_rate, is also returned under its own name.
     return {**sql_stats, **live_stats,
+            "answers_logged": sql_stats["total_queries"],
             "store_chunks": store.total_chunks(),
             "store_files":  len(store.files)}
 
