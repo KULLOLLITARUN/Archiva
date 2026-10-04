@@ -1,17 +1,15 @@
 import re
 from typing import Dict
 
-from groq import Groq
+from config import GROQ_QWEN, BLOCK_PATTERNS, AMBIGUITY_TRIGGERS
+from llm.groq_manager import groq_manager, light_completion_params
 
-from config import (
-    GROQ_API_KEY, GROQ_QWEN, BLOCK_PATTERNS, AMBIGUITY_TRIGGERS,
-    GROQ_REQUEST_TIMEOUT_S,
-)
-
-# timeout + max_retries=0: same reasoning as llm/groq_manager.py's
-# get_client() — bound a single HTTP call and avoid the SDK's own retry
-# silently stacking with the query-level fail-open handling below.
-_client = Groq(api_key=GROQ_API_KEY, timeout=GROQ_REQUEST_TIMEOUT_S, max_retries=0)
+# Room for a one-word verdict. light_completion_params() adds whatever the
+# configured model needs on top: this call used to hardcode
+# reasoning_effort="default", which only Qwen accepts, so pointing GROQ_QWEN
+# at a gpt-oss model made every call a 400 and the layer silently passed
+# everything.
+_MAX_TOKENS = 10
 
 
 def check_regex(query: str) -> bool:
@@ -57,7 +55,10 @@ def safety_check(query: str) -> Dict:
     if is_ambiguous(query):
         # Layer 3 — Qwen (ONLY on ambiguous, NEVER for routing)
         try:
-            response = _client.chat.completions.create(
+            # groq_manager rather than a client of our own: the same key
+            # rotation and timeout as every other call.
+            _, client = groq_manager.get_client()
+            response = client.chat.completions.create(
                 model=GROQ_QWEN,
                 messages=[
                     {
@@ -75,11 +76,14 @@ def safety_check(query: str) -> Dict:
                     },
                 ],
                 temperature=0.0,
-                max_tokens=5,
-                extra_body={"reasoning_effort": "default"},
+                **light_completion_params(GROQ_QWEN, _MAX_TOKENS),
             )
-            answer = response.choices[0].message.content.strip().upper()
-            if "YES" in answer:
+            answer = (response.choices[0].message.content or "").strip().upper()
+            if not answer:
+                # No verdict (e.g. the budget ran out). Same fail-open as an
+                # error below, but logged, so a dead layer shows up in logs.
+                print("  ⚠️  Qwen safety check returned no verdict — defaulting to safe")
+            elif "YES" in answer:
                 return {"safe": False, "reason": "qwen_blocked"}
         except Exception as e:
             # On Qwen failure, fail safe (allow) and log

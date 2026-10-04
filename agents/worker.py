@@ -1,12 +1,11 @@
 """
-agents/worker.py — Groq LLM call with multi-key round-robin and streaming.
+agents/worker.py — Groq LLM call with multi-key round-robin.
 
 Upgrade (Part 7):
   - Replaced module-level singleton client with groq_manager.get_client().
   - On RateLimitError / APIStatusError: marks the failing key and retries
     with the next healthy key (up to len(GROQ_API_KEYS) additional attempts).
   - Exponential backoff still applies between retries.
-  - Streaming (call_groq_stream) also uses key rotation.
 
 Upgrade (Part 5 / STRICT_PROMPT mode):
   - build_prompt() accepts an optional prompt_mode="strict" argument.
@@ -14,16 +13,16 @@ Upgrade (Part 5 / STRICT_PROMPT mode):
 
 Original fixes retained:
   Fix #2:  3 retries with exponential back-off.
-  Fix #8:  call_groq_stream() for SSE streaming.
+
+/chat/stream streams the reflection loop's finished answer (main.py), so
+there is no token-streaming Groq call here.
 """
 
 import time
-from typing import Generator, Optional
+from typing import Optional
 
-from groq import Groq
 from groq import RateLimitError, APIStatusError
 
-from config import MAX_CONTEXT_TOKENS
 from llm.groq_manager import groq_manager, retry_after_seconds
 
 # ── Retry configuration ────────────────────────────────────────────────────────
@@ -209,43 +208,3 @@ def call_groq(model_id: str, prompt: str, query: str) -> str:
 
     print(f"  [ERR]  [worker] Groq permanently failed after {_MAX_RETRIES} attempts: {last_exc}")
     return SERVICE_UNAVAILABLE_ANSWER
-
-
-# ── Streaming LLM call ─────────────────────────────────────────────────────────
-
-def call_groq_stream(
-    model_id: str,
-    prompt: str,
-    query: str,
-) -> Generator[str, None, None]:
-    """
-    Streaming Groq call — yields token strings as they arrive.
-
-    Uses key rotation: on failure selects the next healthy key.
-    Unlike call_groq(), does NOT retry mid-stream (SSE headers already sent).
-    """
-    current_key, client = groq_manager.get_client()
-    try:
-        response = client.chat.completions.create(
-            model=model_id,
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user",   "content": query},
-            ],
-            temperature=0.1,
-            max_tokens=1024,
-            stream=True,
-        )
-        for chunk in response:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                yield delta
-
-    except (RateLimitError, APIStatusError) as exc:
-        groq_manager.mark_failed(current_key)
-        print(f"  [WARN]  [worker/stream] Key …{current_key[-6:]} rate-limited: {exc}")
-        yield f"\n[Stream interrupted: rate limit — please retry]"
-
-    except Exception as exc:
-        print(f"  [ERR]  [worker/stream] Stream error: {exc}")
-        yield f"\n[Stream error: {exc}]"

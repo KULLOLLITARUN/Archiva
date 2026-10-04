@@ -23,9 +23,12 @@ GROQ_API_KEYS: list = _load_groq_keys()
 
 # ── Models ────────────────────────────────────────────────────────────────────
 
-GROQ_FAST   = os.getenv("GROQ_FAST",   "llama-3.1-8b-instant")
-GROQ_STRONG = os.getenv("GROQ_STRONG", "llama-3.3-70b-versatile")
-GROQ_QWEN   = os.getenv("GROQ_QWEN",   "llama-3.3-70b-versatile")  # override with Qwen if available on your plan
+# Groq retired the llama-3.x defaults these used to name (the API now answers
+# 404 model_not_found), so a fresh clone with only GROQ_API_KEY set failed
+# every request. These are the models the answer-quality eval runs against.
+GROQ_FAST   = os.getenv("GROQ_FAST",   "openai/gpt-oss-20b")
+GROQ_STRONG = os.getenv("GROQ_STRONG", "openai/gpt-oss-120b")
+GROQ_QWEN   = os.getenv("GROQ_QWEN",   "qwen/qwen3.8-27b")  # safety classifier, suggestions
 
 # Per-HTTP-call ceiling (connect+read) on the Groq client itself — bounds a
 # single network call so a stalled connection can't hang indefinitely.

@@ -32,6 +32,13 @@ def test_ordinary_model_is_left_untouched():
     assert light_completion_params("llama-3.1-8b-instant", 60) == {"max_tokens": 60}
 
 
+def test_light_params_disable_qwen3_thinking():
+    # Qwen3 rejects "low"; "none" is its no-thinking setting.
+    assert light_completion_params("qwen/qwen3.8-27b", 10) == {
+        "max_tokens": 10, "extra_body": {"reasoning_effort": "none"},
+    }
+
+
 # ── fake client capturing what each helper sends ───────────────────────────────
 
 class _Msg:

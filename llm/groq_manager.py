@@ -47,11 +47,16 @@ def light_completion_params(model: str, max_tokens: int) -> dict:
     Usage: client.chat.completions.create(model=m, messages=..., **light_completion_params(m, 100))
     Non-reasoning models get their max_tokens back unchanged.
     """
-    if "gpt-oss" in model.lower():
+    name = model.lower()
+    if "gpt-oss" in name:
         return {
             "max_tokens": max(max_tokens, _REASONING_MIN_TOKENS),
             "extra_body": {"reasoning_effort": "low"},
         }
+    if "qwen3" in name:
+        # Qwen3 rejects "low" (it takes only "none" or "default"); "none" skips
+        # the thinking entirely, so the small budget is all visible reply.
+        return {"max_tokens": max_tokens, "extra_body": {"reasoning_effort": "none"}}
     return {"max_tokens": max_tokens}
 
 
