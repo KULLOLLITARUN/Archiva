@@ -1,5 +1,13 @@
+import re
+
 from chatbot.memory import ConversationMemory
-from config import FOLLOWUP_SIGNALS
+from config import FOLLOWUP_OPENERS, FOLLOWUP_SIGNALS
+
+# Signals match as whole words or phrases. Plain substring matching read the
+# signal "it" inside "with", "edit", "limit" and "item", so unrelated
+# questions were anchored to the previous answer.
+_SIGNAL_RE = re.compile(r"\b(?:" + "|".join(re.escape(s) for s in FOLLOWUP_SIGNALS) + r")\b")
+_OPENER_RE = re.compile(r"^\W*(?:" + "|".join(re.escape(s) for s in FOLLOWUP_OPENERS) + r")\b")
 
 # Keeps the rewritten query bounded — a previous "summarize"/"explain"
 # answer can run long, and only a preview is needed to resolve the
@@ -10,7 +18,8 @@ _PREV_ANSWER_PREVIEW = 300
 def is_followup(query: str) -> bool:
     """
     Deterministic follow-up detector (no LLM).
-    True if any FOLLOWUP_SIGNAL is in the query.
+    True if the query opens with a FOLLOWUP_OPENER ("And what is ...") or
+    contains a FOLLOWUP_SIGNAL as a whole word or phrase.
 
     Deliberately NOT based on word count. A blanket "< 6 words → treat as
     a follow-up" fallback used to be here, but short queries are routinely
@@ -28,7 +37,7 @@ def is_followup(query: str) -> bool:
     never on length alone.
     """
     q = query.lower()
-    return any(signal in q for signal in FOLLOWUP_SIGNALS)
+    return bool(_OPENER_RE.search(q) or _SIGNAL_RE.search(q))
 
 
 def rewrite(query: str, memory: ConversationMemory, session_id: str) -> str:

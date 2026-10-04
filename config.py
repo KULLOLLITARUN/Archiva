@@ -229,6 +229,10 @@ FOLLOWUP_SIGNALS = [
     "what about", "continue", "and then"
 ]
 
+# A query that OPENS with one of these continues the previous turn
+# ("And what is the IFSC code?"), however few reference words it has.
+FOLLOWUP_OPENERS = ["and", "also", "but"]
+
 BLOCK_PATTERNS = [
     r"ignore (previous|above|all) instructions",
     r"you are now",

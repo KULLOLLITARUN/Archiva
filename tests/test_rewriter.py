@@ -116,3 +116,37 @@ def test_rewrite_does_not_anchor_to_a_prior_refusal():
     memory = _memory_with_last_turn("what need to be in resume", "Not found in the document.")
     query = "give summary"
     assert rewrite(query, memory, "s1") == query
+
+
+# ── Whole-word signals and openers ─────────────────────────────────────────────
+
+def test_signal_inside_another_word_is_not_a_followup():
+    # "it" used to match inside "with", "edit", "limit", "item", "wait"...
+    for query in ("Which clauses deal with termination?", "How do I edit the config file?",
+                  "What is the spending limit per item?", "What is the audit schedule?"):
+        assert is_followup(query) is False, query
+
+
+def test_signal_as_a_whole_word_is_still_a_followup():
+    assert is_followup("What does it cost?") is True
+    assert is_followup("Explain that in more detail") is True
+
+
+def test_query_opening_with_and_is_a_followup():
+    # Found live: "And what is the IFSC code?" was not anchored to the
+    # previous answer about the invoice's bank, so retrieval returned a
+    # 856-passage book instead of the invoice and the question was refused.
+    assert is_followup("And what is the IFSC code?") is True
+    assert is_followup("Also, who signed it off?") is True
+    assert is_followup("but what about the second one") is True
+
+
+def test_and_in_the_middle_of_a_query_is_not_an_opener():
+    assert is_followup("What are the payment terms and the delivery dates?") is False
+
+
+def test_followup_is_anchored_to_the_previous_turn():
+    memory = _memory_with_last_turn("Which bank and UPI ID are on the invoice?", "ICICI and ifox@icici.")
+    anchored = rewrite("And what is the IFSC code?", memory, "s1")
+    assert "Which bank and UPI ID are on the invoice?" in anchored
+    assert "ICICI" in anchored
