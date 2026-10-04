@@ -91,7 +91,7 @@
   --text2: var(--text-2); --text3: var(--text-3);
   --font-display: var(--f-display); --font-body: var(--f-ui); --font-mono: var(--f-mono);
   --radius: 14px; --radius-sm: 9px; --radius-lg: 20px;
-  --panel-w: 360px; --play-w: 300px;
+  --panel-w: 360px;
   --trans: var(--ease);
   --spring: cubic-bezier(0.3, 1.05, 0.6, 1);
 }
@@ -417,6 +417,47 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .rel { display: inline-flex; gap: 2px; } .rel i { width: 4px; height: 10px; border-radius: 2px; background: var(--line-strong); } .rel i.on { background: var(--ok); }
 
 
+/* ── Dialogs (Playbook, Pipeline stats, library maintenance) ─────────── */
+/* A centred panel over the scrim; a bottom sheet on phones (see below). */
+.dlg-scrim { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 24px; background: var(--scrim); }
+.dlg { --dlg-w: 600px; width: min(var(--dlg-w), 100%); max-height: min(780px, 100%); display: flex; flex-direction: column; min-height: 0;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); overflow: hidden; outline: 0; }
+.dlg--wide { --dlg-w: 880px; }
+.dlg-top { position: relative; flex: none; display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 20px; border-bottom: 1px solid var(--line); }
+.dlg-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: none; color: var(--accent-strong); background: var(--accent-wash); }
+.dlg-t { min-width: 0; flex: 1; }
+.dlg-t h2 { font: 600 19px/1.2 var(--f-display); letter-spacing: -.01em; }
+.dlg-t p { font-size: 12.5px; color: var(--text-3); margin-top: 1px; }
+.dlg-top .ibtn { align-self: flex-start; }
+.dlg-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: clip; overscroll-behavior: contain; padding: 20px 22px 26px; }
+.dlg kbd { font: 500 11px var(--f-mono); padding: 0 5px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 5px; background: var(--raised); white-space: nowrap; }
+
+/* Playbook */
+.pb-lede { font: 400 16px/1.55 var(--f-display); color: var(--text); margin-bottom: 22px; }
+.pb-steps { list-style: none; display: grid; gap: 18px; }
+.pb-step { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; }
+.pb-num { font: 500 26px/1 var(--f-display); color: var(--accent); text-align: center; padding-top: 1px; }
+.pb-step h3 { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.pb-step p { font-size: 13.5px; color: var(--text-2); line-height: 1.6; }
+.pb-step b { font-weight: 600; color: var(--text); }
+.pb-step .cite { cursor: default; }
+.pb-legend { list-style: none; margin-top: 10px; display: grid; gap: 1px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); background: var(--line); }
+.pb-legend li { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: center; gap: 10px; padding: 9px 12px; font-size: 12.5px; color: var(--text-2); background: var(--raised); }
+.pb-legend .pill { justify-self: start; }
+.pb-h { margin: 28px 2px 10px; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); }
+.pb-faq { border-radius: var(--r); border: 1px solid var(--line); background: var(--raised); overflow: hidden; }
+.pb-faq details + details { border-top: 1px solid var(--line); }
+.pb-faq summary { list-style: none; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 14px; cursor: pointer; font-size: 13.5px; font-weight: 500; }
+.pb-faq summary::-webkit-details-marker { display: none; }
+.pb-faq summary .ico { margin-left: auto; color: var(--text-3); transition: transform .25s var(--ease-out); }
+.pb-faq details[open] summary .ico { transform: rotate(180deg); }
+.pb-faq summary:hover { background: var(--accent-wash); }
+.pb-faq summary:focus-visible { outline-offset: -2px; }
+.pb-faq details p { padding: 0 14px 13px; font-size: 13px; line-height: 1.6; color: var(--text-2); }
+.pb-keys { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+.pb-keys div { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--text-2); padding: 7px 0; border-bottom: 1px solid var(--line); }
+.pb-keys dd { color: var(--text-3); }
+
 /* ── Overlays (tablet evidence drawer, phone library + evidence sheet) ── */
 .scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); opacity: 0; pointer-events: none; transition: opacity .3s var(--ease); }
 .scrim.on { opacity: 1; pointer-events: auto; }
@@ -462,6 +503,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   .starter:hover { transform: none; }
   .ans-card[role="button"]:hover { background: transparent; border-color: transparent; }
   .drop-fine { display: none; } .drop-touch { display: inline; }   /* nothing to drop on a phone */
+  .pb-kb, .pb-kbd { display: none; }         /* shortcuts need a keyboard */
 }
 @media (pointer: coarse) {
   .ibtn, .doc-x { width: 44px; height: 44px; }
@@ -497,6 +539,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   .starter-more { margin-left: 52px; }
   .ans-head, .ans-body, .ans-foot { padding-left: 12px; padding-right: 12px; }
   .ans-foot .see { padding: 6px 0; }
+  .dlg-scrim { place-items: end stretch; padding: 0; }
+  .dlg { width: 100%; max-height: 92dvh; border-radius: 20px 20px 0 0; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); }
+  .dlg-top { padding-top: 20px; cursor: grab; touch-action: none; }   /* the handle row drags the sheet */
+  .dlg-top::before { content: ""; position: absolute; top: 7px; left: 50%; width: 36px; height: 4px; border-radius: 9px; background: var(--line-strong); transform: translateX(-50%); }
+  .dlg-body { padding: 18px 16px 24px; }
+  .pb-legend li { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .pb-keys { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1067,212 +1116,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   margin: 8px 0;
 }
 
-/* ── Playbook Panel ──────────────────────────────────────── */
-.play-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: var(--play-w);
-  background: var(--bg2);
-  border-left: 1px solid var(--border);
-  z-index: 101;
-  transform: translateX(100%);
-  transition: transform 0.3s var(--spring);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-
-.play-panel--open {
-  transform: translateX(0);
-}
-
-.play-panel::-webkit-scrollbar {
-  width: 3px;
-}
-
-.play-panel::-webkit-scrollbar-thumb {
-  background: var(--border2);
-  border-radius: 3px;
-}
-
-.play-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  background: color-mix(in srgb, var(--panel) 95%, transparent);
-  backdrop-filter: blur(10px);
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
-.play-header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text2);
-}
-
-.play-header-icon {
-  display: flex;
-}
-
-.play-header-title {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.play-close-btn {
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text2);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
-
-.play-close-btn:hover {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
-}
-
-.play-body {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.play-intro {
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
-  padding: 14px;
-  font-size: 13px;
-  color: var(--text2);
-  line-height: 1.6;
-}
-
-.play-intro strong {
-  color: var(--accent2);
-}
-
-.play-step {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  transition: all 0.15s var(--trans);
-}
-
-.play-step:hover {
-  border-color: var(--accent);
-  background: var(--surface2);
-}
-
-.play-step-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.play-step-num {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--accent2);
-  flex-shrink: 0;
-}
-
-.play-step-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.play-step-icon {
-  display: flex;
-  margin-left: auto;
-  color: var(--text3);
-}
-
-.play-step-desc {
-  font-size: 12px;
-  color: var(--text2);
-  line-height: 1.6;
-}
-
-.play-step-tip {
-  background: var(--surface2);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 11.5px;
-  color: var(--green);
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.play-section-title {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  padding-top: 4px;
-  border-top: 1px solid var(--border);
-}
-
-.play-qa {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px 14px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.play-qa:hover {
-  border-color: var(--accent);
-  background: var(--surface2);
-}
-
-.play-qa-q {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-
-.play-qa-a {
-  font-size: 12px;
-  color: var(--text2);
-  line-height: 1.5;
-}
-
 /* ── Toast ───────────────────────────────────────────────── */
 .toast-stack {
   position: fixed;
@@ -1373,6 +1216,5 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 @media (max-width: 768px) {
   :root {
     --panel-w: 100vw;
-    --play-w: 100vw;
   }
 }

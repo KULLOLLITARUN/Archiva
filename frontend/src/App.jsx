@@ -344,11 +344,12 @@ export default function App() {
         onDocsChanged={docsChanged}
       />
       <ToastStack toasts={toasts} />
-      <PlaybookPanel isOpen={showPlaybook} onClose={() => setShowPlaybook(false)} />
+      {showPlaybook && <PlaybookPanel onClose={() => setShowPlaybook(false)} />}
       {showAdmin && (
         <AdminDashboard
           onClose={() => setShowAdmin(false)}
           onDocsChanged={docsChanged}
+          toast={toast}
         />
       )}
     </>
