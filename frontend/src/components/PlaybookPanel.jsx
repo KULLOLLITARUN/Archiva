@@ -43,7 +43,8 @@ const STEPS = [
   },
   {
     title: 'Keep going',
-    body: <>Follow-up questions are read in the context of the conversation. <b>New conversation</b>{' '}
+    body: <>Follow-up questions are read in the context of the conversation, and <b>Ask next</b> under the latest
+      answer offers more questions from your documents. <b>New conversation</b>{' '}
       <span className="pb-kbd">(or <kbd>N</kbd>) </span>starts fresh, and <b>Export</b> saves the conversation as Markdown or PDF.</>,
   },
 ]
