@@ -1,13 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="paper">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f8f4ec" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1a1611" media="(prefers-color-scheme: dark)" />
     <title>Archiva — Ask Your Documents</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23a6551a'/%3E%3Cg transform='translate(4 4)' fill='none' stroke='%23fff3e3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20'/%3E%3Cpath d='M8 7h8M8 11h6'/%3E%3C/g%3E%3C/svg%3E" />
     <meta name="description" content="Archiva lets you upload documents and ask questions in plain English. Instant AI-powered answers with cited sources." />
+    <script>
+      // Set the theme before first paint so Ink users never see a Paper flash:
+      // the saved choice, else the system setting. Mirrors src/theme.js.
+      try {
+        var saved = localStorage.getItem('archiva-theme');
+        var theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'ink' : 'paper';
+        if (saved === 'paper' || saved === 'ink') theme = saved;
+        document.documentElement.dataset.theme = theme;
+      } catch (e) { /* storage blocked: keep the Paper default */ }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>

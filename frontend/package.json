@@ -1,5 +1,5 @@
 {
-  "name": "docchat-frontend",
+  "name": "archiva-frontend",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "animejs": "4.5.0",
     "axios": "^1.15.0",
     "dompurify": "^3.4.0",
     "lucide-react": "^1.8.0",

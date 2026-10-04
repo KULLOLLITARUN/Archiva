@@ -16,10 +16,8 @@ import {
 } from 'lucide-react'
 import { apiUpload as uploadFile, apiReload as reloadDocs, apiDeleteFile as deleteFile, apiClearAllDocs } from '../api.js'
 import { BRAND } from '../brand.js'
+import { ACCEPT_ATTR, isAccepted } from '../docs.js'
 
-const ACCEPTED = '.txt,.pdf,.docx'
-const ACCEPTED_TYPES = ['text/plain', 'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 
 function fileIcon() {
   return <FileText size={15} />
@@ -86,7 +84,7 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
 
   /** Upload a single File object */
   const handleFile = useCallback(async (file) => {
-    if (!ACCEPTED_TYPES.includes(file.type) && !ACCEPTED.includes('.' + file.name.split('.').pop())) {
+    if (!isAccepted(file.name)) {
       toast(`${file.name}: unsupported type`, 'err')
       return
     }
@@ -237,7 +235,7 @@ export default function UploadPanel({ isOpen, docsInfo, onClose, onClearChat, on
             <input
               ref={fileInputRef}
               type="file"
-              accept={ACCEPTED}
+              accept={ACCEPT_ATTR}
               multiple
               onChange={onInputChange}
               className="up-hidden-input"

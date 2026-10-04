@@ -4,16 +4,22 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import Header          from './components/Header.jsx'
-import DocsStrip       from './components/DocsStrip.jsx'
+import Sidebar         from './components/Sidebar.jsx'
+import TopBar          from './components/TopBar.jsx'
+import EvidencePanel   from './components/EvidencePanel.jsx'
+import Evidence        from './components/Evidence.jsx'
+import { ToastStack, useToasts } from './components/Toasts.jsx'
 import ChatWindow      from './components/ChatWindow.jsx'
 import InputBar        from './components/InputBar.jsx'
+import { useCiteLinking } from './useCiteLinking.js'
 import UploadPanel     from './components/UploadPanel.jsx'
 import PlaybookPanel   from './components/PlaybookPanel.jsx'
 import AdminDashboard  from './components/AdminDashboard.jsx'
 import {
   streamChat, apiGetFiles, apiGetSuggestions, waitForBackend, apiExportConversation,
 } from './api.js'
+import { useTheme } from './theme.js'
+import { useMedia, WIDE, NARROW } from './useMedia.js'
 import './styles.css'
 import './auth-admin.css'
 
@@ -28,17 +34,25 @@ export default function App() {
   const [showAdmin,    setShowAdmin]   = useState(false)
   const [docsInfo,     setDocsInfo]    = useState({ files: [], total_files: 0, total_chunks: 0 })
   const [dynTopics,    setDynTopics]   = useState([])
+  // False until /suggestions first answers, so Home can say "finding
+  // topics" instead of implying the documents have none.
+  const [topicsLoaded, setTopicsLoaded]= useState(false)
   const [backendReady, setBackendReady]= useState(false)
   const [backendStatus,setBackendStatus]=useState('Connecting to backend…')
+  // The answer whose evidence is shown. Each new answer takes over when it
+  // finishes, so the panel always matches the latest reply until the user
+  // picks an earlier one.
+  const [selectedId,   setSelectedId]  = useState(null)
 
 
 
   const cancelStreamRef = useRef(null)
+  const [toasts, toast] = useToasts()
 
   // ── Docs + dynamic suggestions ────────────────────────────────────────────
 
   const refreshDocs = useCallback(() => {
-    apiGetFiles()
+    return apiGetFiles()
       .then(setDocsInfo)
       .catch(() => setDocsInfo({ files: [], total_files: 0, total_chunks: 0 }))
   }, [])
@@ -52,6 +66,7 @@ export default function App() {
       // replace them with.
       .then(data => setDynTopics(data.topics || []))
       .catch(() => {})
+      .finally(() => setTopicsLoaded(true))
   }, [])
 
   // Wait for backend, then load initial data
@@ -137,6 +152,7 @@ export default function App() {
             tokens_used:          d.tokens_used          ?? 0,
           } : m)
         )
+        setSelectedId(botMsgId)
         setIsLoading(false)
         setStreamStatus('')
         cancelStreamRef.current = null
@@ -159,68 +175,182 @@ export default function App() {
     cancelStreamRef.current?.()
     cancelStreamRef.current = null
     setMessages([])
+    setSelectedId(null)
     setIsLoading(false)
     setStreamStatus('')
   }, [])
 
 
-  // ── Panel controls ────────────────────────────────────────────────────────
+  // ── Layout: library menu (phones) and evidence column/drawer/sheet ───────
 
-  const openPanel = () => { setShowPanel(true);   setShowPlaybook(false); setShowAdmin(false) }
-  const openPlay  = () => { setShowPlaybook(true); setShowPanel(false);   setShowAdmin(false) }
+  const wide   = useMedia(WIDE)
+  const narrow = useMedia(NARROW)
+  const [theme, setTheme]      = useTheme()
+  const [sideOpen, setSideOpen] = useState(false)
+  const [evOpen,   setEvOpen]   = useState(false)
+  const hasMessages = messages.length > 0
+
+  // Desktop has room, so the evidence column opens with the first message;
+  // on smaller screens it waits to be asked for, because there it covers
+  // the conversation.
+  useEffect(() => {
+    if (!hasMessages) setEvOpen(false)
+    else if (wide) setEvOpen(true)
+  }, [hasMessages]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Crossing a breakpoint changes what "open" means (column vs drawer), so
+  // reset instead of carrying a column straight into a covering drawer.
+  useEffect(() => { setEvOpen(wide && hasMessages) }, [wide]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!narrow) setSideOpen(false) }, [narrow])
+
+  const closeOverlays = useCallback(() => {
+    setSideOpen(false)
+    if (!wide) setEvOpen(false)
+  }, [wide])
+
+  const startNewChat = useCallback(() => {
+    handleClearChat()
+    setSideOpen(false)
+  }, [handleClearChat])
+
+  // Escape closes whichever overlay is open; "N" starts a new conversation
+  // when the user isn't typing somewhere.
+  useEffect(() => {
+    const onKey = e => {
+      if (e.key === 'Escape') { closeOverlays(); return }
+      const typing = e.target.closest?.('input, textarea, select, [contenteditable="true"]')
+      if (!typing && !e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'n' || e.key === 'N')) {
+        e.preventDefault()
+        startNewChat()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [closeOverlays, startNewChat])
+
+  // Resolves once the library list is fresh, so a row being removed stays
+  // dimmed until it's actually gone rather than flickering back.
+  const docsChanged = useCallback(() => {
+    refreshSuggestions()
+    return refreshDocs()
+  }, [refreshDocs, refreshSuggestions])
+
+  const openPanel = () => { setShowPanel(true);   setShowPlaybook(false); setShowAdmin(false); setSideOpen(false) }
+  const openPlay  = () => { setShowPlaybook(true); setShowPanel(false);   setShowAdmin(false); setSideOpen(false) }
+  const openStats = () => { setShowAdmin(true); setSideOpen(false) }
+
+  // Clicking an answer always reveals its evidence, on every screen size.
+  const selectAnswer = useCallback((id) => {
+    setSelectedId(id)
+    setEvOpen(true)
+    setSideOpen(false)
+  }, [])
+  // A citation click selects its answer and points the panel at the passage.
+  const [focus, setFocus] = useState(null)
+  const citeAnswer = useCallback((id, ns) => {
+    selectAnswer(id)
+    setFocus({ id, ns, t: Date.now() })
+  }, [selectAnswer])
+
+  // "Add your first document" on Home: the library's file picker, after
+  // opening the library on phones where it's a menu.
+  const uploadRef = useRef(null)
+  const addDocs = useCallback(() => {
+    if (narrow) setSideOpen(true)
+    uploadRef.current?.()
+  }, [narrow])
+
+  const selectedMsg = messages.find(m => m.id === selectedId && !m.streaming) || null
+  const answerNo = selectedMsg ? messages.filter(m => m.role === 'bot').indexOf(selectedMsg) + 1 : 0
+
+  const inputDisabled = isLoading || messages.some(m => m.streaming) || !backendReady
+  useCiteLinking(selectedMsg?.id)
+
+  const scrimOn = (narrow && sideOpen) || (!wide && evOpen)
+  const total   = docsInfo.total_files || 0
+  const docsLabel = `${total === 1 ? 'the' : `all ${total}`} document${total === 1 ? '' : 's'}`
+  const questions = messages.filter(m => m.role === 'user')
+  const title    = questions[0]?.content || 'New conversation'
+  const subtitle = hasMessages
+    ? `${questions.length} question${questions.length === 1 ? '' : 's'} · ${docsLabel}`
+    : total ? `Searching ${docsLabel}` : 'No documents yet'
 
   return (
-    <div className="app">
-      {/* Upload panel */}
+    <>
+      <div className={`shell${evOpen ? '' : ' no-ev'}`}>
+        <Sidebar
+          docsInfo={docsInfo}
+          open={sideOpen}
+          inert={narrow && !sideOpen}
+          onClose={() => setSideOpen(false)}
+          onNewChat={startNewChat}
+          onDocsChanged={docsChanged}
+          toast={toast}
+          uploadRef={uploadRef}
+          onManage={openPanel}
+          onPlaybook={openPlay}
+          onStats={openStats}
+          theme={theme}
+          onTheme={setTheme}
+        />
+
+        <main className="center">
+          <TopBar
+            title={title}
+            subtitle={subtitle}
+            docsInfo={docsInfo}
+            backendStatus={backendStatus}
+            hasMessages={hasMessages}
+            evOpen={evOpen}
+            onMenu={() => setSideOpen(true)}
+            onToggleEvidence={() => setEvOpen(o => !o)}
+            onExport={format => apiExportConversation(sessionId, format).catch(err => alert(err.message))}
+          />
+
+          <ChatWindow
+            messages={messages}
+            streamStatus={streamStatus}
+            onSend={handleSend}
+            inputDisabled={inputDisabled}
+            topics={dynTopics}
+            topicsLoaded={topicsLoaded}
+            docCount={total}
+            selectedId={selectedMsg?.id}
+            onSelect={selectAnswer}
+            onCite={citeAnswer}
+            onAddDocs={addDocs}
+          />
+
+          {hasMessages && (
+            <div className="dock">
+              <InputBar id="ask-dock" onSend={handleSend} isLoading={inputDisabled} placeholder="Ask a follow-up…" />
+            </div>
+          )}
+        </main>
+
+        <EvidencePanel open={evOpen} inert={!evOpen} onClose={() => setEvOpen(false)}
+          label={answerNo ? `· answer ${answerNo}` : ''}>
+          {selectedMsg && <Evidence key={selectedMsg.id} message={selectedMsg}
+            focus={focus?.id === selectedMsg.id ? focus : null} />}
+        </EvidencePanel>
+      </div>
+      <div className={`scrim${scrimOn ? ' on' : ''}`} onClick={closeOverlays} aria-hidden="true" />
+
       <UploadPanel
         isOpen={showPanel}
         docsInfo={docsInfo}
         onClose={() => setShowPanel(false)}
         onClearChat={handleClearChat}
-        onDocsChanged={() => { refreshDocs(); refreshSuggestions() }}
+        onDocsChanged={docsChanged}
       />
-
-      {/* Playbook panel */}
-      <PlaybookPanel
-        isOpen={showPlaybook}
-        onClose={() => setShowPlaybook(false)}
-      />
-
-      {/* Admin dashboard (modal) */}
+      <ToastStack toasts={toasts} />
+      <PlaybookPanel isOpen={showPlaybook} onClose={() => setShowPlaybook(false)} />
       {showAdmin && (
         <AdminDashboard
           onClose={() => setShowAdmin(false)}
-          onDocsChanged={() => { refreshDocs(); refreshSuggestions() }}
+          onDocsChanged={docsChanged}
         />
       )}
-
-      {/* Main chat area */}
-      <div className={`main-pane${showPanel ? ' main-pane--panel-open' : ''}${showPlaybook ? ' main-pane--play-open' : ''}`}>
-        <Header
-          docsInfo={docsInfo}
-          onUploadClick={openPanel}
-          onPlaybookClick={openPlay}
-          onAdminClick={() => setShowAdmin(true)}
-          onExportClick={(format) => apiExportConversation(sessionId, format).catch(err => alert(err.message))}
-          hasMessages={messages.length > 0}
-          backendStatus={backendStatus}
-        />
-
-        <DocsStrip docsInfo={docsInfo} onManage={openPanel} />
-
-        <ChatWindow
-          messages={messages}
-          isLoading={isLoading}
-          streamStatus={streamStatus}
-          onSuggestionClick={handleSend}
-          dynamicTopics={dynTopics}
-          hasDocs={docsInfo.total_files > 0}
-        />
-        <InputBar
-          onSend={handleSend}
-          isLoading={isLoading || messages.some(m => m.streaming) || !backendReady}
-        />
-      </div>
-    </div>
+    </>
   )
 }

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import UploadPanel, { fileMeta } from './UploadPanel.jsx'
-import DocsStrip from './DocsStrip.jsx'
 
 const noop = () => {}
 
@@ -68,23 +67,5 @@ describe('UploadPanel — document list states', () => {
     expect(screen.getByText('7 chunks')).toBeInTheDocument()
     expect(screen.queryByText('OCR running')).not.toBeInTheDocument()
     expect(screen.queryByText('failed')).not.toBeInTheDocument()
-  })
-})
-
-describe('DocsStrip — pending documents', () => {
-  it('marks a processing document as not searchable yet', () => {
-    render(<DocsStrip onManage={noop} docsInfo={{
-      files: [{ filename: 'scan.pdf', chunk_count: 0, status: 'processing' }],
-    }} />)
-    expect(screen.getByText('OCR…')).toBeInTheDocument()
-    expect(screen.getByTitle(/OCR in progress, not searchable yet/)).toBeInTheDocument()
-  })
-
-  it('flags a failed document', () => {
-    render(<DocsStrip onManage={noop} docsInfo={{
-      files: [{ filename: 'bad.pdf', chunk_count: 0, status: 'failed', message: 'no text' }],
-    }} />)
-    expect(screen.getByText('!')).toBeInTheDocument()
-    expect(screen.getByTitle(/no text/)).toBeInTheDocument()
   })
 })

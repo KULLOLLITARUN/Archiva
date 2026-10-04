@@ -1,9 +1,11 @@
-/** InputBar.jsx — Auto-resizing textarea with glowing send button */
+/** InputBar.jsx — the composer: auto-resizing textarea and send button. */
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Loader2, Send } from 'lucide-react'
+import { ArrowUp, Loader2 } from 'lucide-react'
 
-export default function InputBar({ onSend, isLoading }) {
+const MAX_HEIGHT = 200   // matches .composer textarea max-height
+
+export default function InputBar({ onSend, isLoading, placeholder = 'Ask anything about your documents…', id = 'ask' }) {
   const [value, setValue] = useState('')
   const textareaRef = useRef(null)
 
@@ -12,7 +14,7 @@ export default function InputBar({ onSend, isLoading }) {
     const ta = textareaRef.current
     if (!ta) return
     ta.style.height = 'auto'
-    ta.style.height = Math.min(ta.scrollHeight, 160) + 'px'
+    ta.style.height = Math.min(ta.scrollHeight, MAX_HEIGHT) + 'px'
   }, [value])
 
   const handleSend = useCallback(() => {
@@ -20,7 +22,6 @@ export default function InputBar({ onSend, isLoading }) {
     if (!trimmed || isLoading) return
     onSend(trimmed)
     setValue('')
-    if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }, [value, isLoading, onSend])
 
   const handleKey = useCallback((e) => {
@@ -31,34 +32,32 @@ export default function InputBar({ onSend, isLoading }) {
   }, [handleSend])
 
   return (
-    <div className="input-area">
-      <div className="input-wrap">
-        <textarea
-          ref={textareaRef}
-          className="input-field"
-          placeholder={isLoading ? 'Archiva is searching…' : 'Ask anything about your documents…'}
-          value={value}
-          onChange={e => setValue(e.target.value)}
-          onKeyDown={handleKey}
-          disabled={isLoading}
-          rows={1}
-          aria-label="Chat input"
-        />
+    <div className="composer">
+      <label htmlFor={id} className="sr">Ask a question</label>
+      <textarea
+        id={id}
+        ref={textareaRef}
+        placeholder={isLoading ? 'Archiva is searching…' : placeholder}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={handleKey}
+        disabled={isLoading}
+        rows={1}
+      />
+      <div className="composer-bar">
         <button
-          className="send-btn"
+          type="button"
+          className="send"
           onClick={handleSend}
           disabled={!value.trim() || isLoading}
           aria-label="Send message"
           title="Send (Enter)"
         >
-          {isLoading ? <Loader2 size={17} className="spin" /> : <Send size={17} />}
+          {isLoading
+            ? <Loader2 size={16} strokeWidth={2} className="ico spin" aria-hidden="true" />
+            : <ArrowUp size={16} strokeWidth={2} className="ico" aria-hidden="true" />}
         </button>
       </div>
-      <p className="input-hint">
-        Press <kbd style={{ background: 'var(--surface2)', padding: '1px 5px', borderRadius: 4, fontSize: 10, fontFamily: 'monospace' }}>Enter</kbd> to send
-        &nbsp;·&nbsp;
-        <kbd style={{ background: 'var(--surface2)', padding: '1px 5px', borderRadius: 4, fontSize: 10, fontFamily: 'monospace' }}>Shift+Enter</kbd> for new line
-      </p>
     </div>
   )
 }

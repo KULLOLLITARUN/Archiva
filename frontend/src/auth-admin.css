@@ -46,7 +46,7 @@
   justify-content: space-between;
   padding: 20px 24px;
   border-bottom: 1px solid var(--border);
-  background: rgba(245, 241, 232, 0.9);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
 }
 
 .admin-header-left {
