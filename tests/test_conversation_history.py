@@ -61,3 +61,10 @@ def test_open_unknown_conversation_is_404(mem):
 
 def run(coro):
     return asyncio.run(coro)
+
+
+def test_a_provider_outage_is_not_kept_as_an_answer():
+    # Saving "Service temporarily unavailable" would anchor the next follow-up to it.
+    assert main._produced_answer({"reflection_reason": "provider_unavailable"}) is False
+    assert main._produced_answer({"reflection_reason": "passed_all_checks"}) is True
+    assert main._produced_answer({"reflection_reason": "explicit_not_found"}) is True

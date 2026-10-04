@@ -339,15 +339,15 @@ async def chat(
     # over turn instead of resolving cleanly against what the user actually
     # asked each time.
     elapsed = int((time.time() - t_start) * 1000)
-    memory.add(body.session_id, raw_query, answer, sources, intent,
-               checks=_answer_checks(loop_result, model_id, elapsed, flagged))
-
-    asyncio.create_task(_async_log_feedback(
-        query,
-        loop_result.get("failure_type", "NONE"),
-        loop_result.get("healing_action", "NONE"),
-        not flagged,
-    ))
+    if _produced_answer(loop_result):
+        memory.add(body.session_id, raw_query, answer, sources, intent,
+                   checks=_answer_checks(loop_result, model_id, elapsed, flagged))
+        asyncio.create_task(_async_log_feedback(
+            query,
+            loop_result.get("failure_type", "NONE"),
+            loop_result.get("healing_action", "NONE"),
+            not flagged,
+        ))
     asyncio.create_task(log_pipeline(
         _build_log_payload(request_id, query, safety, loop_result, intent, elapsed, flagged)
     ))
@@ -431,15 +431,15 @@ async def chat_stream(
         source_refs = [SourceRef(**s) for s in sources]
         # See /chat above: store the original query, not the rewritten one,
         # so anchors don't compound turn over turn.
-        memory.add(body.session_id, raw_query, answer, source_refs, intent,
-                   checks=_answer_checks(loop_result, model_id, elapsed, validation["flagged"]))
-
-        asyncio.create_task(_async_log_feedback(
-            query,
-            loop_result.get("failure_type", "NONE"),
-            loop_result.get("healing_action", "NONE"),
-            not validation["flagged"],
-        ))
+        if _produced_answer(loop_result):
+            memory.add(body.session_id, raw_query, answer, source_refs, intent,
+                       checks=_answer_checks(loop_result, model_id, elapsed, validation["flagged"]))
+            asyncio.create_task(_async_log_feedback(
+                query,
+                loop_result.get("failure_type", "NONE"),
+                loop_result.get("healing_action", "NONE"),
+                not validation["flagged"],
+            ))
         asyncio.create_task(log_pipeline(
             _build_log_payload(str(uuid.uuid4()), query, safety,
                                loop_result, intent, elapsed, validation["flagged"])
@@ -939,6 +939,16 @@ async def health() -> HealthResponse:
         model_strong=GROQ_STRONG,
         model_reasoning=GROQ_QWEN,
     )
+
+
+def _produced_answer(loop_result: dict) -> bool:
+    """
+    False when the AI provider was unreachable or rate-limited: the reply is a
+    fixed "Service temporarily unavailable" message, not an answer. It isn't
+    saved to the conversation (the next follow-up would be anchored to it)
+    or logged as an answer (it counted against the validator pass rate).
+    """
+    return loop_result.get("reflection_reason") != "provider_unavailable"
 
 
 def _answer_checks(loop_result: dict, model_id: str, elapsed_ms: int, flagged: bool) -> dict:

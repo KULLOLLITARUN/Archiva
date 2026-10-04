@@ -8,6 +8,7 @@ import MessageBubble from './MessageBubble.jsx'
 import Home, { topicIcon } from './Home.jsx'
 import { go } from '../motion.js'
 import { nextQuestions } from '../suggest.js'
+import { isFailedAnswer } from '../evidence.js'
 
 const ICON = { size: 15, strokeWidth: 1.75, className: 'ico', 'aria-hidden': true }
 
@@ -36,7 +37,8 @@ export default function ChatWindow({
   const seen = useRef(new Set())
   const lastContent = messages.at(-1)?.content
   const last = messages.at(-1)
-  const showNext = last?.role === 'bot' && !last.streaming && !last.isError && !inputDisabled
+  // Not after a failed request: if the provider is down, the next question would fail too.
+  const showNext = last?.role === 'bot' && !last.streaming && !isFailedAnswer(last) && !inputDisabled
   const next = useMemo(() => (showNext ? nextQuestions(topics, messages) : []), [showNext, topics, messages])
 
   // Follow the conversation as it grows.

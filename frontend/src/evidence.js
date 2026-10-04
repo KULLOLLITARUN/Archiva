@@ -37,6 +37,16 @@ const FAILED_CHECK = {
 
 const NOT_FOUND_REASONS = ['explicit_not_found', 'no_chunks_retrieved', 'no_results', 'answer_too_short_max_attempts']
 
+/**
+ * True when there is no answer to verify: the request failed, or the AI
+ * provider was unreachable / rate-limited (agents/loop.py returns
+ * "provider_unavailable" with a fixed message, never a generated answer).
+ */
+export function isFailedAnswer(m) {
+  return Boolean(m.isError) || m.reflection_reason === 'error' || m.reflection_reason === 'provider_unavailable'
+    || (m.content || '').trim().startsWith('Service temporarily unavailable')
+}
+
 export function isNotFoundAnswer(m) {
   const reason = m.reflection_reason || ''
   return (m.content || '').toLowerCase().includes('not found in the document')
@@ -79,8 +89,18 @@ export function buildEvidence(m) {
   })
   const modelCheck = { state: 'info', label: `Answered by ${model}`, meta: m.latency_ms ? seconds(m.latency_ms) : '' }
 
-  if (m.isError || reason === 'error') {
-    return { kind: 'error', title: 'No answer', note: m.content || 'The request failed.', confidence: null, checks: [], passages: [] }
+  if (isFailedAnswer(m)) {
+    const unavailable = reason === 'provider_unavailable' || (m.content || '').trim().startsWith('Service temporarily unavailable')
+    return {
+      kind: 'error',
+      title: 'No answer',
+      note: unavailable
+        ? 'The AI provider couldn’t be reached or its rate limit was hit, so nothing was generated or checked. Try again in a few minutes.'
+        : (m.content || 'The request failed.'),
+      confidence: null,
+      checks: [],
+      passages: [],
+    }
   }
 
   if (isNotFoundAnswer(m)) {

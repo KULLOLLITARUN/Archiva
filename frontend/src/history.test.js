@@ -46,3 +46,16 @@ describe('timeAgo', () => {
 
   it('is empty for a missing time', () => expect(timeAgo(undefined, now)).toBe(''))
 })
+
+describe('a provider outage', () => {
+  it('is "No answer", not a grounded answer with 0% confidence', () => {
+    const ev = buildEvidence({
+      role: 'bot', content: 'Service temporarily unavailable: the AI provider could not be reached or its rate limit / daily quota was reached.',
+      reflection_reason: 'provider_unavailable', attempts: 1, confidence: 0, flagged: true, sources: [],
+    })
+    expect(ev.kind).toBe('error')
+    expect(ev.title).toBe('No answer')
+    expect(ev.confidence).toBeNull()
+    expect(ev.checks).toEqual([])
+  })
+})
