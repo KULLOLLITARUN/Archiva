@@ -141,6 +141,26 @@ export async function adminDeleteAllDocuments() {
   return res.json()
 }
 
+// ── Conversation history ──────────────────────────────────────────────────────
+
+export async function apiListConversations(limit = 30) {
+  const res = await fetch(`${BASE}/conversations?limit=${limit}`)
+  if (!res.ok) throw new Error('Could not load conversations')
+  return (await res.json()).conversations || []
+}
+
+export async function apiGetConversation(sessionId) {
+  const res = await fetch(`${BASE}/conversations/${encodeURIComponent(sessionId)}`)
+  if (!res.ok) { const e = await safeJson(res); throw new Error(e?.detail || 'Could not open the conversation') }
+  return res.json()
+}
+
+export async function apiDeleteConversation(sessionId) {
+  const res = await fetch(`${BASE}/conversations/${encodeURIComponent(sessionId)}`, { method: 'DELETE' })
+  if (!res.ok) { const e = await safeJson(res); throw new Error(e?.detail || 'Delete failed') }
+  return res.json()
+}
+
 // ── Export ────────────────────────────────────────────────────────────────────
 
 export async function apiExportConversation(sessionId, format = 'markdown') {

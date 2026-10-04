@@ -338,8 +338,9 @@ async def chat(
     # next follow-up would anchor to THAT, compounding wrapper text turn
     # over turn instead of resolving cleanly against what the user actually
     # asked each time.
-    memory.add(body.session_id, raw_query, answer, sources, intent)
     elapsed = int((time.time() - t_start) * 1000)
+    memory.add(body.session_id, raw_query, answer, sources, intent,
+               checks=_answer_checks(loop_result, model_id, elapsed, flagged))
 
     asyncio.create_task(_async_log_feedback(
         query,
@@ -430,7 +431,8 @@ async def chat_stream(
         source_refs = [SourceRef(**s) for s in sources]
         # See /chat above: store the original query, not the rewritten one,
         # so anchors don't compound turn over turn.
-        memory.add(body.session_id, raw_query, answer, source_refs, intent)
+        memory.add(body.session_id, raw_query, answer, source_refs, intent,
+                   checks=_answer_checks(loop_result, model_id, elapsed, validation["flagged"]))
 
         asyncio.create_task(_async_log_feedback(
             query,
@@ -937,6 +939,42 @@ async def health() -> HealthResponse:
         model_strong=GROQ_STRONG,
         model_reasoning=GROQ_QWEN,
     )
+
+
+def _answer_checks(loop_result: dict, model_id: str, elapsed_ms: int, flagged: bool) -> dict:
+    """The verification fields the done frame sends, saved with the turn so a
+    reopened conversation shows the same evidence (frontend/src/evidence.js)."""
+    return {
+        "model_used":        model_id,
+        "latency_ms":        elapsed_ms,
+        "flagged":           flagged,
+        "attempts":          loop_result.get("attempts", 1),
+        "reflected":         loop_result.get("reflected", False),
+        "reflection_reason": loop_result.get("reflection_reason", "not_reflected"),
+        "confidence":        round(loop_result.get("confidence", 1.0), 3),
+        "failure_type":      loop_result.get("failure_type"),
+    }
+
+
+@app.get("/conversations")
+async def list_conversations(limit: int = 30) -> dict:
+    """Recent conversations, newest first (each keeps its last 10 turns)."""
+    return {"conversations": memory.list_sessions(max(1, min(limit, 100)))}
+
+
+@app.get("/conversations/{session_id}")
+async def get_conversation(session_id: str) -> dict:
+    history = memory.get_history(session_id)
+    if not history:
+        raise HTTPException(status_code=404, detail="No conversation history found for this session.")
+    return {"session_id": session_id, "turns": [e.model_dump() for e in history]}
+
+
+@app.delete("/conversations/{session_id}")
+@limiter.limit("30/minute")
+async def delete_conversation(request: Request, session_id: str) -> dict:
+    memory.clear(session_id)
+    return {"deleted": True, "session_id": session_id}
 
 
 @app.get("/conversations/{session_id}/export")

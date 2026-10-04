@@ -81,6 +81,10 @@ class MemoryEntry(BaseModel):
     sources: List[SourceRef]
     intent: str
     timestamp: str
+    # What the answer's verification reported (attempts, reflection_reason,
+    # confidence, flagged...), so a reopened conversation can show the same
+    # evidence. None for turns saved before this was recorded.
+    checks: Optional[dict] = None
 
 
 class PipelineLog(BaseModel):

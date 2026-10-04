@@ -14,9 +14,11 @@ import InputBar        from './components/InputBar.jsx'
 import { useCiteLinking } from './useCiteLinking.js'
 import PlaybookPanel   from './components/PlaybookPanel.jsx'
 import AdminDashboard  from './components/AdminDashboard.jsx'
+import HistoryPanel    from './components/HistoryPanel.jsx'
 import {
-  streamChat, apiGetFiles, apiGetSuggestions, waitForBackend, apiExportConversation,
+  streamChat, apiGetFiles, apiGetSuggestions, waitForBackend, apiExportConversation, apiGetConversation,
 } from './api.js'
+import { turnsToMessages } from './history.js'
 import { useTheme } from './theme.js'
 import { useMedia, WIDE, NARROW } from './useMedia.js'
 import './styles.css'
@@ -24,12 +26,15 @@ import './auth-admin.css'
 
 
 export default function App() {
-  const [sessionId]                    = useState(() => crypto.randomUUID())
+  // The server keeps each session's turns (follow-ups read them, and they
+  // can be reopened from Conversations), so a new conversation needs a new id.
+  const [sessionId,    setSessionId]   = useState(() => crypto.randomUUID())
   const [messages,     setMessages]    = useState([])
   const [isLoading,    setIsLoading]   = useState(false)
   const [streamStatus, setStreamStatus]= useState('')
   const [showPlaybook, setShowPlaybook]= useState(false)
   const [showAdmin,    setShowAdmin]   = useState(false)
+  const [showHistory,  setShowHistory] = useState(false)
   const [docsInfo,     setDocsInfo]    = useState({ files: [], total_files: 0, total_chunks: 0 })
   const [dynTopics,    setDynTopics]   = useState([])
   // False until /suggestions first answers, so Home can say "finding
@@ -176,6 +181,21 @@ export default function App() {
     setSelectedId(null)
     setIsLoading(false)
     setStreamStatus('')
+    setSessionId(crypto.randomUUID())
+  }, [])
+
+  // Reopen a saved conversation and continue it: follow-ups go to the same
+  // session, so the server's memory of earlier turns carries on.
+  const openConversation = useCallback(async (id) => {
+    const { turns } = await apiGetConversation(id)
+    cancelStreamRef.current?.()
+    cancelStreamRef.current = null
+    const restored = turnsToMessages(turns)
+    setMessages(restored)
+    setSessionId(id)
+    setSelectedId(restored.filter(m => m.role === 'bot').at(-1)?.id ?? null)
+    setIsLoading(false)
+    setStreamStatus('')
   }, [])
 
 
@@ -233,8 +253,9 @@ export default function App() {
     return refreshDocs()
   }, [refreshDocs, refreshSuggestions])
 
-  const openPlay  = () => { setShowPlaybook(true); setShowAdmin(false); setSideOpen(false) }
-  const openStats = () => { setShowAdmin(true); setShowPlaybook(false); setSideOpen(false) }
+  const openPlay  = () => { setShowPlaybook(true); setShowAdmin(false); setShowHistory(false); setSideOpen(false) }
+  const openStats = () => { setShowAdmin(true); setShowPlaybook(false); setShowHistory(false); setSideOpen(false) }
+  const openHist  = () => { setShowHistory(true); setShowPlaybook(false); setShowAdmin(false); setSideOpen(false) }
 
   // Clicking an answer always reveals its evidence, on every screen size.
   const selectAnswer = useCallback((id) => {
@@ -286,6 +307,7 @@ export default function App() {
           uploadRef={uploadRef}
           onPlaybook={openPlay}
           onStats={openStats}
+          onHistory={openHist}
           theme={theme}
           onTheme={setTheme}
         />
@@ -334,6 +356,15 @@ export default function App() {
 
       <ToastStack toasts={toasts} />
       {showPlaybook && <PlaybookPanel onClose={() => setShowPlaybook(false)} />}
+      {showHistory && (
+        <HistoryPanel
+          currentId={hasMessages ? sessionId : null}
+          onOpen={openConversation}
+          onDeleted={id => { if (id === sessionId) handleClearChat() }}
+          onClose={() => setShowHistory(false)}
+          toast={toast}
+        />
+      )}
       {showAdmin && (
         <AdminDashboard
           onClose={() => setShowAdmin(false)}

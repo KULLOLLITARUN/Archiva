@@ -49,6 +49,7 @@ def _serialize_entry(entry: MemoryEntry) -> dict:
         "answer":    entry.answer,
         "intent":    entry.intent,
         "timestamp": entry.timestamp,
+        "checks":    entry.checks,
         "sources": [
             {
                 "filename": s.filename,
@@ -68,6 +69,7 @@ def _deserialize_entry(d: dict) -> MemoryEntry:
         answer=d["answer"],
         intent=d.get("intent", "qa"),
         timestamp=d.get("timestamp", ""),
+        checks=d.get("checks"),
         sources=[
             SourceRef(
                 filename=s["filename"],
@@ -137,6 +139,7 @@ class ConversationMemory:
         answer: str,
         sources: List[SourceRef],
         intent: str,
+        checks: Optional[dict] = None,
     ) -> None:
         entry = MemoryEntry(
             query=query,
@@ -144,6 +147,7 @@ class ConversationMemory:
             sources=sources,
             intent=intent,
             timestamp=datetime.now(timezone.utc).isoformat(),
+            checks=checks,
         )
         history = self.sessions.setdefault(session_id, [])
         history.append(entry)
@@ -166,6 +170,14 @@ class ConversationMemory:
         self.sessions.pop(session_id, None)
         if PERSIST_MEMORY:
             self._save_to_disk()
+
+    def list_sessions(self, limit: int = 30) -> List[dict]:
+        """Most recent conversations first: id, first question, turn count, last update."""
+        rows = [
+            {"session_id": sid, "title": h[0].query, "turns": len(h), "updated_at": h[-1].timestamp}
+            for sid, h in self.sessions.items() if h
+        ]
+        return sorted(rows, key=lambda r: r["updated_at"], reverse=True)[:limit]
 
     def clear_all(self) -> None:
         """Wipe all sessions from memory and disk."""
@@ -220,10 +232,10 @@ class PostgresConversationMemory(ConversationMemory):
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
-    def add(self, session_id, query, answer, sources, intent) -> None:
+    def add(self, session_id, query, answer, sources, intent, checks=None) -> None:
         entry = MemoryEntry(
             query=query, answer=answer, sources=sources, intent=intent,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(), checks=checks,
         )
         try:
             from db import postgres as pg
@@ -245,6 +257,14 @@ class PostgresConversationMemory(ConversationMemory):
     def get_last(self, session_id: str) -> Optional[MemoryEntry]:
         history = self.get_history(session_id)
         return history[-1] if history else None
+
+    def list_sessions(self, limit: int = 30) -> List[dict]:
+        try:
+            from db import postgres as pg
+            return pg.db_list_sessions(limit)
+        except Exception as exc:
+            print(f"  [WARN]  Could not list sessions from Postgres ({exc}) - using this process's copy.")
+            return super().list_sessions(limit)
 
     def clear(self, session_id: str) -> None:
         self.sessions.pop(session_id, None)

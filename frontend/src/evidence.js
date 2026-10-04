@@ -12,6 +12,10 @@
  *     on separately, and failure_type is set if any of them failed.
  * Why an earlier, rejected attempt failed is not reported, so the panel
  * says a draft was rejected without naming a reason it doesn't know.
+ *
+ * A reopened conversation carries each turn's saved checks; turns saved
+ * before checks were recorded arrive with `restored: true` and no checks,
+ * and the panel says so instead of defaulting to "passed".
  */
 
 import { maskModel } from './brand.js'
@@ -85,8 +89,19 @@ export function buildEvidence(m) {
       title: 'Not in your documents',
       note: 'No passage supported an answer, so Archiva declined instead of guessing.',
       confidence: null,
-      checks: [{ state: 'ok', label: 'Refused rather than guessed' }, modelCheck],
+      checks: [{ state: 'ok', label: 'Refused rather than guessed' }, ...(m.restored ? [] : [modelCheck])],
       passages: [],
+    }
+  }
+
+  if (m.restored) {
+    return {
+      kind: 'unrecorded',
+      title: 'Checks not recorded',
+      note: 'This answer was saved before Archiva kept its verification results. Its cited passages are below.',
+      confidence: null,
+      checks: [],
+      passages,
     }
   }
 

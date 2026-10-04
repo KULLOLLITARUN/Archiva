@@ -439,6 +439,24 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .pb-keys div { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--text-2); padding: 7px 0; border-bottom: 1px solid var(--line); }
 .pb-keys dd { color: var(--text-3); }
 
+/* Conversations */
+.hist-list { list-style: none; display: grid; gap: 6px; }
+.hist-row { display: flex; align-items: center; gap: 6px; padding-right: 8px; border-radius: var(--r); background: var(--raised); border: 1px solid var(--line);
+  transition: border-color .15s, box-shadow .15s; }
+.hist-row:hover { border-color: var(--line-strong); box-shadow: var(--shadow-sm); }
+.hist-row:hover .hist-x, .hist-x:focus-visible { opacity: 1; }
+.hist-row.is-current { border-color: var(--accent-ring); }
+.hist-row[aria-busy] { opacity: .6; }
+.hist-open { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 11px; padding: 11px 4px 11px 12px; text-align: left; }
+.hist-open:disabled { cursor: progress; }
+.hist-ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: none; color: var(--accent-strong); background: var(--accent-wash); }
+.hist-m { min-width: 0; display: grid; gap: 1px; }
+.hist-m b { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.hist-m span { font-size: 12px; color: var(--text-3); }
+.hist-m em { font-style: normal; color: var(--accent-strong); font-weight: 600; }
+.hist-row .doc-confirm { flex: none; margin: 0; flex-wrap: nowrap; }
+.hist-note { margin-top: 14px; text-align: center; font-size: 12px; color: var(--text-3); }
+
 /* ── Overlays (tablet evidence drawer, phone library + evidence sheet) ── */
 .scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); opacity: 0; pointer-events: none; transition: opacity .3s var(--ease); }
 .scrim.on { opacity: 1; pointer-events: auto; }

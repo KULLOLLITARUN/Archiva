@@ -209,3 +209,12 @@ def test_replace_document_records_ocr_and_never_clears_it():
 
     pg.db_replace_document("plain", "plain.pdf", "pdf", "h-plain", [])
     assert {d["id"]: d["ocr"] for d in pg.db_list_all_documents()}["plain"] is False
+
+
+def test_list_sessions_newest_first_titled_by_oldest_kept_turn():
+    pg.db_append_session_entry("s1", {"query": "first", "answer": "a"}, max_turns=2)
+    pg.db_append_session_entry("s2", {"query": "other", "answer": "a"}, max_turns=2)
+    pg.db_append_session_entry("s1", {"query": "second", "answer": "a"}, max_turns=2)
+    pg.db_append_session_entry("s1", {"query": "third", "answer": "a"}, max_turns=2)
+    rows = pg.db_list_sessions(10)
+    assert [(r["session_id"], r["title"], r["turns"]) for r in rows] == [("s1", "second", 2), ("s2", "other", 1)]

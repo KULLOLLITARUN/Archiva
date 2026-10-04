@@ -428,6 +428,25 @@ def db_get_session_entries(session_id: str) -> List[dict]:
         return list(row["entries"]) if row else []
 
 
+def db_list_sessions(limit: int = 30) -> List[dict]:
+    """
+    Most recent conversations first. The title is the oldest turn still
+    kept (sessions keep their last MAX_TURNS turns), so a long conversation
+    is named by its earliest remembered question.
+    """
+    with get_db() as db:
+        rows = db.execute(
+            """SELECT session_id, entries->0->>'query' AS title,
+                      jsonb_array_length(entries) AS turns, updated_at
+               FROM chat_sessions
+               WHERE jsonb_array_length(entries) > 0
+               ORDER BY updated_at DESC
+               LIMIT %s""",
+            (limit,),
+        ).fetchall()
+    return [{**r, "updated_at": r["updated_at"].isoformat()} for r in rows]
+
+
 def db_clear_session(session_id: str) -> None:
     with get_db() as db:
         db.execute("DELETE FROM chat_sessions WHERE session_id = %s", (session_id,))
