@@ -27,14 +27,14 @@ Normalizer → Context-Aware Rewriter → Intent Detector → Safety Layer
                                          layer 3 only fires on ambiguous input)
    │
    ▼
-Semantic Cache lookup ── hit (cosine ≥ 0.97) ──→ Return cached result  [NO LLM]
-   │ miss
-   ▼
 Multi-Hop Decomposition ── query splits into N sub-questions ──→ run each
-   │                                                              through this
-   │ single question                                             whole pipeline
+   │                                                              through the rest
+   │ single question                                             of this pipeline
    ▼                                                              independently,
-Hybrid Retrieval: BM25 + Dense (sentence-transformers) → RRF fusion          then merge
+Semantic Cache lookup ── hit (cosine ≥ 0.97) ──→ Return cached result  [NO LLM]
+   │ miss                                                          then merge
+   ▼
+Hybrid Retrieval: BM25 + Dense (sentence-transformers) → RRF fusion
    │
    ▼
 Score Gate ── below threshold ──→ "Not found in the document."  [NO LLM]
